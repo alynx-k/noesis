@@ -11,7 +11,7 @@ export const GRADES: Grade[] = [
   { id: '5eme', label: '5ème', available: true },
   { id: '4eme', label: '4ème', available: true },
   { id: '3eme', label: '3ème', available: true },
-  { id: '2nde', label: '2nde', available: false },
-  { id: '1ere', label: '1ère', available: false },
-  { id: 'terminale', label: 'Terminale', available: false },
+  { id: '2nde', label: '2nde', available: true },
+  { id: '1ere', label: '1ère', available: true },
+  { id: 'terminale', label: 'Terminale', available: true },
 ];
