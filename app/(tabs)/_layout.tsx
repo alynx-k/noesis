@@ -1,33 +1,67 @@
+import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { StyleSheet, useColorScheme } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function TabsLayout() {
+  const COLORS = useThemeColors();
+  const scheme = useColorScheme();
+
+  const styles = StyleSheet.create({
+    tabBar: {
+      position: 'absolute',
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: COLORS.border,
+      elevation: 0,
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+  });
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
+        tabBarActiveTintColor: COLORS.accent,
+        tabBarInactiveTintColor: COLORS.mutedText,
         tabBarButton: HapticTab,
+        tabBarLabelStyle: styles.label,
+        tabBarBackground: () => (
+          <BlurView intensity={80} tint={scheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        ),
+        tabBarStyle: styles.tabBar,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Accueil',
+          tabBarIcon: ({ color, size }) => <IconSymbol name="house.fill" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="flashcards"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Fiches',
+          tabBarIcon: ({ color, size }) => <IconSymbol name="doc.text.fill" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Communauté',
+          tabBarIcon: ({ color, size }) => <IconSymbol name="person.2.fill" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ color, size }) => <IconSymbol name="person.fill" color={color} size={size} />,
         }}
       />
     </Tabs>
