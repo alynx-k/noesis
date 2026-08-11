@@ -6,11 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GradePicker } from '@/components/grade-picker';
 import { GridBackground } from '@/components/grid-background';
+import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
-import { GRADES, GradeId } from '@/constants/grades';
+import { GRADES, GradeId, isLyceeGrade, SERIES_BY_GRADE, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { getGradeChangeEligibility, getGradeProfile, GradeProfile, updateGrade } from '@/lib/grade';
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const [gradeProfile, setGradeProfile] = useState<GradeProfile | null>(null);
   const [showGradePicker, setShowGradePicker] = useState(false);
+  const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
   const [gradeChangeError, setGradeChangeError] = useState<string | null>(null);
   const [changingGrade, setChangingGrade] = useState(false);
   const [notificationsOn, setNotificationsOn] = useState(false);
@@ -53,7 +55,11 @@ export default function SettingsScreen() {
     }
   };
 
-  const gradeLabel = gradeProfile ? GRADES.find((grade) => grade.id === gradeProfile.grade)?.label : null;
+  const gradeLabelBase = gradeProfile ? GRADES.find((grade) => grade.id === gradeProfile.grade)?.label : null;
+  const serieLabel = gradeProfile?.serie
+    ? SERIES_BY_GRADE[gradeProfile.grade]?.find((s) => s.id === gradeProfile.serie)?.label
+    : null;
+  const gradeLabel = serieLabel ? `${gradeLabelBase} — ${serieLabel}` : gradeLabelBase;
 
   const handleChangeGradePress = () => {
     setGradeChangeError(null);
@@ -71,25 +77,35 @@ export default function SettingsScreen() {
       );
       return;
     }
+    setPendingGrade(null);
     setShowGradePicker((previous) => !previous);
   };
 
-  const handleSelectGrade = async (grade: GradeId) => {
+  const finalizeGradeChange = async (grade: GradeId, serie: SeriesId | null) => {
     if (!user || changingGrade) {
       return;
     }
     setShowGradePicker(false);
-    if (gradeProfile && grade === gradeProfile.grade) {
+    setPendingGrade(null);
+    if (gradeProfile && grade === gradeProfile.grade && serie === gradeProfile.serie) {
       return;
     }
     setChangingGrade(true);
-    const { error } = await updateGrade(user.id, grade);
+    const { error } = await updateGrade(user.id, grade, serie);
     setChangingGrade(false);
     if (error) {
       setGradeChangeError(error);
       return;
     }
-    setGradeProfile((previous) => (previous ? { ...previous, grade, lastChangedAt: new Date() } : previous));
+    setGradeProfile((previous) => (previous ? { ...previous, grade, serie, lastChangedAt: new Date() } : previous));
+  };
+
+  const handleSelectGrade = (grade: GradeId) => {
+    if (isLyceeGrade(grade)) {
+      setPendingGrade(grade);
+      return;
+    }
+    finalizeGradeChange(grade, null);
   };
 
   const handleSignOut = async () => {
@@ -231,9 +247,21 @@ export default function SettingsScreen() {
             <ThemedText style={styles.changeLink}>Changer</ThemedText>
           </BouncyPressable>
 
-          {showGradePicker ? (
+          {showGradePicker && !pendingGrade ? (
             <View style={styles.pickerWrapper}>
               <GradePicker selectedGrade={gradeProfile?.grade} onSelect={handleSelectGrade} />
+            </View>
+          ) : null}
+          {showGradePicker && pendingGrade ? (
+            <View style={styles.pickerWrapper}>
+              <BouncyPressable onPress={() => setPendingGrade(null)}>
+                <ThemedText style={styles.changeLink}>‹ Changer de classe</ThemedText>
+              </BouncyPressable>
+              <SeriePicker
+                grade={pendingGrade}
+                selectedSerie={gradeProfile?.serie}
+                onSelect={(serie) => finalizeGradeChange(pendingGrade, serie)}
+              />
             </View>
           ) : null}
           {gradeChangeError ? <ThemedText style={styles.error}>{gradeChangeError}</ThemedText> : null}

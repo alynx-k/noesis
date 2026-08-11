@@ -1,3 +1,5 @@
+import { GradeId, isLyceeGrade, SeriesId } from '@/constants/grades';
+
 export type DisciplineId =
   | 'histoire-geographie'
   | 'mathematiques'
@@ -7,7 +9,9 @@ export type DisciplineId =
   | 'physique-chimie'
   | 'svt'
   | 'espagnol'
-  | 'allemand';
+  | 'allemand'
+  | 'philosophie'
+  | 'tice';
 
 export type Discipline = {
   id: DisciplineId;
@@ -22,7 +26,9 @@ export type Discipline = {
     | 'atom'
     | 'leaf.fill'
     | 'flag.fill'
-    | 'character.book.closed.fill';
+    | 'character.book.closed.fill'
+    | 'brain.head.profile'
+    | 'desktopcomputer';
   // Values of the `subject` column (in the `courses` table) grouped under
   // this discipline. Histoire-Géographie is the one discipline that's
   // actually two subjects shown together under subheadings; every other
@@ -113,4 +119,49 @@ export const DISCIPLINES: Discipline[] = [
     subjects: ['allemand'],
     gradient: ['#D9A066', '#96622E'],
   },
+  // Lycée-only disciplines: Philosophie appears from la 1ère, TICE only in
+  // 1ère séries C/D — see getDisciplineIdsFor below.
+  {
+    id: 'philosophie',
+    label: 'Philosophie',
+    available: true,
+    icon: 'brain.head.profile',
+    subjects: ['philosophie'],
+    gradient: ['#B08BE0', '#6B4AA8'],
+  },
+  {
+    id: 'tice',
+    label: 'TICE',
+    available: true,
+    icon: 'desktopcomputer',
+    subjects: ['tice'],
+    gradient: ['#7FB8D9', '#3D7DA3'],
+  },
 ];
+
+// Which discipline ids are visible for a given grade (+ série for lycée
+// grades). Collège has one uniform list; lycée subjects genuinely change by
+// grade and série (Philosophie starts en 1ère, Terminale A drops
+// Physique-Chimie, séries C/D drop les LV2 à partir de la 1ère, TICE
+// n'existe qu'en 1ère C/D) — confirmed against lyc.ecole-ci.org's own
+// category structure per série.
+export function getDisciplineIdsFor(grade: GradeId, serie: SeriesId | null): DisciplineId[] {
+  if (!isLyceeGrade(grade)) {
+    return ['histoire-geographie', 'mathematiques', 'anglais', 'francais', 'edhc', 'physique-chimie', 'svt', 'espagnol', 'allemand'];
+  }
+
+  const core: DisciplineId[] = ['histoire-geographie', 'mathematiques', 'anglais', 'francais', 'physique-chimie', 'svt'];
+
+  if (grade === '2nde') {
+    return [...core, 'espagnol', 'allemand'];
+  }
+
+  if (serie === 'A') {
+    const seriesA: DisciplineId[] = [...core, 'espagnol', 'allemand', 'philosophie'];
+    return grade === 'terminale' ? seriesA.filter((id) => id !== 'physique-chimie') : seriesA;
+  }
+
+  // Séries C/D (1ère/Terminale): no LV2, Philosophie present, TICE only in 1ère.
+  const seriesCD: DisciplineId[] = [...core, 'philosophie'];
+  return grade === '1ere' ? [...seriesCD, 'tice'] : seriesCD;
+}

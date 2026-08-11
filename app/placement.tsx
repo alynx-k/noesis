@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { Subject, SUBJECT_LABELS } from '@/constants/courses';
-import { GradeId } from '@/constants/grades';
+import { GradeId, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
@@ -21,6 +21,7 @@ export default function PlacementScreen() {
   const COLORS = useThemeColors();
   const { user } = useAuth();
   const [gradeId, setGradeId] = useState<GradeId | null>(null);
+  const [serie, setSerie] = useState<SeriesId | null>(null);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [selections, setSelections] = useState<Partial<Record<Subject, string>>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +30,8 @@ export default function PlacementScreen() {
     getGradeProfile().then((profile) => {
       if (profile) {
         setGradeId(profile.grade);
-        getCoursesForGrade(profile.grade).then(setCourses);
+        setSerie(profile.serie);
+        getCoursesForGrade(profile.grade, profile.serie).then(setCourses);
       }
     });
   }, []);
@@ -55,7 +57,7 @@ export default function PlacementScreen() {
       return;
     }
     setSubmitting(true);
-    await applyPlacement(user.id, gradeId, selections);
+    await applyPlacement(user.id, gradeId, selections, serie);
     setSubmitting(false);
     finish();
   };

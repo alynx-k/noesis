@@ -90,13 +90,14 @@ export async function getCourseTitle(courseId: string): Promise<string> {
   return data.title as string;
 }
 
-export async function getCoursesForGrade(grade: string): Promise<CourseSummary[]> {
-  const { data, error } = await supabase
+export async function getCoursesForGrade(grade: string, serie: string | null = null): Promise<CourseSummary[]> {
+  let query = supabase
     .from('courses')
     .select('id, grade, subject, title, order_index, requires_course_id')
-    .eq('grade', grade)
-    .order('subject', { ascending: true })
-    .order('order_index', { ascending: true });
+    .eq('grade', grade);
+  query = serie ? query.eq('serie', serie) : query.is('serie', null);
+
+  const { data, error } = await query.order('subject', { ascending: true }).order('order_index', { ascending: true });
 
   if (error || !data) {
     console.error('Failed to load courses for grade:', error);

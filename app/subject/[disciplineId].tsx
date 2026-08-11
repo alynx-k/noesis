@@ -48,7 +48,7 @@ export default function SubjectScreen() {
         }
         setGradeId(profile.grade);
 
-        getCoursesForGrade(profile.grade).then((coursesForGrade) => {
+        getCoursesForGrade(profile.grade, profile.serie).then((coursesForGrade) => {
           const coursesForDiscipline = coursesForGrade.filter((course) => discipline.subjects.includes(course.subject));
           setCourses(coursesForDiscipline);
           setLoadingCourses(false);

@@ -96,9 +96,7 @@ Deno.serve(async (req: Request) => {
     // 3 AI evaluations/day for the 'gratuit_limite' status (no free trial —
     // every account starts here; only 'premium' lifts it). This only counts
     // real exercise attempts: answer_attempts rows, one per grade-answer
-    // call. The initial diagnostic (app/diagnostic.tsx) never calls this
-    // function and never writes to answer_attempts, so it structurally
-    // can't consume any of this quota.
+    // call.
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('access_status')

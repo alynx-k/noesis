@@ -15,3 +15,31 @@ export const GRADES: Grade[] = [
   { id: '1ere', label: '1ère', available: true },
   { id: 'terminale', label: 'Terminale', available: true },
 ];
+
+// A "série" (track) only applies to lycée grades — collège has one uniform
+// subject list per grade. Seconde only splits into A/C on the real source
+// (lyc.ecole-ci.org); Première/Terminale split into A/C/D.
+export type SeriesId = 'A' | 'C' | 'D';
+
+export const LYCEE_GRADES: GradeId[] = ['2nde', '1ere', 'terminale'];
+
+export function isLyceeGrade(grade: GradeId): boolean {
+  return LYCEE_GRADES.includes(grade);
+}
+
+export const SERIES_BY_GRADE: Partial<Record<GradeId, { id: SeriesId; label: string }[]>> = {
+  '2nde': [
+    { id: 'A', label: 'Série A (littéraire)' },
+    { id: 'C', label: 'Série C (scientifique)' },
+  ],
+  '1ere': [
+    { id: 'A', label: 'Série A (littéraire)' },
+    { id: 'C', label: 'Série C (scientifique)' },
+    { id: 'D', label: 'Série D (scientifique)' },
+  ],
+  terminale: [
+    { id: 'A', label: 'Série A (littéraire)' },
+    { id: 'C', label: 'Série C (scientifique)' },
+    { id: 'D', label: 'Série D (scientifique)' },
+  ],
+};

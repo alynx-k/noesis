@@ -51,8 +51,8 @@ async function loadEntry(course: CourseSummary): Promise<CourseHistoryEntry> {
 // and order as the home screen's "Mes matières" grid), so the history reads
 // as one organized list per subject instead of one long flat list sorted
 // only by performance.
-export async function loadCourseHistory(grade: string): Promise<CourseHistorySection[]> {
-  const courses = await getCoursesForGrade(grade);
+export async function loadCourseHistory(grade: string, serie: string | null = null): Promise<CourseHistorySection[]> {
+  const courses = await getCoursesForGrade(grade, serie);
   const entries = await Promise.all(courses.map(loadEntry));
   const entryByCourseId = new Map(entries.map((entry) => [entry.courseId, entry]));
 

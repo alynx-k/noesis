@@ -1,91 +1,94 @@
 -- Physique-Chimie 4ème — Traitement de l'eau.
--- FALLBACK content (see header of
--- 20260812400000_pc-4e-sources-recepteurs-lumiere_content.sql for the
--- sourcing attempts this pass). Written from solid general knowledge of
--- the standard 4ème chemistry competency (étapes de potabilisation :
--- dégrillage, décantation, coagulation-floculation, filtration,
--- désinfection), contextualisé avec la SODECI, société ivoirienne de
--- distribution d'eau. Original wording throughout, not copied from any
--- source.
+-- REAL CONTENT sourced from coll.ecole-ci.org (Collège Numérique, logged-in
+-- access confirmed), course id 2007 "Lecon12_Traitement de l'eau", resource
+-- id 16380 ("Je lis le résumé de la leçon"), PDF "PC 4ème_L12_Traitement de
+-- leau.pdf" (6 pages, thème "Eau potable"). Rewritten in original wording —
+-- paraphrased, not copied from the source PDF — keeping the same technical
+-- content: nécessité de traiter l'eau et agents de pollution, étapes du
+-- traitement physico-chimique (floculation au sulfate d'alumine,
+-- décantation, filtration, désinfection à l'hypochlorite de calcium/à
+-- l'ozone/au dichlore, neutralisation du pH), interprétation d'une facture
+-- d'eau (ancien index/nouvel index/cubage consommé) contextualisée avec la
+-- SODECI, et bons comportements pour économiser l'eau.
 update public.courses
 set
   content = jsonb_build_object(
     'situation', jsonb_build_object(
-      'text', $$L'eau prélevée dans un fleuve ou une lagune est trouble, chargée de débris, de particules en suspension et de micro-organismes : elle n'est absolument pas consommable en l'état. Pourtant, quelques heures plus tard, elle arrive limpide et potable au robinet des habitations. Quelles étapes une usine de traitement fait-elle subir à cette eau pour la rendre propre à la consommation ?$$
+      'text', $$L'eau distribuée par la SODECI dans une ville de Côte d'Ivoire provient d'un lac qui reçoit des eaux de ruissellement, chargées d'impuretés. Pourtant, l'eau qui arrive au robinet des habitations est consommée sans aucun risque. Des élèves de 4ème, avec l'aide de leur professeur de Physique-Chimie, décident de comprendre par quelles étapes cette eau doit passer pour devenir potable.$$
     ),
     'sections', jsonb_build_array(
       jsonb_build_object(
-        'heading', $$De l'eau brute à l'eau potable$$,
-        'body', $$L'eau prélevée dans le milieu naturel (fleuve, lagune, forage) est appelée eau brute. Elle contient des déchets grossiers, des particules en suspension responsables de sa turbidité, ainsi que des micro-organismes, dont certains peuvent être pathogènes. Une usine de traitement lui fait subir plusieurs étapes successives pour la rendre potable, c'est-à-dire propre à la consommation humaine.$$,
-        'highlights', array[$$eau brute$$, $$eau potable$$]::text[],
-        'property', jsonb_build_object('label', $$Définition$$, 'text', $$L'eau potable est une eau qui peut être consommée sans risque pour la santé, débarrassée de ses impuretés et de ses micro-organismes pathogènes par un traitement adapté.$$),
-        'example', jsonb_build_object('statement', $$Pourquoi l'eau prélevée directement dans une lagune ne peut-elle pas être bue sans traitement préalable ?$$, 'solution', $$Parce qu'elle contient des particules en suspension et des micro-organismes, dont certains pathogènes, qui la rendent impropre à la consommation en l'état.$$),
-        'fixation', jsonb_build_object('question', $$Comment nomme-t-on l'eau prélevée directement dans le milieu naturel, avant tout traitement ?$$, 'solution', $$L'eau brute.$$)
+        'heading', $$Nécessité de traiter l'eau et agents de pollution$$,
+        'body', $$L'eau est indispensable à la vie, mais elle peut aussi en présenter un danger lorsqu'elle est polluée. C'est pourquoi elle doit être traitée avant toute consommation : en Côte d'Ivoire, c'est notamment le rôle de la SODECI, société de distribution d'eau. Parmi les agents responsables de la pollution de l'eau figurent les bactéries, les déchets organiques et les produits phytosanitaires (utilisés en agriculture).$$,
+        'highlights', array[$$SODECI$$, $$agents de pollution$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$L'eau doit être traitée avant consommation à cause de plusieurs agents de pollution : bactéries, déchets organiques, produits phytosanitaires.$$),
+        'example', jsonb_build_object('statement', $$Pourquoi une eau prélevée directement dans un lac ne peut-elle pas être bue sans traitement préalable ?$$, 'solution', $$Parce qu'elle peut contenir des agents de pollution comme des bactéries, des déchets organiques ou des produits phytosanitaires, dangereux pour la santé.$$),
+        'fixation', jsonb_build_object('question', $$Cite trois agents responsables de la pollution de l'eau.$$, 'solution', $$Les bactéries, les déchets organiques et les produits phytosanitaires.$$)
       ),
       jsonb_build_object(
-        'heading', $$Étapes mécaniques : dégrillage et décantation$$,
-        'body', $$Le dégrillage (ou tamisage) est la première étape : l'eau brute traverse des grilles qui retiennent les déchets les plus grossiers (branches, feuilles, débris). Vient ensuite la décantation, durant laquelle l'eau est laissée au repos dans de grands bassins, ce qui permet aux particules les plus lourdes en suspension de se déposer au fond sous l'effet de leur propre poids.$$,
-        'highlights', array[$$dégrillage$$, $$décantation$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Le dégrillage retient les déchets grossiers par une simple barrière physique. La décantation sépare les particules en suspension les plus lourdes par sédimentation naturelle, sans intervention chimique.$$),
-        'example', jsonb_build_object('statement', $$Après un passage dans un bassin de décantation, l'eau est déjà plus claire mais reste encore légèrement trouble. Pourquoi la décantation seule ne suffit-elle pas à clarifier totalement l'eau ?$$, 'solution', $$Parce que les particules les plus fines restent en suspension trop longtemps pour se déposer par simple gravité : une étape supplémentaire (coagulation-floculation) est nécessaire pour les éliminer.$$),
-        'fixation', jsonb_build_object('question', $$Quelle étape du traitement de l'eau retient les déchets les plus grossiers grâce à des grilles ?$$, 'solution', $$Le dégrillage (ou tamisage).$$)
-      ),
-      jsonb_build_object(
-        'heading', $$Coagulation-floculation et filtration$$,
-        'body', $$Pour éliminer les particules fines qui ne décantent pas naturellement, on ajoute à l'eau un réactif appelé coagulant : les particules fines s'agglomèrent alors en amas plus gros, appelés flocons, qui peuvent ensuite se déposer ou être retenus. L'eau traverse enfin des filtres, souvent constitués de sable et de charbon actif, qui retiennent les dernières particules en suspension.$$,
-        'highlights', array[$$coagulation-floculation$$, $$filtration$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$La coagulation-floculation agglomère les particules fines en flocons plus faciles à séparer. La filtration, à travers du sable et du charbon actif, retient les dernières impuretés et clarifie l'eau.$$),
-        'example', jsonb_build_object('statement', $$Pourquoi ajoute-t-on un coagulant à l'eau avant la filtration ?$$, 'solution', $$Pour agglomérer les fines particules en suspension en flocons plus gros, plus faciles à retenir lors de la filtration.$$),
-        'fixation', jsonb_build_object('question', $$À travers quels matériaux l'eau passe-t-elle généralement lors de l'étape de filtration ?$$, 'solution', $$Du sable et du charbon actif.$$)
-      ),
-      jsonb_build_object(
-        'heading', $$Désinfection et distribution$$,
-        'body', $$Même filtrée, l'eau peut encore contenir des micro-organismes invisibles. La désinfection, réalisée par ajout de chlore (chloration) ou par ozonation, élimine les micro-organismes pathogènes restants et protège l'eau contre une nouvelle contamination pendant son acheminement. L'eau potable est ensuite stockée dans des châteaux d'eau avant d'être distribuée jusqu'aux robinets, comme le fait la SODECI en Côte d'Ivoire.$$,
-        'highlights', array[$$désinfection$$, $$chloration$$, $$distribution$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$La désinfection (chloration ou ozonation) élimine les micro-organismes pathogènes restants après la filtration, rendant l'eau potable et sûre pour la consommation.$$),
-        'example', jsonb_build_object('statement', $$Pourquoi ajoute-t-on du chlore à l'eau potable avant sa distribution, même après une filtration efficace ?$$, 'solution', $$Pour éliminer les micro-organismes pathogènes restants et protéger l'eau d'une nouvelle contamination pendant son transport jusqu'aux robinets.$$),
-        'fixation', jsonb_build_object('question', $$Quelle société assure le traitement et la distribution de l'eau potable en Côte d'Ivoire ?$$, 'solution', $$La SODECI (Société de Distribution d'Eau de Côte d'Ivoire).$$),
+        'heading', $$Les étapes du traitement physico-chimique de l'eau$$,
+        'body', $$Le traitement de l'eau brute suit plusieurs étapes successives. La floculation consiste à injecter dans l'eau un réactif, le sulfate d'alumine, qui provoque la formation de flocons regroupant la matière organique en suspension. Vient ensuite la décantation, durant laquelle l'eau est laissée au repos pour que ces flocons se déposent. La filtration fait ensuite passer l'eau à travers un filtre qui ne laisse passer que les particules les plus légères. La désinfection (ou stérilisation), réalisée à l'aide d'hypochlorite de calcium, d'ozone ou de dichlore gazeux, détruit les micro-organismes susceptibles de transmettre des maladies. Enfin, la neutralisation ajuste le pH de l'eau pour le rendre neutre (pH = 7).$$,
+        'highlights', array[$$floculation$$, $$décantation$$, $$filtration$$, $$désinfection$$, $$neutralisation$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Les étapes du traitement physico-chimique de l'eau se déroulent toujours dans le même ordre : floculation, décantation, filtration, désinfection, puis neutralisation.$$),
+        'example', jsonb_build_object('statement', $$Pourquoi ajoute-t-on du sulfate d'alumine à l'eau avant l'étape de décantation ?$$, 'solution', $$Le sulfate d'alumine provoque la floculation : il regroupe les particules organiques en suspension en flocons plus gros, qui pourront ensuite se déposer lors de la décantation.$$),
+        'fixation', jsonb_build_object('question', $$Range dans l'ordre les cinq étapes du traitement physico-chimique de l'eau.$$, 'solution', $$Floculation, décantation, filtration, désinfection, neutralisation.$$),
         'table', jsonb_build_object(
           'headers', array[$$Étape$$, $$Rôle$$]::text[],
           'rows', jsonb_build_array(
-            jsonb_build_array($$Dégrillage$$, $$Retenir les déchets grossiers$$),
-            jsonb_build_array($$Décantation$$, $$Déposer les particules lourdes en suspension$$),
-            jsonb_build_array($$Coagulation-floculation$$, $$Agglomérer les particules fines en flocons$$),
-            jsonb_build_array($$Filtration$$, $$Retenir les dernières impuretés (sable, charbon actif)$$),
-            jsonb_build_array($$Désinfection$$, $$Éliminer les micro-organismes pathogènes$$)
+            jsonb_build_array($$Floculation$$, $$Regrouper les particules en flocons grâce au sulfate d'alumine$$),
+            jsonb_build_array($$Décantation$$, $$Laisser les flocons se déposer au repos$$),
+            jsonb_build_array($$Filtration$$, $$Ne laisser passer que les particules légères$$),
+            jsonb_build_array($$Désinfection$$, $$Détruire les micro-organismes pathogènes$$),
+            jsonb_build_array($$Neutralisation$$, $$Ramener le pH de l'eau à une valeur neutre (pH = 7)$$)
           )
         )
+      ),
+      jsonb_build_object(
+        'heading', $$Interprétation d'une facture d'eau$$,
+        'body', $$Une facture d'eau, comme celle de la SODECI, se base sur des relevés appelés index. L'ancien index correspond à l'index relevé lors de la facture précédente, tandis que le nouvel index correspond au relevé actuel du compteur. Le cubage consommé, exprimé en mètres cubes, s'obtient en calculant la différence entre le nouvel index et l'ancien index.$$,
+        'highlights', array[$$ancien index$$, $$nouvel index$$, $$cubage consommé$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Cubage consommé = Nouvel index − Ancien index.$$),
+        'example', jsonb_build_object('statement', $$Sur une facture, l'ancien index est de 1 210 m3 et le nouvel index de 1 305 m3. Calcule le cubage consommé.$$, 'solution', $$Cubage consommé = 1 305 − 1 210 = 95 m3.$$),
+        'fixation', jsonb_build_object('question', $$Que représente le cubage consommé indiqué sur une facture d'eau ?$$, 'solution', $$Il représente la quantité d'eau, en mètres cubes, consommée depuis le relevé précédent ; il s'obtient en soustrayant l'ancien index du nouvel index.$$)
+      ),
+      jsonb_build_object(
+        'heading', $$Bons comportements pour économiser l'eau$$,
+        'body', $$La préservation de l'eau est l'affaire de tous : quelques gestes simples permettent de réduire de 20 à 30 % la consommation d'eau d'un foyer. On peut par exemple préférer les douches aux bains, ne pas laisser couler l'eau en se brossant les dents, utiliser une chasse d'eau à double commande, laver une voiture à l'éponge plutôt qu'au jet, arroser le jardin le soir pour limiter l'évaporation, et être économe en eau lors du lavage des légumes ou des vêtements.$$,
+        'highlights', array[$$économie d'eau$$, $$gestes éco-citoyens$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Des gestes éco-citoyens simples (douches plutôt que bains, chasse d'eau à double commande, arrosage du soir...) peuvent réduire de 20 à 30 % la consommation d'eau d'un foyer.$$),
+        'example', jsonb_build_object('statement', $$Pourquoi conseille-t-on d'arroser un jardin le soir plutôt qu'en pleine journée ?$$, 'solution', $$Parce que la chaleur du jour favorise l'évaporation de l'eau ; arroser le soir limite cette évaporation et permet à l'eau de mieux profiter aux plantes.$$),
+        'fixation', jsonb_build_object('question', $$Cite deux gestes simples permettant de réduire la consommation d'eau d'un foyer.$$, 'solution', $$Par exemple : préférer les douches aux bains, et ne pas laisser couler l'eau en se brossant les dents.$$)
       )
     ),
     'evaluation', jsonb_build_object(
-      'scenario', $$Une usine de traitement d'eau prélève de l'eau trouble dans un fleuve. Elle la fait successivement passer par des grilles, puis dans un grand bassin de repos, puis lui ajoute un réactif provoquant la formation de flocons, avant de la filtrer sur du sable et de lui ajouter du chlore.$$,
+      'scenario', $$Dans un village situé loin d'une usine de traitement, les habitants sont obligés d'utiliser l'eau d'un marigot. L'infirmier du village sensibilise la population sur les risques de maladies liés à la consommation de cette eau non traitée.$$,
       'questions', array[
-        $$Nomme, dans l'ordre, chacune des cinq étapes décrites dans ce scénario.$$,
-        $$Quel est le rôle du réactif ajouté avant la filtration ?$$,
-        $$Pourquoi l'ajout de chlore est-il indispensable, même après la filtration sur sable ?$$
+        $$Cite deux agents responsables de la pollution de l'eau du marigot.$$,
+        $$Énumère, dans l'ordre, les étapes du traitement physico-chimique qui permettraient de rendre cette eau potable.$$,
+        $$Propose une méthode simple, adaptée à un village sans usine de traitement, pour rendre l'eau du marigot plus sûre à consommer.$$
       ]::text[]
     )
   ),
   exercise_questions = jsonb_build_array(
     jsonb_build_object(
-      'question', $$Quelle est la première étape du traitement de l'eau, qui retient les déchets grossiers grâce à des grilles ?$$,
-      'hint', $$Elle porte aussi le nom de tamisage.$$,
-      'expected', $$Le dégrillage.$$
+      'question', $$Quel réactif utilise-t-on lors de l'étape de floculation du traitement de l'eau ?$$,
+      'hint', $$C'est un sel d'aluminium.$$,
+      'expected', $$Le sulfate d'alumine.$$
     ),
     jsonb_build_object(
-      'question', $$Quel est le rôle de la décantation dans le traitement de l'eau ?$$,
-      'hint', $$Pense à ce qui se passe quand l'eau est laissée au repos.$$,
-      'expected', $$Elle permet aux particules lourdes en suspension de se déposer au fond du bassin sous l'effet de leur propre poids.$$
+      'question', $$Quelle étape du traitement de l'eau permet de détruire les micro-organismes susceptibles de transmettre des maladies ?$$,
+      'hint', $$Elle peut être réalisée à l'ozone, au chlore ou à l'hypochlorite de calcium.$$,
+      'expected', $$La désinfection (ou stérilisation).$$
     ),
     jsonb_build_object(
-      'question', $$À travers quels matériaux l'eau passe-t-elle généralement lors de la filtration ?$$,
-      'hint', $$Ce sont deux matériaux naturels très utilisés en filtration.$$,
-      'expected', $$Du sable et du charbon actif.$$
+      'question', $$Sur une facture d'eau, l'ancien index est de 980 m3 et le nouvel index de 1 040 m3. Calcule le cubage consommé.$$,
+      'hint', $$Cubage consommé = Nouvel index − Ancien index.$$,
+      'expected', $$Cubage consommé = 1 040 − 980 = 60 m3.$$
     ),
     jsonb_build_object(
-      'question', $$Pourquoi la désinfection (chloration) est-elle une étape indispensable du traitement de l'eau ?$$,
-      'hint', $$Pense à ce que la filtration seule ne peut pas éliminer.$$,
-      'expected', $$Parce qu'elle élimine les micro-organismes pathogènes restants, invisibles, que la filtration seule ne suffit pas toujours à retenir, rendant ainsi l'eau sûre pour la consommation.$$
+      'question', $$Cite un geste simple permettant de réduire la consommation d'eau d'un foyer.$$,
+      'hint', $$Pense à la douche, à la chasse d'eau ou à l'arrosage du jardin.$$,
+      'expected', $$Par exemple : préférer les douches aux bains, utiliser une chasse d'eau à double commande, ou arroser le jardin le soir.$$
     )
   ),
   content_generated_at = now()

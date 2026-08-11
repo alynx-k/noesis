@@ -16,7 +16,7 @@ initNotificationHandler();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   // Purely a visual overlay shown for the first couple seconds — everything
-  // underneath (auth check, grade/LV2/placement/diagnostic gating) mounts
+  // underneath (auth check, grade/LV2/placement gating) mounts
   // and runs exactly as before, untouched; this just hides it briefly.
   const [showSplash, setShowSplash] = useState(true);
 
@@ -31,7 +31,6 @@ export default function RootLayout() {
               <Stack.Screen name="select-grade" options={{ headerShown: false }} />
               <Stack.Screen name="select-language" options={{ headerShown: false }} />
               <Stack.Screen name="placement" options={{ headerShown: false }} />
-              <Stack.Screen name="diagnostic" options={{ headerShown: false }} />
               <Stack.Screen name="subject/[disciplineId]" options={{ headerShown: false }} />
               <Stack.Screen name="course/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="exercise" options={{ headerShown: false }} />

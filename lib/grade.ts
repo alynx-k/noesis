@@ -1,14 +1,16 @@
-import type { GradeId } from '@/constants/grades';
+import type { GradeId, SeriesId } from '@/constants/grades';
 import { supabase } from '@/lib/supabase';
 
 export type GradeProfile = {
   grade: GradeId;
+  serie: SeriesId | null;
   firstSelectedAt: Date;
   lastChangedAt: Date;
 };
 
 type ProfileRow = {
   grade: GradeId;
+  serie: SeriesId | null;
   grade_first_selected_at: string;
   grade_last_changed_at: string;
 };
@@ -16,6 +18,7 @@ type ProfileRow = {
 function rowToProfile(row: ProfileRow): GradeProfile {
   return {
     grade: row.grade,
+    serie: row.serie,
     firstSelectedAt: new Date(row.grade_first_selected_at),
     lastChangedAt: new Date(row.grade_last_changed_at),
   };
@@ -24,7 +27,7 @@ function rowToProfile(row: ProfileRow): GradeProfile {
 export async function getGradeProfile(): Promise<GradeProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('grade, grade_first_selected_at, grade_last_changed_at')
+    .select('grade, serie, grade_first_selected_at, grade_last_changed_at')
     .maybeSingle();
 
   if (error) {
@@ -37,11 +40,16 @@ export async function getGradeProfile(): Promise<GradeProfile | null> {
   return rowToProfile(data as ProfileRow);
 }
 
-export async function setInitialGrade(userId: string, grade: GradeId): Promise<{ error: string | null }> {
+export async function setInitialGrade(
+  userId: string,
+  grade: GradeId,
+  serie: SeriesId | null = null,
+): Promise<{ error: string | null }> {
   const now = new Date().toISOString();
   const { error } = await supabase.from('profiles').insert({
     user_id: userId,
     grade,
+    serie,
     grade_first_selected_at: now,
     grade_last_changed_at: now,
   });
@@ -66,10 +74,14 @@ export function getGradeChangeEligibility(_profile: GradeProfile, _now: Date = n
   return { allowed: true, nextAllowedDate: null };
 }
 
-export async function updateGrade(userId: string, grade: GradeId): Promise<{ error: string | null }> {
+export async function updateGrade(
+  userId: string,
+  grade: GradeId,
+  serie: SeriesId | null = null,
+): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('profiles')
-    .update({ grade, grade_last_changed_at: new Date().toISOString() })
+    .update({ grade, serie, grade_last_changed_at: new Date().toISOString() })
     .eq('user_id', userId);
 
   if (error) {

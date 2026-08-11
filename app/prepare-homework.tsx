@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { DISCIPLINES } from '@/constants/disciplines';
+import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
@@ -53,9 +53,14 @@ export default function PrepareHomeworkScreen() {
   );
 
   useEffect(() => {
-    getLv2().then((lv2Choice) => {
+    Promise.all([getLv2(), getGradeProfile()]).then(([lv2Choice, profile]) => {
+      const disciplineIdsForGrade = profile ? getDisciplineIdsFor(profile.grade, profile.serie) : DISCIPLINES.map((d) => d.id);
       setAvailableSubjects(
-        DISCIPLINES.filter((d) => (d.id !== 'espagnol' && d.id !== 'allemand') || d.id === lv2Choice),
+        DISCIPLINES.filter(
+          (d) =>
+            disciplineIdsForGrade.includes(d.id) &&
+            ((d.id !== 'espagnol' && d.id !== 'allemand') || d.id === lv2Choice),
+        ),
       );
     });
   }, []);
@@ -73,7 +78,7 @@ export default function PrepareHomeworkScreen() {
     }
 
     const discipline = DISCIPLINES.find((d) => d.id === disciplineId);
-    const allCourses = await getCoursesForGrade(profile.grade);
+    const allCourses = await getCoursesForGrade(profile.grade, profile.serie);
     setCourses(allCourses.filter((c) => discipline?.subjects.includes(c.subject)));
     setLoadingCourses(false);
   };

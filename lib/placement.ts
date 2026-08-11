@@ -1,5 +1,5 @@
 import type { Subject } from '@/constants/courses';
-import type { GradeId } from '@/constants/grades';
+import type { GradeId, SeriesId } from '@/constants/grades';
 import { getCoursesForGrade } from '@/lib/courses';
 import { initializeNeutralReviewState } from '@/lib/spaced-repetition';
 
@@ -7,8 +7,9 @@ export async function applyPlacement(
   userId: string,
   grade: GradeId,
   lastSeenBySubject: Partial<Record<Subject, string>>,
+  serie: SeriesId | null = null,
 ): Promise<void> {
-  const coursesForGrade = await getCoursesForGrade(grade);
+  const coursesForGrade = await getCoursesForGrade(grade, serie);
   const tasks: Promise<void>[] = [];
 
   for (const subject of Object.keys(lastSeenBySubject) as Subject[]) {

@@ -38,6 +38,8 @@ const MAPPING = {
   'atom': 'science',
   'flag.fill': 'flag',
   'character.book.closed.fill': 'language',
+  'brain.head.profile': 'psychology',
+  'desktopcomputer': 'computer',
 } as IconMapping;
 
 /**

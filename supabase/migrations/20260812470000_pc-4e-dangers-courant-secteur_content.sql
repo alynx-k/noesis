@@ -1,90 +1,93 @@
 -- Physique-Chimie 4ème — Les dangers du courant du secteur.
--- FALLBACK content (see header of
--- 20260812400000_pc-4e-sources-recepteurs-lumiere_content.sql for the
--- sourcing attempts this pass). Written from solid general knowledge of
--- the standard 4ème electrical-safety competency (électrisation,
--- électrocution, contact direct/indirect, seuils de tension de sécurité,
--- rôle de la terre et du disjoncteur différentiel). Numeric safety
--- thresholds (25 V / 50 V) reflect the commonly taught conventional
--- limit values found in standard French/Ivorian collège textbooks;
--- kept qualitative where precision was uncertain. Original wording
--- throughout, not copied from any source.
+-- REAL CONTENT sourced from coll.ecole-ci.org (Collège Numérique, logged-in
+-- access confirmed), course id 2011 "Lecon8_Dangers du Courant du secteur",
+-- resource id 16428 ("Je lis le résumé de la leçon"), PDF "PC 4ème_L8_Dangers
+-- du Courant du secteur ASSEU.pdf" (6 pages, thème "Courants et tensions
+-- alternatifs"). Rewritten in original wording — paraphrased, not copied
+-- from the source PDF — keeping the same technical content: caractéristiques
+-- du courant du secteur (Ueff=220V, Um=1,41xUeff=310V, T=20ms, N=50Hz), les
+-- trois bornes P/N/T d'une prise identifiées au tournevis testeur,
+-- électrisation/électrocution/court-circuit, seuil de danger 25V,
+-- dispositifs de protection (fusible, disjoncteur général, stabilisateur,
+-- onduleur, prise de terre, disjoncteur différentiel à 30mA) et règles de
+-- sécurité.
 update public.courses
 set
   content = jsonb_build_object(
     'situation', jsonb_build_object(
-      'text', $$Un technicien intervient sur une installation électrique et prend soin de couper le disjoncteur avant de toucher le moindre fil, même isolé. Il rappelle aussi qu'il ne faut jamais manipuler un appareil électrique avec les mains mouillées. Pourquoi la tension du secteur, si utile au quotidien, représente-t-elle un danger réel pour le corps humain ?$$
+      'text', $$Un grave incendie survenu une nuit dans un quartier d'Abidjan a détruit une partie d'une maison. Les voisins pensaient d'abord à un acte criminel, avant d'apprendre que l'incendie était dû à un court-circuit électrique. Un élève de 4ème, habitant du quartier, prend alors conscience du danger que représente le courant du secteur et décide, avec ses camarades, de comprendre ce danger et les moyens de s'en protéger.$$
     ),
     'sections', jsonb_build_array(
       jsonb_build_object(
-        'heading', $$Le corps humain, un conducteur électrique$$,
-        'body', $$Le corps humain, en particulier lorsqu'il est humide (peau mouillée, transpiration), conduit le courant électrique. Si une personne touche un élément sous tension tout en étant en contact avec la terre (le sol, un objet relié au sol), un courant électrique peut la traverser.$$,
-        'highlights', array[$$corps humain$$, $$conducteur$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Le corps humain conduit le courant électrique, d'autant mieux qu'il est humide. Le passage d'un courant à travers le corps est appelé électrisation ; lorsqu'il est suffisamment intense pour être mortel, on parle d'électrocution.$$),
-        'example', jsonb_build_object('statement', $$Pourquoi est-il particulièrement dangereux de toucher un appareil électrique avec les mains mouillées ?$$, 'solution', $$L'eau rend la peau bien plus conductrice, ce qui facilite le passage d'un courant électrique à travers le corps en cas de contact avec un élément sous tension.$$),
-        'fixation', jsonb_build_object('question', $$Comment appelle-t-on le passage d'un courant électrique à travers le corps humain ?$$, 'solution', $$L'électrisation (électrocution si elle est mortelle).$$)
+        'heading', $$Caractéristiques du courant du secteur$$,
+        'body', $$Le courant du secteur est le courant fourni par le réseau de distribution d'électricité ; en Côte d'Ivoire, cette distribution est assurée par la CIE. La tension efficace qu'il délivre vaut 220 V. Étant une tension alternative sinusoïdale, sa valeur instantanée atteint en réalité une tension maximale Um, liée à la tension efficace Ueff par la relation Um = 1,41 × Ueff, soit environ 310 V pour le secteur ivoirien. Sa période T, durée d'un motif complet visible à l'oscilloscope, vaut 20 ms (0,02 s), ce qui correspond à une fréquence N = 1/T = 50 Hz.$$,
+        'highlights', array[$$courant du secteur$$, $$tension efficace$$, $$tension maximale$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Um = 1,41 × Ueff. En Côte d'Ivoire : Ueff = 220 V, Um ≈ 310 V, T = 20 ms = 0,02 s, et la fréquence N = 1/T = 50 Hz.$$),
+        'example', jsonb_build_object('statement', $$Une prise du secteur affiche une tension efficace de 225 V. Calcule la tension maximale correspondante.$$, 'solution', $$Um = 1,41 × 225 ≈ 317 V.$$),
+        'fixation', jsonb_build_object('question', $$Quelle formule relie la tension maximale et la tension efficace d'un courant alternatif sinusoïdal, et quelle est la fréquence du courant du secteur en Côte d'Ivoire ?$$, 'solution', $$Um = 1,41 × Ueff ; la fréquence du secteur ivoirien est N = 50 Hz.$$)
       ),
       jsonb_build_object(
-        'heading', $$Contact direct et contact indirect$$,
-        'body', $$On distingue deux types de contacts dangereux avec l'électricité. Le contact direct se produit lorsqu'une personne touche directement un conducteur normalement sous tension (un fil dénudé, une borne). Le contact indirect se produit lorsqu'une personne touche la carcasse métallique d'un appareil devenue accidentellement sous tension à la suite d'un défaut d'isolation.$$,
-        'highlights', array[$$contact direct$$, $$contact indirect$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Contact direct : contact avec un conducteur normalement sous tension. Contact indirect : contact avec une masse métallique accidentellement mise sous tension par un défaut d'isolation.$$),
-        'example', jsonb_build_object('statement', $$Une personne touche la carcasse métallique d'un lave-linge défectueux, dont l'isolation interne est endommagée, et ressent une décharge. De quel type de contact s'agit-il ?$$, 'solution', $$C'est un contact indirect : la carcasse, normalement non alimentée, est devenue accidentellement sous tension à cause d'un défaut d'isolation.$$),
-        'fixation', jsonb_build_object('question', $$Un enfant touche un fil électrique dénudé, normalement sous tension. De quel type de contact s'agit-il ?$$, 'solution', $$D'un contact direct.$$),
+        'heading', $$Les trois bornes d'une prise du secteur$$,
+        'body', $$Une prise de courant du secteur comporte trois bornes distinctes. En approchant un tournevis testeur (un petit tournevis muni d'une lampe témoin) de chacune des bornes, tout en le touchant du doigt, la lampe ne s'allume que pour une seule borne : c'est la phase, notée P. Pour les deux autres bornes, la lampe reste éteinte : ce sont le neutre, noté N, et la prise de terre, notée T.$$,
+        'highlights', array[$$phase$$, $$neutre$$, $$terre$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Une prise du secteur possède trois bornes : la phase P (seule borne à allumer la lampe du tournevis testeur), le neutre N et la terre T (lampe éteinte pour ces deux bornes).$$),
+        'example', jsonb_build_object('statement', $$Un électricien approche un tournevis testeur des trois bornes d'une prise. La lampe témoin ne s'allume que pour une seule borne. Quel est le nom de cette borne ?$$, 'solution', $$C'est la phase (P), seule borne capable d'allumer la lampe du tournevis testeur.$$),
+        'fixation', jsonb_build_object('question', $$Comment reconnaît-on la borne de phase d'une prise de courant ?$$, 'solution', $$C'est la seule borne pour laquelle un tournevis testeur allume sa lampe témoin.$$)
+      ),
+      jsonb_build_object(
+        'heading', $$Électrisation, électrocution et court-circuit$$,
+        'body', $$Le contact du corps humain avec le courant du secteur peut provoquer une électrisation : un choc physiologique violent (brûlure, tremblement, tétanisation, arrêt cardiaque ou asphyxie) causé par le passage du courant à travers l'organisme. Lorsque ce passage de courant entraîne la mort, on parle d'électrocution. On considère qu'à partir d'environ 25 V, le courant traversant le corps humain devient dangereux, en particulier lorsque celui-ci établit un contact entre la phase et le neutre, ou entre la phase et la terre. Un court-circuit est, quant à lui, la connexion directe des bornes d'un élément du circuit par un simple fil : il peut échauffer les fils, détruire les isolants et déclencher un incendie. La surcharge, qui consiste à brancher trop d'appareils sur une même prise, est une autre cause fréquente de danger pour les installations, en provoquant une surintensité pouvant elle aussi provoquer un incendie.$$,
+        'highlights', array[$$électrisation$$, $$électrocution$$, $$court-circuit$$]::text[],
+        'property', jsonb_build_object('label', $$Définitions$$, 'text', $$Électrisation : choc physiologique dû au passage du courant dans le corps, sans décès. Électrocution : électrisation mortelle. Court-circuit : connexion directe des bornes d'un élément du circuit par un fil. Seuil de danger pour le corps humain : environ 25 V.$$),
+        'example', jsonb_build_object('statement', $$Une personne touche accidentellement à la fois le fil de phase et le fil de neutre d'une installation, et en meurt. Comment appelle-t-on cet accident ?$$, 'solution', $$C'est une électrocution : une électrisation qui a entraîné la mort de la personne.$$),
+        'fixation', jsonb_build_object('question', $$Que se passe-t-il pour les fils et les isolants lorsqu'un court-circuit se produit entre la phase et le neutre ?$$, 'solution', $$Les fils s'échauffent, les isolants sont détruits, et un incendie peut se déclencher.$$),
         'table', jsonb_build_object(
-          'headers', array[$$Type de contact$$, $$Élément touché$$]::text[],
+          'headers', array[$$Terme$$, $$Définition$$]::text[],
           'rows', jsonb_build_array(
-            jsonb_build_array($$Contact direct$$, $$Conducteur normalement sous tension (fil dénudé, borne)$$),
-            jsonb_build_array($$Contact indirect$$, $$Masse métallique accidentellement sous tension (défaut d'isolation)$$)
+            jsonb_build_array($$Électrisation$$, $$Choc physiologique dû au passage du courant, sans décès$$),
+            jsonb_build_array($$Électrocution$$, $$Électrisation mortelle$$),
+            jsonb_build_array($$Court-circuit$$, $$Connexion directe des bornes d'un élément par un fil$$)
           )
         )
       ),
       jsonb_build_object(
-        'heading', $$Seuil de tension dangereuse$$,
-        'body', $$Une tension n'est pas dangereuse en elle-même à toute valeur : le risque dépend de la tension appliquée au corps et de l'état de la peau (sèche ou humide). Les tensions usuellement enseignées comme limites de sécurité sont plus basses en milieu humide qu'en milieu sec, car l'humidité diminue fortement la résistance du corps.$$,
-        'highlights', array[$$tension de sécurité$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$On considère généralement qu'une tension est sans danger si elle reste inférieure à environ 25 V en milieu humide et à environ 50 V en milieu sec ; la tension du secteur, 220 V, dépasse largement ces deux seuils et présente donc un danger réel.$$),
-        'example', jsonb_build_object('statement', $$Pourquoi une salle de bains est-elle un lieu où les installations électriques doivent respecter des règles de sécurité renforcées ?$$, 'solution', $$Parce que l'humidité y abaisse le seuil de tension dangereuse pour le corps humain, rendant même des tensions modérées potentiellement risquées.$$),
-        'fixation', jsonb_build_object('question', $$La tension du secteur, 220 V, est-elle inférieure ou supérieure aux seuils de tension considérés comme sans danger ?$$, 'solution', $$Elle leur est largement supérieure : elle représente donc un danger réel pour le corps humain.$$)
-      ),
-      jsonb_build_object(
-        'heading', $$Dispositifs de protection : la terre et le disjoncteur différentiel$$,
-        'body', $$Pour limiter les risques de contact indirect, les carcasses métalliques des appareils sont reliées à la terre par le fil de terre des prises. En cas de défaut d'isolation, le courant de fuite s'écoule alors préférentiellement vers la terre plutôt qu'à travers une personne qui toucherait l'appareil. Un disjoncteur différentiel surveille en permanence l'égalité des courants entrant et sortant d'une installation ; dès qu'il détecte une fuite de courant vers la terre, il coupe automatiquement l'alimentation.$$,
-        'highlights', array[$$fil de terre$$, $$disjoncteur différentiel$$]::text[],
-        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Le fil de terre évacue vers le sol un courant de fuite en cas de défaut d'isolation. Le disjoncteur différentiel détecte ce déséquilibre de courant et coupe automatiquement l'alimentation électrique, protégeant les personnes contre les contacts indirects.$$),
-        'example', jsonb_build_object('statement', $$Un appareil défectueux, dont la carcasse est reliée à la terre, laisse fuir un courant vers le sol. Quel dispositif va couper automatiquement l'alimentation pour protéger l'utilisateur ?$$, 'solution', $$Le disjoncteur différentiel, qui détecte la fuite de courant vers la terre et coupe l'alimentation.$$),
-        'fixation', jsonb_build_object('question', $$Quel rôle joue le fil de terre d'une prise électrique en cas de défaut d'isolation d'un appareil ?$$, 'solution', $$Il évacue le courant de fuite vers le sol, limitant le risque qu'il traverse une personne touchant l'appareil.$$)
+        'heading', $$Dispositifs de protection et règles de sécurité$$,
+        'body', $$Pour protéger les appareils, on utilise un fusible (un petit fil qui fond et ouvre le circuit dès que l'intensité devient trop élevée), un disjoncteur général (qui coupe l'électricité du bâtiment si l'intensité totale dépasse la valeur souscrite), un stabilisateur (qui délivre une tension stable malgré les variations du secteur) ou un onduleur (qui stabilise la tension tout en accumulant de l'énergie pour alimenter brièvement les appareils lors d'une coupure brutale, le temps de les éteindre correctement). Pour protéger les personnes, la prise de terre dévie le courant de fuite vers le sol plutôt qu'à travers le corps en cas de contact accidentel, et le disjoncteur différentiel coupe automatiquement le circuit dès que la différence entre les intensités des fils de phase et de neutre atteint 30 mA. Parmi les règles de sécurité à respecter : ne jamais toucher un fil dénudé, débrancher un appareil avant toute réparation, éviter de brancher trop d'appareils sur une même prise, ne jamais manipuler un appareil avec les mains ou les pieds humides, couper le courant avant toute intervention sur l'installation, et ne jamais introduire d'objets métalliques dans une prise.$$,
+        'highlights', array[$$disjoncteur différentiel$$, $$prise de terre$$, $$règles de sécurité$$]::text[],
+        'property', jsonb_build_object('label', $$Propriété$$, 'text', $$Le disjoncteur différentiel coupe le circuit dès que la différence entre les intensités de phase et de neutre atteint 30 mA, protégeant les personnes en s'appuyant sur la prise de terre qui dévie le courant de fuite vers le sol.$$),
+        'example', jsonb_build_object('statement', $$Le disjoncteur différentiel d'une maison se déclenche brusquement alors qu'un appareil défectueux laisse fuir du courant vers sa carcasse, reliée à la terre. Pourquoi ce déclenchement protège-t-il les occupants ?$$, 'solution', $$Le disjoncteur différentiel détecte que les intensités de phase et de neutre ne sont plus égales à cause de la fuite vers la terre ; il coupe alors l'alimentation avant qu'une personne touchant l'appareil ne soit électrisée.$$),
+        'fixation', jsonb_build_object('question', $$Cite deux règles de sécurité à respecter pour éviter les dangers du courant du secteur.$$, 'solution', $$Par exemple : ne jamais toucher un fil dénudé, et couper le courant avant toute intervention sur une installation.$$)
       )
     ),
     'evaluation', jsonb_build_object(
-      'scenario', $$Dans une maison, un fer à repasser présente un défaut d'isolation interne : sa carcasse métallique, normalement reliée à la terre, devient accidentellement sous tension. Le disjoncteur différentiel de l'installation se déclenche aussitôt et coupe l'alimentation.$$,
+      'scenario', $$Dans un atelier, un technicien remarque que le disjoncteur général se déclenche chaque fois que plusieurs machines fonctionnent en même temps sur la même ligne. Un autre jour, un fer à souder défectueux, dont la carcasse est reliée à la terre, déclenche cette fois le disjoncteur différentiel.$$,
       'questions', array[
-        $$Si une personne avait touché la carcasse du fer à repasser avant le déclenchement, de quel type de contact aurait-il été victime ?$$,
-        $$Quel rôle a joué la liaison à la terre de la carcasse dans cet incident ?$$,
-        $$Pourquoi le disjoncteur différentiel s'est-il déclenché automatiquement ?$$
+        $$Pourquoi le disjoncteur général se déclenche-t-il lorsque trop de machines fonctionnent simultanément sur la même ligne ?$$,
+        $$Quel phénomène a permis au disjoncteur différentiel de détecter le défaut du fer à souder ?$$,
+        $$Cite deux règles de sécurité que le technicien doit malgré tout respecter pour éviter tout risque d'électrisation.$$
       ]::text[]
     )
   ),
   exercise_questions = jsonb_build_array(
     jsonb_build_object(
-      'question', $$Quelle est la différence entre un contact direct et un contact indirect avec l'électricité ?$$,
-      'hint', $$Pense à l'élément touché : conducteur sous tension ou carcasse accidentellement sous tension.$$,
-      'expected', $$Le contact direct est le contact avec un conducteur normalement sous tension ; le contact indirect est le contact avec une masse métallique accidentellement sous tension à la suite d'un défaut d'isolation.$$
+      'question', $$Quelle est la tension efficace et la fréquence du courant du secteur en Côte d'Ivoire ?$$,
+      'hint', $$Ce sont deux valeurs caractéristiques fournies par la CIE.$$,
+      'expected', $$Ueff = 220 V et N = 50 Hz.$$
     ),
     jsonb_build_object(
-      'question', $$Pourquoi le corps humain est-il plus dangereusement traversé par le courant lorsqu'il est humide ?$$,
-      'hint', $$Pense à la conductivité de l'eau.$$,
-      'expected', $$L'humidité augmente fortement la conductivité de la peau, ce qui facilite le passage du courant à travers le corps.$$
+      'question', $$Comment identifie-t-on la borne de phase d'une prise à l'aide d'un tournevis testeur ?$$,
+      'hint', $$Pense à la lampe témoin du tournevis.$$,
+      'expected', $$C'est la seule borne qui allume la lampe du tournevis testeur.$$
     ),
     jsonb_build_object(
-      'question', $$Quel dispositif coupe automatiquement l'alimentation électrique en cas de fuite de courant vers la terre ?$$,
-      'hint', $$C'est un appareil de sécurité installé dans le tableau électrique.$$,
+      'question', $$Quelle est la différence entre électrisation et électrocution ?$$,
+      'hint', $$L'une des deux est mortelle, l'autre non.$$,
+      'expected', $$L'électrisation est un choc physiologique dû au courant, sans décès ; l'électrocution est une électrisation qui entraîne la mort.$$
+    ),
+    jsonb_build_object(
+      'question', $$Quel dispositif protège une personne en coupant le circuit dès qu'une fuite de courant de 30 mA est détectée entre la phase et le neutre ?$$,
+      'hint', $$Il est associé au fil de terre.$$,
       'expected', $$Le disjoncteur différentiel.$$
-    ),
-    jsonb_build_object(
-      'question', $$La tension du secteur, 220 V, est-elle sans danger pour le corps humain ? Justifie.$$,
-      'hint', $$Compare-la aux seuils de tension de sécurité.$$,
-      'expected', $$Non, elle dépasse largement les seuils de tension considérés comme sans danger (environ 25 V en milieu humide, 50 V en milieu sec) : elle présente un danger réel.$$
     )
   ),
   content_generated_at = now()

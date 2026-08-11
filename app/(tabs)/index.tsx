@@ -15,13 +15,13 @@ import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { DISCIPLINES } from '@/constants/disciplines';
+import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { GradeId, SeriesId } from '@/constants/grades';
 import { Lv2Id } from '@/constants/lv2';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { hasCompletedDiagnostic } from '@/lib/diagnostic-storage';
 import { getGradeProfile } from '@/lib/grade';
 import { getLv2 } from '@/lib/lv2';
 import { hasHandledPlacement } from '@/lib/placement-storage';
@@ -53,8 +53,9 @@ export default function HomeScreen() {
   const [checkingGrade, setCheckingGrade] = useState(true);
   const [checkingLv2, setCheckingLv2] = useState(true);
   const [checkingPlacement, setCheckingPlacement] = useState(true);
-  const [checkingDiagnostic, setCheckingDiagnostic] = useState(true);
   const [lv2, setLv2State] = useState<Lv2Id | null>(null);
+  const [gradeId, setGradeId] = useState<GradeId | null>(null);
+  const [serie, setSerie] = useState<SeriesId | null>(null);
   const [streakInfo, setStreakInfo] = useState<StreakInfo>(EMPTY_STREAK);
 
   useFocusEffect(
@@ -72,6 +73,8 @@ export default function HomeScreen() {
           router.replace('/select-grade');
           return;
         }
+        setGradeId(profile.grade);
+        setSerie(profile.serie);
         setCheckingGrade(false);
 
         getLv2().then((lv2Choice) => {
@@ -88,14 +91,6 @@ export default function HomeScreen() {
               return;
             }
             setCheckingPlacement(false);
-
-            hasCompletedDiagnostic().then((done) => {
-              if (!done) {
-                router.replace('/diagnostic');
-                return;
-              }
-              setCheckingDiagnostic(false);
-            });
           });
         });
       });
@@ -281,12 +276,15 @@ export default function HomeScreen() {
     },
   });
 
-  if (authLoading || checkingGrade || checkingLv2 || checkingPlacement || checkingDiagnostic) {
+  if (authLoading || checkingGrade || checkingLv2 || checkingPlacement) {
     return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']} />;
   }
 
+  const disciplineIdsForGrade = gradeId ? getDisciplineIdsFor(gradeId, serie) : [];
   const visibleDisciplines = DISCIPLINES.filter(
-    (discipline) => (discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === lv2,
+    (discipline) =>
+      disciplineIdsForGrade.includes(discipline.id) &&
+      ((discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === lv2),
   );
 
   const firstName = firstNameFromEmail(user?.email);

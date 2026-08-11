@@ -156,7 +156,7 @@ export default function CourseHistoryScreen() {
         setLoading(false);
         return;
       }
-      loadCourseHistory(profile.grade).then((result) => {
+      loadCourseHistory(profile.grade, profile.serie).then((result) => {
         setSections(result);
         setLoading(false);
       });
