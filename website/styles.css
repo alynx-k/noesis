@@ -245,8 +245,17 @@ h1 .accent-text { color: var(--accent); }
   position: absolute;
   inset: 6%;
   border-radius: var(--radius-lg);
-  background: radial-gradient(120% 120% at 20% 15%, #163A31 0%, #0F6E56 55%, #0B4437 100%);
-  box-shadow: 0 30px 60px -20px rgba(15, 110, 86, 0.5);
+  background: radial-gradient(120% 120% at 20% 15%, #1a1a1a 0%, #0b0b0b 55%, #000 100%);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+#pantherCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: none;
 }
 
 .orbit-rings {
