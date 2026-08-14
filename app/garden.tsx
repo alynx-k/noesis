@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GridBackground } from '@/components/grid-background';
@@ -255,12 +255,9 @@ export default function GardenScreen() {
                 </View>
               </View>
 
-              <View style={styles.grid}>
-                {overview.entries.map((entry, index) => (
-                  <Animated.View
-                    key={entry.destination.id}
-                    entering={FadeInDown.delay(Math.min(index, 12) * 50).springify().damping(16)}
-                    style={styles.destinationCard}>
+              <Animated.View entering={FadeIn.duration(400)} style={styles.grid}>
+                {overview.entries.map((entry) => (
+                  <View key={entry.destination.id} style={styles.destinationCard}>
                     <PlanetIcon
                       size={56}
                       baseColor={entry.destination.baseColor}
@@ -281,9 +278,9 @@ export default function GardenScreen() {
                         Encore {entry.sessionsRemaining} session{entry.sessionsRemaining > 1 ? 's' : ''}
                       </ThemedText>
                     )}
-                  </Animated.View>
+                  </View>
                 ))}
-              </View>
+              </Animated.View>
             </>
           ) : null}
 
@@ -308,19 +305,16 @@ export default function GardenScreen() {
                   </ThemedText>
                 </ThemedView>
               ) : (
-                <View style={styles.launchGrid}>
-                  {launches.map((launch, index) => (
-                    <Animated.View
-                      key={launch.id}
-                      entering={FadeInDown.delay(Math.min(index, 12) * 40).springify().damping(16)}
-                      style={styles.launchSlot}>
+                <Animated.View entering={FadeIn.duration(400)} style={styles.launchGrid}>
+                  {launches.map((launch) => (
+                    <View key={launch.id} style={styles.launchSlot}>
                       <RocketIcon size={36} />
                       <ThemedText style={styles.launchDate}>
                         {launch.completedAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       </ThemedText>
-                    </Animated.View>
+                    </View>
                   ))}
-                </View>
+                </Animated.View>
               )}
             </>
           ) : null}
