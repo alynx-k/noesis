@@ -14,6 +14,8 @@ export const queryKeys = {
   },
   spacedRepetition: {
     forCourse: (userId: string | undefined, courseId: string) => ['spaced-repetition', userId, courseId] as const,
+    datesForCourses: (userId: string | undefined, courseIds: string[]) =>
+      ['next-review-dates', userId, ...courseIds] as const,
   },
   streak: {
     forUser: (userId: string | undefined) => ['streak', userId] as const,

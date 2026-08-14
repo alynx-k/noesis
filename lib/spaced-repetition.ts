@@ -135,6 +135,29 @@ export async function initializeNeutralReviewState(userId: string, courseId: str
   }
 }
 
+// Batched variant of getNextReviewDate for a subject's whole course list —
+// one round trip instead of one per course.
+export async function getNextReviewDates(courseIds: string[]): Promise<Record<string, Date | null>> {
+  if (courseIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase.from('spaced_repetition_state').select('course_id, due').in('course_id', courseIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const map: Record<string, Date | null> = {};
+  courseIds.forEach((id) => {
+    map[id] = null;
+  });
+  (data ?? []).forEach((row) => {
+    map[row.course_id as string] = new Date(row.due as string);
+  });
+  return map;
+}
+
 export async function getNextReviewDate(courseId: string): Promise<Date | null> {
   const { data, error } = await supabase
     .from('spaced_repetition_state')

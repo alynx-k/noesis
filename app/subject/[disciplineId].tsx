@@ -1,23 +1,21 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
-import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Screen } from '@/components/ui/screen';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { SUBJECT_LABELS } from '@/constants/courses';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
-import { GradeId } from '@/constants/grades';
 import { useProgress } from '@/context/progress';
+import { useCoursesForGrade } from '@/hooks/queries/use-courses';
+import { useNextReviewDates } from '@/hooks/queries/use-spaced-repetition';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
-import { getGradeProfile } from '@/lib/grade';
-import { getNextReviewDate } from '@/lib/spaced-repetition';
 
 function subjectLabel(subject: string): string {
   return SUBJECT_LABELS[subject as keyof typeof SUBJECT_LABELS] ?? subject;
@@ -29,50 +27,15 @@ export default function SubjectScreen() {
   const discipline = DISCIPLINES.find((d) => d.id === disciplineId);
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
-  const [gradeId, setGradeId] = useState<GradeId | null>(null);
-  const [courses, setCourses] = useState<CourseSummary[]>([]);
-  const [nextReviewDates, setNextReviewDates] = useState<Record<string, Date | null>>({});
-  const [loadingCourses, setLoadingCourses] = useState(true);
+  const coursesQuery = useCoursesForGrade();
 
-  // Refetch on focus, not just on mount: Expo Router keeps this screen instance
-  // alive in the stack, so returning here from an exercise (no remount) would
-  // otherwise keep showing next-review dates fetched before that exercise ran.
-  useFocusEffect(
-    useCallback(() => {
-      if (!discipline) {
-        return;
-      }
-      getGradeProfile().then((profile) => {
-        if (!profile) {
-          return;
-        }
-        setGradeId(profile.grade);
-
-        getCoursesForGrade(profile.grade, profile.serie).then((coursesForGrade) => {
-          const coursesForDiscipline = coursesForGrade.filter((course) => discipline.subjects.includes(course.subject));
-          setCourses(coursesForDiscipline);
-          setLoadingCourses(false);
-
-          Promise.all(coursesForDiscipline.map((course) => getNextReviewDate(course.id))).then((dates) => {
-            const map: Record<string, Date | null> = {};
-            coursesForDiscipline.forEach((course, index) => {
-              map[course.id] = dates[index];
-            });
-            setNextReviewDates(map);
-          });
-        });
-      });
-    }, [discipline]),
-  );
+  const courses = coursesQuery.data ?? [];
+  const coursesForDiscipline = discipline ? courses.filter((course) => discipline.subjects.includes(course.subject)) : [];
+  const courseIds = coursesForDiscipline.map((course) => course.id);
+  const reviewDatesQuery = useNextReviewDates(courseIds);
+  const nextReviewDates = reviewDatesQuery.data ?? {};
 
   const styles = StyleSheet.create({
-    safeArea: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: SPACING.screen,
-      paddingBottom: 40,
-    },
     title: {
       ...TYPOGRAPHY.largeTitle,
       color: COLORS.text,
@@ -126,89 +89,112 @@ export default function SubjectScreen() {
       flexShrink: 1,
       marginRight: SPACING.tight,
     },
-    emptyText: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.mutedText,
-    },
   });
 
-  if (!discipline || progressLoading || !gradeId || loadingCourses) {
-    return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']} />;
+  if (!discipline) {
+    return (
+      <Screen>
+        <ErrorState title="Matière introuvable" />
+      </Screen>
+    );
+  }
+
+  if (coursesQuery.isPending || progressLoading) {
+    return (
+      <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
+        <ThemedText style={styles.title}>{discipline.label}</ThemedText>
+        <SkeletonList count={6} cardHeight={64} />
+      </Screen>
+    );
+  }
+
+  if (coursesQuery.isError) {
+    return (
+      <Screen>
+        <ErrorState
+          title="Impossible de charger les cours"
+          description="Vérifie ta connexion et réessaie."
+          onRetry={() => coursesQuery.refetch()}
+        />
+      </Screen>
+    );
   }
 
   return (
-    <ScreenBackground>
-      <GridBackground />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <ThemedText style={styles.title}>{discipline.label}</ThemedText>
+    <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
+      <ThemedText style={styles.title}>{discipline.label}</ThemedText>
 
-          {discipline.subjects.map((subject) => {
-            const coursesForSubject = courses.filter((course) => course.subject === subject);
-            if (coursesForSubject.length === 0) {
-              return null;
-            }
+      {discipline.subjects.map((subject, subjectIndex) => {
+        const coursesForSubject = coursesForDiscipline.filter((course) => course.subject === subject);
+        if (coursesForSubject.length === 0) {
+          return null;
+        }
 
-            return (
-              <View key={subject} style={styles.section}>
-                {discipline.subjects.length > 1 ? (
-                  <ThemedText style={styles.sectionTitle}>{subjectLabel(subject)}</ThemedText>
-                ) : null}
-                {coursesForSubject.map((course) => {
-                  // A course also counts as unlocked when its prerequisite already has
-                  // spaced-repetition state, which is how auto-placement grants access
-                  // to lessons a student already saw in class without marking them
-                  // "completed" one by one.
-                  const prerequisiteSatisfied =
-                    course.requiresCourseId === null ||
-                    completedCourseIds.includes(course.requiresCourseId) ||
-                    nextReviewDates[course.requiresCourseId] != null;
-                  const isLocked = !prerequisiteSatisfied;
+        return (
+          <Animated.View
+            key={subject}
+            entering={FadeInDown.delay(subjectIndex * 60).springify().damping(16)}
+            style={styles.section}>
+            {discipline.subjects.length > 1 ? (
+              <ThemedText style={styles.sectionTitle}>{subjectLabel(subject)}</ThemedText>
+            ) : null}
+            {coursesForSubject.map((course) => {
+              // A course also counts as unlocked when its prerequisite already has
+              // spaced-repetition state, which is how auto-placement grants access
+              // to lessons a student already saw in class without marking them
+              // "completed" one by one.
+              const prerequisiteSatisfied =
+                course.requiresCourseId === null ||
+                completedCourseIds.includes(course.requiresCourseId) ||
+                nextReviewDates[course.requiresCourseId] != null;
+              const isLocked = !prerequisiteSatisfied;
 
-                  if (isLocked) {
-                    return (
-                      <View key={course.id} style={[styles.card, styles.cardLocked]}>
-                        <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
-                        <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
-                      </View>
-                    );
-                  }
+              if (isLocked) {
+                return (
+                  <View key={course.id} style={[styles.card, styles.cardLocked]}>
+                    <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
+                    <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
+                  </View>
+                );
+              }
 
-                  const isCompleted = completedCourseIds.includes(course.id);
-                  const nextReviewDate = nextReviewDates[course.id];
+              const isCompleted = completedCourseIds.includes(course.id);
+              const nextReviewDate = nextReviewDates[course.id];
 
-                  return (
-                    <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
-                      <BouncyPressable style={styles.card}>
-                        <View style={styles.cardHeader}>
-                          <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
-                          {isCompleted ? (
-                            <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
-                          ) : null}
-                        </View>
-                        {nextReviewDate ? (
-                          <ThemedText style={styles.cardSubtitle}>
-                            Prochaine révision :{' '}
-                            {nextReviewDate.toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
-                          </ThemedText>
-                        ) : null}
-                      </BouncyPressable>
-                    </Link>
-                  );
-                })}
-              </View>
-            );
-          })}
+              return (
+                <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
+                  <BouncyPressable style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
+                      {isCompleted ? (
+                        <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
+                      ) : null}
+                    </View>
+                    {nextReviewDate ? (
+                      <ThemedText style={styles.cardSubtitle}>
+                        Prochaine révision :{' '}
+                        {nextReviewDate.toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </ThemedText>
+                    ) : null}
+                  </BouncyPressable>
+                </Link>
+              );
+            })}
+          </Animated.View>
+        );
+      })}
 
-          {courses.length === 0 ? (
-            <ThemedText style={styles.emptyText}>Aucun cours disponible pour ta classe pour l'instant.</ThemedText>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </ScreenBackground>
+      {coursesForDiscipline.length === 0 ? (
+        <EmptyState
+          icon="book-outline"
+          title="Aucun cours disponible"
+          description="Rien n'est encore disponible pour ta classe dans cette matière."
+        />
+      ) : null}
+    </Screen>
   );
 }

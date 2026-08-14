@@ -72,8 +72,7 @@ export async function getExerciseQuestions(courseId: string): Promise<ExerciseQu
   const { data, error } = await supabase.from('courses').select('exercise_questions').eq('id', courseId).single();
 
   if (error || !data?.exercise_questions) {
-    console.error('Failed to load exercise questions:', error);
-    return [];
+    throw new Error(error?.message ?? "Cet exercice n'est pas disponible.");
   }
 
   return data.exercise_questions as ExerciseQuestion[];
@@ -83,8 +82,7 @@ export async function getCourseTitle(courseId: string): Promise<string> {
   const { data, error } = await supabase.from('courses').select('title').eq('id', courseId).single();
 
   if (error || !data?.title) {
-    console.error('Failed to load course title:', error);
-    return '';
+    throw new Error(error?.message ?? "Ce cours n'existe pas.");
   }
 
   return data.title as string;

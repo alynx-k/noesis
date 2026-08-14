@@ -1,7 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
@@ -10,41 +8,16 @@ import { FloatingBar } from '@/components/floating-bar';
 import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
+import { ErrorState } from '@/components/ui/error-state';
 import { PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useCourseDetail } from '@/hooks/queries/use-courses';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { CourseDetail, getOrGenerateCourse } from '@/lib/courses';
 
 export default function CourseScreen() {
   const COLORS = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [course, setCourse] = useState<CourseDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!id) {
-        return;
-      }
-      let cancelled = false;
-      setCourse(null);
-      setError(null);
-
-      getOrGenerateCourse(id).then((result) => {
-        if (cancelled) {
-          return;
-        }
-        if ('error' in result) {
-          setError(result.error);
-          return;
-        }
-        setCourse(result);
-      });
-
-      return () => {
-        cancelled = true;
-      };
-    }, [id]),
-  );
+  const courseQuery = useCourseDetail(id ?? '');
+  const course = courseQuery.data;
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -80,6 +53,7 @@ export default function CourseScreen() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: SPACING.screen,
+      gap: SPACING.element,
     },
     loadingTitle: {
       ...TYPOGRAPHY.title,
@@ -114,21 +88,29 @@ export default function CourseScreen() {
             </ScrollView>
 
             <FloatingBar>
-              <Link href={`/exercise?courseId=${course.id}`} asChild>
+              <Link href={{ pathname: '/exercise', params: { courseId: course.id } }} asChild>
                 <BouncyPressable style={styles.button}>
-                  <ThemedText style={styles.buttonText}>Commencer l'exercice</ThemedText>
+                  <ThemedText style={styles.buttonText}>Commencer l&apos;exercice</ThemedText>
                 </BouncyPressable>
               </Link>
             </FloatingBar>
           </>
+        ) : courseQuery.isError ? (
+          <ErrorState
+            title="Impossible d'ouvrir ce cours"
+            description={(courseQuery.error as Error)?.message}
+            onRetry={() => courseQuery.refetch()}
+          />
         ) : (
           <View style={styles.centered}>
-            <ThemedText style={styles.loadingTitle}>
-              {error ? "Impossible d'ouvrir ce cours" : 'Préparation de ton cours...'}
-            </ThemedText>
-            <ThemedText style={styles.loadingSubtitle}>
-              {error ?? "Ça peut prendre quelques secondes la première fois — les prochains élèves l'auront instantanément."}
-            </ThemedText>
+            <ActivityIndicator color={COLORS.accent} size="large" />
+            <View>
+              <ThemedText style={styles.loadingTitle}>Préparation de ton cours...</ThemedText>
+              <ThemedText style={styles.loadingSubtitle}>
+                Ça peut prendre quelques secondes la première fois — les prochains élèves l&apos;auront
+                instantanément.
+              </ThemedText>
+            </View>
           </View>
         )}
       </SafeAreaView>

@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AiTutorChat } from '@/components/ai-tutor-chat';
@@ -9,14 +9,15 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
+import { useExercise } from '@/hooks/queries/use-exercise';
+import { useScheduleNextReview } from '@/hooks/queries/use-spaced-repetition';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { ExerciseQuestion, getCourseTitle, getExerciseQuestions } from '@/lib/courses';
 import { isNotificationsEnabled, scheduleReviewReminder } from '@/lib/notifications';
-import { scheduleNextReview } from '@/lib/spaced-repetition';
 import { playCorrectSound, playLessonCompleteSound } from '@/lib/sound';
 import { supabase } from '@/lib/supabase';
 
@@ -64,9 +65,9 @@ export default function ExerciseScreen() {
 
   const { user } = useAuth();
   const { completeCourse } = useProgress();
-  const [questions, setQuestions] = useState<ExerciseQuestion[]>([]);
-  const [courseTitle, setCourseTitle] = useState('');
-  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const exerciseQuery = useExercise(courseId);
+  const questions = exerciseQuery.data?.questions ?? [];
+  const courseTitle = exerciseQuery.data?.courseTitle ?? '';
   const [currentIndex, setCurrentIndex] = useState(0);
   const [finalVerdicts, setFinalVerdicts] = useState<Verdict[]>([]);
   const [answerText, setAnswerText] = useState('');
@@ -78,20 +79,19 @@ export default function ExerciseScreen() {
   const [hintRevealed, setHintRevealed] = useState(false);
   const [tutorVisible, setTutorVisible] = useState(false);
 
+  // Each visit to this screen is a fresh attempt at the exercise, regardless
+  // of whether the underlying questions are freshly fetched or served from
+  // cache — this reset is about UI state, not data freshness.
   useFocusEffect(
     useCallback(() => {
-      setLoadingQuestions(true);
       setCurrentIndex(0);
       setFinalVerdicts([]);
-      getExerciseQuestions(courseId).then((result) => {
-        setQuestions(result);
-        setLoadingQuestions(false);
-      });
-      getCourseTitle(courseId).then(setCourseTitle);
-    }, [courseId]),
+    }, []),
   );
 
-  const isFinished = !loadingQuestions && currentIndex >= questions.length;
+  const isFinished = exerciseQuery.isSuccess && currentIndex >= questions.length;
+
+  const scheduleReview = useScheduleNextReview();
 
   const proceedToNext = (updatedFinalVerdicts: Verdict[]) => {
     const isLastQuestion = currentIndex === questions.length - 1;
@@ -100,16 +100,18 @@ export default function ExerciseScreen() {
       completeCourse(courseId);
       if (user) {
         const correctCount = updatedFinalVerdicts.filter((v) => v === 'correct').length;
-        scheduleNextReview(user.id, courseId, correctCount / questions.length).then((dueDate) => {
-          if (!dueDate) {
-            return;
-          }
-          isNotificationsEnabled().then((enabled) => {
-            if (enabled) {
-              scheduleReviewReminder(courseId, courseTitle, dueDate);
+        scheduleReview
+          .mutateAsync({ courseId, accuracyRate: correctCount / questions.length })
+          .then((dueDate) => {
+            if (!dueDate) {
+              return;
             }
+            isNotificationsEnabled().then((enabled) => {
+              if (enabled) {
+                scheduleReviewReminder(courseId, courseTitle, dueDate);
+              }
+            });
           });
-        });
       }
     }
     setFinalVerdicts(updatedFinalVerdicts);
@@ -309,8 +311,28 @@ export default function ExerciseScreen() {
     },
   });
 
-  if (loadingQuestions) {
-    return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']} />;
+  if (exerciseQuery.isPending) {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={[styles.safeArea, styles.centered]} edges={['top', 'bottom']}>
+          <ActivityIndicator color={COLORS.accent} size="large" />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
+  if (exerciseQuery.isError) {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ErrorState
+            title="Impossible de charger l'exercice"
+            description={(exerciseQuery.error as Error)?.message}
+            onRetry={() => exerciseQuery.refetch()}
+          />
+        </SafeAreaView>
+      </ThemedView>
+    );
   }
 
   if (isFinished) {
@@ -392,7 +414,7 @@ export default function ExerciseScreen() {
 
               {consecutiveWrong >= HELP_THRESHOLD && !hintRevealed ? (
                 <BouncyPressable style={styles.helpButton} onPress={() => setHintRevealed(true)}>
-                  <ThemedText style={styles.helpButtonText}>Besoin d'aide ?</ThemedText>
+                  <ThemedText style={styles.helpButtonText}>Besoin d&apos;aide ?</ThemedText>
                 </BouncyPressable>
               ) : null}
 
