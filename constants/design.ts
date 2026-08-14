@@ -80,6 +80,72 @@ export const FEEDBACK_COLORS = {
   incorrect: '#B3261E',
 };
 
+// Semantic status colors — success/warning/info alongside the existing
+// correct/partial/incorrect trio, for use outside exercise grading (form
+// validation, toasts, error/empty states). Same value in light/dark: these
+// are always paired with white text/icons like GRADIENTS, not text-on-background.
+export const STATUS_COLORS = {
+  success: '#2E7D32',
+  warning: '#ED6C02',
+  error: '#B3261E',
+  info: '#2F6FED',
+};
+
+// Cross-platform shadow scale for the few places that need real depth
+// (modals, floating bars, toasts) rather than the app's default hairline
+// border. Most surfaces should keep using cardBorder(colors), not this.
+export const ELEVATION = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+};
+
+// Named intensities for expo-blur's <BlurView intensity>, so glass surfaces
+// (tab bar, toasts, modals) stay consistent instead of each picking its own number.
+export const BLUR = {
+  subtle: 40,
+  standard: 80,
+  heavy: 100,
+};
+
+// Named durations (ms) and easing curves for Reanimated timing/springs, so
+// motion feels like one system instead of every component picking its own numbers.
+export const MOTION = {
+  duration: {
+    fast: 150,
+    base: 250,
+    slow: 400,
+  },
+  spring: {
+    snappy: { damping: 16, stiffness: 420 },
+    gentle: { damping: 18, stiffness: 220 },
+  },
+};
+
+export const Z_INDEX = {
+  tabBar: 10,
+  toast: 100,
+  modal: 200,
+};
+
 export const SPACING = {
   xs: 4,
   tight: 8,
