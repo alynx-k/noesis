@@ -1,8 +1,6 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -14,38 +12,23 @@ import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Skeleton } from '@/components/ui/skeleton';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
+import { useSuccessfulSessionCount } from '@/hooks/queries/use-atlas';
+import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
-import { getSuccessfulSessionCount } from '@/lib/focus-session';
-import { getGradeProfile } from '@/lib/grade';
 
 export default function ProfileScreen() {
   const COLORS = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
   const { user } = useAuth();
   const { completedCourseIds } = useProgress();
-  const [totalCourses, setTotalCourses] = useState(0);
-  const [treesPlanted, setTreesPlanted] = useState(0);
-
-  // Refetch on focus, not just on mount: this screen stays alive in the
-  // navigation stack, so coming back here after finishing an exercise (no
-  // remount) would otherwise keep showing stats from before that attempt.
-  useFocusEffect(
-    useCallback(() => {
-      getGradeProfile().then((profile) => {
-        if (!profile) {
-          return;
-        }
-        getCoursesForGrade(profile.grade).then((courses: CourseSummary[]) => {
-          setTotalCourses(courses.length);
-        });
-      });
-      getSuccessfulSessionCount().then(setTreesPlanted);
-    }, []),
-  );
+  const coursesQuery = useCoursesForGrade();
+  const sessionCountQuery = useSuccessfulSessionCount();
+  const totalCourses = coursesQuery.data?.length ?? 0;
+  const treesPlanted = sessionCountQuery.data ?? 0;
 
   const emailLocal = user?.email?.split('@')[0] ?? '';
   const displayName = emailLocal ? emailLocal.charAt(0).toUpperCase() + emailLocal.slice(1) : '';
@@ -216,12 +199,16 @@ export default function ProfileScreen() {
                 <IconSymbol name="checkmark" size={18} color={COLORS.accentText} />
               </LinearGradient>
               <ThemedText style={styles.statLabel}>Cours terminés</ThemedText>
-              <View style={styles.statNumberRow}>
-                <Animated.Text key={completedCourseIds.length} entering={FadeIn.duration(350)} style={styles.statNumber}>
-                  {completedCourseIds.length}
-                </Animated.Text>
-                <ThemedText style={styles.statNumberTotal}>/{totalCourses}</ThemedText>
-              </View>
+              {coursesQuery.isPending ? (
+                <Skeleton width={70} height={28} />
+              ) : (
+                <View style={styles.statNumberRow}>
+                  <Animated.Text key={completedCourseIds.length} entering={FadeIn.duration(350)} style={styles.statNumber}>
+                    {completedCourseIds.length}
+                  </Animated.Text>
+                  <ThemedText style={styles.statNumberTotal}>/{totalCourses}</ThemedText>
+                </View>
+              )}
             </ThemedView>
             <Link href="/garden" asChild>
               <BouncyPressable style={[styles.statCard, styles.rocketCardWrapper]}>
@@ -234,9 +221,13 @@ export default function ProfileScreen() {
                     <RocketIcon size={26} floating />
                   </View>
                   <ThemedText style={styles.rocketCardLabel}>Fusées lancées</ThemedText>
-                  <Animated.Text key={treesPlanted} entering={FadeIn.duration(350)} style={styles.rocketCardNumber}>
-                    {treesPlanted}
-                  </Animated.Text>
+                  {sessionCountQuery.isPending ? (
+                    <Skeleton width={40} height={28} style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
+                  ) : (
+                    <Animated.Text key={treesPlanted} entering={FadeIn.duration(350)} style={styles.rocketCardNumber}>
+                      {treesPlanted}
+                    </Animated.Text>
+                  )}
                 </LinearGradient>
               </BouncyPressable>
             </Link>

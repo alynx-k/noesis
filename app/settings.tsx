@@ -10,11 +10,12 @@ import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GRADES, GradeId, isLyceeGrade, SERIES_BY_GRADE, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
+import { useGradeProfile, useUpdateGrade } from '@/hooks/queries/use-grade-profile';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { getGradeChangeEligibility, getGradeProfile, GradeProfile, updateGrade } from '@/lib/grade';
 import {
   cancelAllReminders,
   isNotificationsEnabled,
@@ -26,15 +27,15 @@ import {
 export default function SettingsScreen() {
   const COLORS = useThemeColors();
   const { user, signOut } = useAuth();
-  const [gradeProfile, setGradeProfile] = useState<GradeProfile | null>(null);
+  const gradeProfileQuery = useGradeProfile();
+  const gradeProfile = gradeProfileQuery.data ?? null;
+  const updateGradeMutation = useUpdateGrade();
   const [showGradePicker, setShowGradePicker] = useState(false);
   const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
   const [gradeChangeError, setGradeChangeError] = useState<string | null>(null);
-  const [changingGrade, setChangingGrade] = useState(false);
   const [notificationsOn, setNotificationsOn] = useState(false);
 
   useEffect(() => {
-    getGradeProfile().then(setGradeProfile);
     isNotificationsEnabled().then(setNotificationsOn);
   }, []);
 
@@ -66,23 +67,12 @@ export default function SettingsScreen() {
     if (!gradeProfile) {
       return;
     }
-    const eligibility = getGradeChangeEligibility(gradeProfile);
-    if (!eligibility.allowed && eligibility.nextAllowedDate) {
-      setGradeChangeError(
-        `Tu pourras changer de classe à partir du ${eligibility.nextAllowedDate.toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}.`,
-      );
-      return;
-    }
     setPendingGrade(null);
     setShowGradePicker((previous) => !previous);
   };
 
   const finalizeGradeChange = async (grade: GradeId, serie: SeriesId | null) => {
-    if (!user || changingGrade) {
+    if (!user || updateGradeMutation.isPending) {
       return;
     }
     setShowGradePicker(false);
@@ -90,14 +80,10 @@ export default function SettingsScreen() {
     if (gradeProfile && grade === gradeProfile.grade && serie === gradeProfile.serie) {
       return;
     }
-    setChangingGrade(true);
-    const { error } = await updateGrade(user.id, grade, serie);
-    setChangingGrade(false);
+    const { error } = await updateGradeMutation.mutateAsync({ grade, serie });
     if (error) {
       setGradeChangeError(error);
-      return;
     }
-    setGradeProfile((previous) => (previous ? { ...previous, grade, serie, lastChangedAt: new Date() } : previous));
   };
 
   const handleSelectGrade = (grade: GradeId) => {
@@ -236,13 +222,17 @@ export default function SettingsScreen() {
           </View>
 
           <ThemedText style={styles.sectionTitle}>Classe</ThemedText>
-          <BouncyPressable style={styles.row} onPress={handleChangeGradePress} disabled={changingGrade}>
+          <BouncyPressable style={styles.row} onPress={handleChangeGradePress} disabled={updateGradeMutation.isPending}>
             <View style={styles.rowIcon}>
               <IconSymbol name="checkmark.circle.fill" size={18} color={COLORS.mutedText} />
             </View>
             <View style={styles.rowText}>
               <ThemedText style={styles.rowLabel}>Classe actuelle</ThemedText>
-              <ThemedText style={styles.rowValue}>{gradeLabel}</ThemedText>
+              {gradeProfileQuery.isPending ? (
+                <Skeleton width={120} height={18} style={{ marginTop: 4 }} />
+              ) : (
+                <ThemedText style={styles.rowValue}>{gradeLabel}</ThemedText>
+              )}
             </View>
             <ThemedText style={styles.changeLink}>Changer</ThemedText>
           </BouncyPressable>

@@ -1,31 +1,22 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useLeaderboard } from '@/hooks/queries/use-leaderboard';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { getLeaderboard, LeaderboardEntry } from '@/lib/leaderboard';
 
 export default function CommunityScreen() {
   const COLORS = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useFocusEffect(
-    useCallback(() => {
-      getLeaderboard().then((result) => {
-        setEntries(result);
-        setLoading(false);
-      });
-    }, []),
-  );
+  const leaderboardQuery = useLeaderboard();
+  const entries = leaderboardQuery.data ?? [];
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -110,7 +101,16 @@ export default function CommunityScreen() {
           <ThemedText style={styles.title}>Classement</ThemedText>
           <ThemedText style={styles.subtitle}>Les élèves avec le plus de cours terminés.</ThemedText>
 
-          {!loading && entries.length === 0 ? (
+          {leaderboardQuery.isPending ? <SkeletonList count={5} cardHeight={56} /> : null}
+
+          {leaderboardQuery.isError ? (
+            <ErrorState
+              title="Impossible de charger le classement"
+              onRetry={() => leaderboardQuery.refetch()}
+            />
+          ) : null}
+
+          {leaderboardQuery.isSuccess && entries.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}>
                 <IconSymbol name="trophy.fill" size={28} color={COLORS.accent} />

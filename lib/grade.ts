@@ -61,19 +61,6 @@ export async function setInitialGrade(
   return { error: null };
 }
 
-export type GradeChangeEligibility = {
-  allowed: boolean;
-  nextAllowedDate: Date | null;
-};
-
-// Grade changes are unrestricted — students can switch classes as often as
-// they want. (An earlier version capped this to one change/month after an
-// initial 48h free window; removed at the user's request so grades can be
-// browsed freely.)
-export function getGradeChangeEligibility(_profile: GradeProfile, _now: Date = new Date()): GradeChangeEligibility {
-  return { allowed: true, nextAllowedDate: null };
-}
-
 export async function updateGrade(
   userId: string,
   grade: GradeId,

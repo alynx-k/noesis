@@ -14,8 +14,10 @@ export type LeaderboardEntry = {
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase.rpc('get_leaderboard');
 
-  if (error || !data) {
-    console.error('Failed to load leaderboard:', error);
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
     return [];
   }
 
