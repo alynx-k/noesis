@@ -1,5 +1,4 @@
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -58,28 +57,25 @@ export function GradePicker({ selectedGrade, onSelect }: GradePickerProps) {
 
   return (
     <View style={styles.list}>
-      {GRADES.map((grade, index) => {
+      {GRADES.map((grade) => {
         const isSelected = grade.id === selectedGrade;
 
         if (!grade.available) {
           return (
-            <Animated.View key={grade.id} entering={FadeInDown.delay(index * 50).springify().damping(16)}>
-              <View style={[styles.row, styles.rowDisabled]}>
-                <ThemedText style={styles.rowTextDisabled}>{grade.label}</ThemedText>
-                <ThemedText style={styles.badge}>Bientôt disponible</ThemedText>
-              </View>
-            </Animated.View>
+            <View key={grade.id} style={[styles.row, styles.rowDisabled]}>
+              <ThemedText style={styles.rowTextDisabled}>{grade.label}</ThemedText>
+              <ThemedText style={styles.badge}>Bientôt disponible</ThemedText>
+            </View>
           );
         }
 
         return (
-          <Animated.View key={grade.id} entering={FadeInDown.delay(index * 50).springify().damping(16)}>
-            <BouncyPressable
-              style={[styles.row, isSelected && styles.rowSelected]}
-              onPress={() => onSelect(grade.id)}>
-              <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{grade.label}</ThemedText>
-            </BouncyPressable>
-          </Animated.View>
+          <BouncyPressable
+            key={grade.id}
+            style={[styles.row, isSelected && styles.rowSelected]}
+            onPress={() => onSelect(grade.id)}>
+            <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{grade.label}</ThemedText>
+          </BouncyPressable>
         );
       })}
     </View>

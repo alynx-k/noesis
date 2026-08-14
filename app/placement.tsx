@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -140,17 +139,14 @@ export default function PlacementScreen() {
         </BouncyPressable>
       </View>
 
-      {SUBJECTS.map((subject, subjectIndex) => {
+      {SUBJECTS.map((subject) => {
         const coursesForSubject = courses.filter((course) => course.subject === subject);
         if (coursesForSubject.length === 0) {
           return null;
         }
 
         return (
-          <Animated.View
-            key={subject}
-            entering={FadeInDown.delay(subjectIndex * 80).springify().damping(16)}
-            style={styles.section}>
+          <View key={subject} style={styles.section}>
             <ThemedText style={styles.sectionTitle}>{SUBJECT_LABELS[subject]}</ThemedText>
             <View style={styles.list}>
               {coursesForSubject.map((course) => {
@@ -167,7 +163,7 @@ export default function PlacementScreen() {
                 );
               })}
             </View>
-          </Animated.View>
+          </View>
         );
       })}
 

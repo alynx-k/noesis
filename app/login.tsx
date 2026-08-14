@@ -1,15 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
 import { Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
+import { Halo } from '@/components/ui/halo';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
-import { GRADIENTS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { ELEVATION, GRADIENTS, HALO_COLORS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useLoginForm } from '@/hooks/use-login-form';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
@@ -29,28 +38,53 @@ export default function LoginScreen() {
     handleOAuth,
   } = useLoginForm();
 
+  // A slow, continuous spin — the brand mark itself is orbital rings, so this
+  // is an ambient motif that means something, not a generic mount effect.
+  const ringRotation = useSharedValue(0);
+  useEffect(() => {
+    ringRotation.value = withRepeat(withTiming(360, { duration: 22000, easing: Easing.linear }), -1);
+  }, [ringRotation]);
+  const ringStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${ringRotation.value}deg` }] }));
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       justifyContent: 'center',
     },
-    logoBadge: {
-      width: 76,
-      height: 76,
-      borderRadius: 22,
+    haloWrap: {
+      position: 'absolute',
+      top: -120,
       alignSelf: 'center',
+      alignItems: 'center',
+    },
+    logoStage: {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: SPACING.element,
-      shadowColor: '#000',
-      shadowOpacity: 0.18,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 6,
+      height: 108,
+    },
+    ring: {
+      position: 'absolute',
+      width: 108,
+      height: 108,
+      borderRadius: 54,
+      borderWidth: 1.5,
+      borderColor: COLORS.borderStrong,
+      borderRightColor: 'transparent',
+      borderTopColor: 'transparent',
+    },
+    logoBadge: {
+      width: 72,
+      height: 72,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...ELEVATION.md,
+      shadowColor: HALO_COLORS.violet,
     },
     logoImage: {
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
     },
     title: {
       ...TYPOGRAPHY.largeTitle,
@@ -114,22 +148,29 @@ export default function LoginScreen() {
 
   return (
     <Screen scroll edges={['top', 'bottom']} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+      <View style={styles.haloWrap} pointerEvents="none">
+        <Halo color={HALO_COLORS.violet} size={260} opacity={0.28} />
+      </View>
+
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Animated.View entering={FadeInDown.duration(500).springify().damping(16)}>
-          <LinearGradient
-            colors={GRADIENTS.hero}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logoBadge}>
-            <Image source={LOGO_ASSET} style={styles.logoImage} resizeMode="contain" />
-          </LinearGradient>
+        {/* One coordinated entrance for the whole screen — not a staircase of
+            per-section fades. */}
+        <Animated.View entering={FadeInDown.duration(550).springify().damping(18)}>
+          <View style={styles.logoStage}>
+            <Animated.View style={[styles.ring, ringStyle]} />
+            <LinearGradient
+              colors={GRADIENTS.hero}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoBadge}>
+              <Image source={LOGO_ASSET} style={styles.logoImage} resizeMode="contain" />
+            </LinearGradient>
+          </View>
           <ThemedText style={styles.title}>Noesis</ThemedText>
           <ThemedText style={styles.subtitle}>
             Connecte-toi ou crée un compte pour suivre ta progression.
           </ThemedText>
-        </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(500).springify().damping(16)}>
           <TextField
             label="E-mail"
             placeholder="toi@exemple.com"
@@ -156,9 +197,7 @@ export default function LoginScreen() {
             loading={submitting}
             style={styles.secondaryButton}
           />
-        </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(160).duration(500).springify().damping(16)}>
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
             <ThemedText style={styles.dividerText}>ou</ThemedText>
