@@ -47,6 +47,11 @@ export default function CoursScreen() {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
       padding: SPACING.element,
+      // Fixed height so every card lines up regardless of label length —
+      // without this, a two-line label (e.g. "Histoire-Géographie") makes
+      // its card taller than its single-line neighbors.
+      minHeight: 132,
+      justifyContent: 'center',
       ...cardBorder(COLORS),
     },
     iconBadge: {
@@ -127,7 +132,9 @@ export default function CoursScreen() {
                           <View style={[styles.iconBadge, styles.iconBadgeLocked]}>
                             <IconSymbol name={discipline.icon} size={20} color={COLORS.text} />
                           </View>
-                          <ThemedText style={styles.cardTitleLocked}>{discipline.label}</ThemedText>
+                          <ThemedText style={styles.cardTitleLocked} numberOfLines={2}>
+                            {discipline.label}
+                          </ThemedText>
                           <View style={styles.badge}>
                             <ThemedText style={styles.badgeText}>Bientôt disponible</ThemedText>
                           </View>
@@ -147,7 +154,9 @@ export default function CoursScreen() {
                             style={styles.iconBadge}>
                             <IconSymbol name={discipline.icon} size={20} color={COLORS.accentText} />
                           </LinearGradient>
-                          <ThemedText style={styles.cardTitle}>{discipline.label}</ThemedText>
+                          <ThemedText style={styles.cardTitle} numberOfLines={2}>
+                            {discipline.label}
+                          </ThemedText>
                         </BouncyPressable>
                       </Link>
                     </View>
