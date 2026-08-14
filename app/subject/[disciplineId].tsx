@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -122,19 +122,17 @@ export default function SubjectScreen() {
 
   return (
     <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
+      <Animated.View entering={FadeIn.duration(400)}>
       <ThemedText style={styles.title}>{discipline.label}</ThemedText>
 
-      {discipline.subjects.map((subject, subjectIndex) => {
+      {discipline.subjects.map((subject) => {
         const coursesForSubject = coursesForDiscipline.filter((course) => course.subject === subject);
         if (coursesForSubject.length === 0) {
           return null;
         }
 
         return (
-          <Animated.View
-            key={subject}
-            entering={FadeInDown.delay(subjectIndex * 60).springify().damping(16)}
-            style={styles.section}>
+          <View key={subject} style={styles.section}>
             {discipline.subjects.length > 1 ? (
               <ThemedText style={styles.sectionTitle}>{subjectLabel(subject)}</ThemedText>
             ) : null}
@@ -184,7 +182,7 @@ export default function SubjectScreen() {
                 </Link>
               );
             })}
-          </Animated.View>
+          </View>
         );
       })}
 
@@ -195,6 +193,7 @@ export default function SubjectScreen() {
           description="Rien n'est encore disponible pour ta classe dans cette matière."
         />
       ) : null}
+      </Animated.View>
     </Screen>
   );
 }

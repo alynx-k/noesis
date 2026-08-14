@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { DataTable } from '@/components/data-table';
@@ -243,19 +243,15 @@ export function CourseContent({ content }: CourseContentProps) {
   });
 
   return (
-    <View>
+    <Animated.View entering={FadeIn.duration(400)}>
       <ThemedText style={styles.situation}>{content.situation.text}</ThemedText>
 
       {content.sections.map((section, index) => (
-        <Animated.View key={index} entering={FadeInDown.delay(index * 60).springify().damping(18)}>
-          <SectionView section={section} isLast={index === content.sections.length - 1} />
-        </Animated.View>
+        <SectionView key={index} section={section} isLast={index === content.sections.length - 1} />
       ))}
 
       {content.evaluation ? (
-        <Animated.View
-          style={styles.evaluationBox}
-          entering={FadeInDown.delay(content.sections.length * 60).springify().damping(18)}>
+        <View style={styles.evaluationBox}>
           <ThemedText style={styles.evaluationLabel}>Situation d&apos;évaluation</ThemedText>
           <ThemedText style={styles.evaluationScenario}>{content.evaluation.scenario}</ThemedText>
           {content.evaluation.questions.map((question, index) => (
@@ -263,8 +259,8 @@ export function CourseContent({ content }: CourseContentProps) {
               {index + 1}. {question}
             </ThemedText>
           ))}
-        </Animated.View>
+        </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
