@@ -1,6 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -12,10 +11,13 @@ import { GridBackground } from '@/components/grid-background';
 import { HighlightedText } from '@/components/highlighted-text';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonText } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useDeckCards, useDeckFiche } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { Fiche, Flashcard, getDeckCards, getDeckFiche } from '@/lib/flashcards';
+import { Fiche } from '@/lib/flashcards';
 
 type Tab = 'fiche' | 'cartes';
 
@@ -130,27 +132,27 @@ function FicheView({ fiche }: { fiche: Fiche }) {
 export default function FlashcardDeckScreen() {
   const COLORS = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [cards, setCards] = useState<Flashcard[]>([]);
-  const [fiche, setFiche] = useState<Fiche | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cardsQuery = useDeckCards(id ?? '');
+  const ficheQuery = useDeckFiche(id ?? '');
+  const cards = cardsQuery.data ?? [];
+  const fiche = ficheQuery.data ?? null;
+  const loading = cardsQuery.isPending || ficheQuery.isPending;
+  const isError = cardsQuery.isError || ficheQuery.isError;
+
   const [tab, setTab] = useState<Tab>('fiche');
+  const [tabInitialized, setTabInitialized] = useState(false);
   const [index, setIndex] = useState(0);
   const [tutorVisible, setTutorVisible] = useState(false);
   const flip = useSharedValue(0);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!id) {
-        return;
-      }
-      Promise.all([getDeckCards(id), getDeckFiche(id)]).then(([deckCards, deckFiche]) => {
-        setCards(deckCards);
-        setFiche(deckFiche);
-        setTab(deckFiche && deckFiche.chapters.length > 0 ? 'fiche' : 'cartes');
-        setLoading(false);
-      });
-    }, [id]),
-  );
+  // Default to whichever tab actually has content, decided once the fiche
+  // query resolves — after that the student's own tab choice takes over.
+  useEffect(() => {
+    if (!tabInitialized && ficheQuery.isSuccess) {
+      setTab(fiche && fiche.chapters.length > 0 ? 'fiche' : 'cartes');
+      setTabInitialized(true);
+    }
+  }, [ficheQuery.isSuccess, fiche, tabInitialized]);
 
   useEffect(() => {
     flip.value = 0;
@@ -331,7 +333,23 @@ export default function FlashcardDeckScreen() {
           </BouncyPressable>
         </View>
 
-        {!loading ? (
+        {loading ? (
+          <View style={styles.centered}>
+            <SkeletonText lines={4} />
+          </View>
+        ) : null}
+
+        {isError ? (
+          <ErrorState
+            title="Impossible de charger ce paquet"
+            onRetry={() => {
+              cardsQuery.refetch();
+              ficheQuery.refetch();
+            }}
+          />
+        ) : null}
+
+        {!loading && !isError ? (
           <View style={styles.tabRow}>
             <BouncyPressable
               style={[styles.tabButton, tab === 'fiche' && styles.tabButtonActive]}
@@ -350,7 +368,7 @@ export default function FlashcardDeckScreen() {
           </View>
         ) : null}
 
-        {!loading && tab === 'fiche' ? (
+        {!loading && !isError && tab === 'fiche' ? (
           hasFiche ? (
             <FicheView fiche={fiche as Fiche} />
           ) : (
@@ -360,7 +378,7 @@ export default function FlashcardDeckScreen() {
           )
         ) : null}
 
-        {!loading && tab === 'cartes' && currentCard ? (
+        {!loading && !isError && tab === 'cartes' && currentCard ? (
           <View style={styles.centered}>
             <BouncyPressable onPress={handleFlip} style={styles.cardWrapper}>
               <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
@@ -394,7 +412,7 @@ export default function FlashcardDeckScreen() {
           </View>
         ) : null}
 
-        {!loading && tab === 'cartes' && cards.length === 0 ? (
+        {!loading && !isError && tab === 'cartes' && cards.length === 0 ? (
           <View style={styles.centered}>
             <ThemedText style={styles.emptyText}>Ce paquet ne contient aucune carte mémo.</ThemedText>
           </View>

@@ -1,8 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,10 +10,13 @@ import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useFlashcardDecks, useGenerateFlashcards } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { generateFlashcards, getDecks, FlashcardDeck } from '@/lib/flashcards';
 
 function toDataUrl(asset: ImagePicker.ImagePickerAsset): string | null {
   if (!asset.base64) {
@@ -27,20 +29,11 @@ function toDataUrl(asset: ImagePicker.ImagePickerAsset): string | null {
 export default function FlashcardsScreen() {
   const COLORS = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
-  const [decks, setDecks] = useState<FlashcardDeck[]>([]);
-  const [loading, setLoading] = useState(true);
+  const decksQuery = useFlashcardDecks();
+  const decks = decksQuery.data ?? [];
   const [showScanOptions, setShowScanOptions] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      getDecks().then((result) => {
-        setDecks(result);
-        setLoading(false);
-      });
-    }, []),
-  );
+  const generateMutation = useGenerateFlashcards();
 
   const handleGenerate = async (images: string[]) => {
     if (images.length === 0) {
@@ -48,15 +41,13 @@ export default function FlashcardsScreen() {
     }
     setShowScanOptions(false);
     setError(null);
-    setGenerating(true);
-    const result = await generateFlashcards(images);
-    setGenerating(false);
+    const result = await generateMutation.mutateAsync(images);
 
     if ('error' in result) {
       setError(result.error);
       return;
     }
-    router.push(`/flashcard-deck?id=${result.deckId}`);
+    router.push({ pathname: '/flashcard-deck', params: { id: result.deckId } });
   };
 
   const handleTakePhoto = async () => {
@@ -168,22 +159,6 @@ export default function FlashcardsScreen() {
       color: COLORS.danger,
       marginBottom: SPACING.element,
     },
-    emptyCard: {
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      padding: SPACING.element,
-      ...cardBorder(COLORS),
-    },
-    emptyTitle: {
-      ...TYPOGRAPHY.body,
-      fontWeight: '700',
-      color: COLORS.text,
-      marginBottom: 4,
-    },
-    emptyText: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.mutedText,
-    },
     deckCard: {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
@@ -233,7 +208,7 @@ export default function FlashcardsScreen() {
             </ThemedView>
           ) : null}
 
-          {generating ? (
+          {generateMutation.isPending ? (
             <ThemedView style={styles.scanCard}>
               <ThemedText style={styles.scanTitle}>Génération en cours...</ThemedText>
               <ThemedText style={styles.scanSubtitle}>Ça peut prendre quelques secondes.</ThemedText>
@@ -242,17 +217,22 @@ export default function FlashcardsScreen() {
 
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-          {!loading && decks.length === 0 && !showScanOptions && !generating ? (
-            <ThemedView style={styles.emptyCard}>
-              <ThemedText style={styles.emptyTitle}>Aucune fiche pour l'instant</ThemedText>
-              <ThemedText style={styles.emptyText}>
-                Scanne tes notes de cours ou un document pour créer tes premières fiches de révision.
-              </ThemedText>
-            </ThemedView>
+          {decksQuery.isPending ? <SkeletonList count={3} cardHeight={72} /> : null}
+
+          {decksQuery.isError ? (
+            <ErrorState title="Impossible de charger tes fiches" onRetry={() => decksQuery.refetch()} />
+          ) : null}
+
+          {decksQuery.isSuccess && decks.length === 0 && !showScanOptions && !generateMutation.isPending ? (
+            <EmptyState
+              icon="albums-outline"
+              title="Aucune fiche pour l'instant"
+              description="Scanne tes notes de cours ou un document pour créer tes premières fiches de révision."
+            />
           ) : null}
 
           {decks.map((deck) => (
-            <Link key={deck.id} href={`/flashcard-deck?id=${deck.id}`} asChild>
+            <Link key={deck.id} href={{ pathname: '/flashcard-deck', params: { id: deck.id } }} asChild>
               <BouncyPressable style={styles.deckCard}>
                 <ThemedText style={styles.deckTitle}>{deck.title}</ThemedText>
                 <ThemedText style={styles.deckSubtitle}>
