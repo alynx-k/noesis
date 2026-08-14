@@ -4,7 +4,8 @@ import { AppState } from 'react-native';
 import { Destination } from '@/constants/destinations';
 import { useAuth } from '@/context/auth';
 import { destinationForSequence, newlyUnlockedDestination } from '@/lib/atlas';
-import { finishFocusSession, getTreesPlantedCount, startFocusSession } from '@/lib/focus-session';
+import { finishFocusSession, getSuccessfulSessionCount, startFocusSession } from '@/lib/focus-session';
+import { recordActivity } from '@/lib/streak';
 
 type Phase = 'idle' | 'running' | 'success' | 'failed';
 
@@ -63,6 +64,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
     setPhase('success');
     if (sessionIdRef.current) {
       finishFocusSession(sessionIdRef.current, true);
+      recordActivity();
     }
   }, []);
 
@@ -106,7 +108,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
       setPhase('running');
       const [sessionId, priorCount] = await Promise.all([
         startFocusSession(user.id, minutes),
-        getTreesPlantedCount(),
+        getSuccessfulSessionCount(),
       ]);
       sessionIdRef.current = sessionId;
       priorSessionCountRef.current = priorCount;

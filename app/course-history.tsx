@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,11 +8,14 @@ import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useCourseHistory } from '@/hooks/queries/use-course-history';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { CourseHistoryEntry, CourseHistorySection, ErrorType, loadCourseHistory } from '@/lib/course-history';
-import { getGradeProfile } from '@/lib/grade';
+import { CourseHistoryEntry, CourseHistorySection, ErrorType } from '@/lib/course-history';
 
 const ERROR_LABELS: Record<ErrorType, { singular: string; plural: string }> = {
   étourderie: { singular: 'étourderie', plural: 'étourderies' },
@@ -147,21 +149,8 @@ function DisciplineSection({ section, isLast }: { section: CourseHistorySection;
 
 export default function CourseHistoryScreen() {
   const COLORS = useThemeColors();
-  const [sections, setSections] = useState<CourseHistorySection[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getGradeProfile().then((profile) => {
-      if (!profile) {
-        setLoading(false);
-        return;
-      }
-      loadCourseHistory(profile.grade, profile.serie).then((result) => {
-        setSections(result);
-        setLoading(false);
-      });
-    });
-  }, []);
+  const historyQuery = useCourseHistory();
+  const sections = historyQuery.data ?? [];
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -196,12 +185,6 @@ export default function CourseHistoryScreen() {
       paddingTop: 0,
       paddingBottom: 40,
     },
-    emptyText: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.mutedText,
-      textAlign: 'center',
-      marginTop: SPACING.section,
-    },
   });
 
   return (
@@ -217,8 +200,21 @@ export default function CourseHistoryScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {!loading && sections.length === 0 ? (
-            <ThemedText style={styles.emptyText}>Aucun cours pour l&apos;instant.</ThemedText>
+          {historyQuery.isPending ? <SkeletonList count={3} cardHeight={120} /> : null}
+
+          {historyQuery.isError ? (
+            <ErrorState
+              title="Impossible de charger l'historique"
+              onRetry={() => historyQuery.refetch()}
+            />
+          ) : null}
+
+          {historyQuery.isSuccess && sections.length === 0 ? (
+            <EmptyState
+              icon="time-outline"
+              title="Aucun cours pour l'instant"
+              description="Ton historique apparaîtra ici dès que tu auras commencé un cours."
+            />
           ) : null}
 
           {sections.map((section, index) => (

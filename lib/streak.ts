@@ -1,5 +1,17 @@
 import { supabase } from '@/lib/supabase';
 
+// Records today's activity toward the streaks table (added alongside the
+// TanStack Query rewrite) — safe to call multiple times per day, since
+// public.record_activity() is idempotent for same-day calls. Called from
+// every activity-producing mutation (course completion, focus session
+// success, flashcard review).
+export async function recordActivity(): Promise<void> {
+  const { error } = await supabase.rpc('record_activity');
+  if (error) {
+    console.error('Failed to record activity:', error);
+  }
+}
+
 export type StreakInfo = {
   streak: number;
   weekDays: boolean[]; // Monday..Sunday of the current week

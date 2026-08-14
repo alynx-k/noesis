@@ -25,43 +25,17 @@ export async function finishFocusSession(sessionId: string, succeeded: boolean):
   }
 }
 
-export async function getTreesPlantedCount(): Promise<number> {
+export async function getSuccessfulSessionCount(): Promise<number> {
   const { count, error } = await supabase
     .from('focus_sessions')
     .select('id', { count: 'exact', head: true })
     .eq('succeeded', true);
 
   if (error || count === null) {
-    console.error('Failed to load trees planted count:', error);
+    console.error('Failed to load successful session count:', error);
     return 0;
   }
   return count;
-}
-
-export type PlantedTree = {
-  id: string;
-  durationMinutes: number;
-  plantedAt: Date;
-};
-
-// Every successful session stays planted forever — this is the garden.
-export async function getPlantedTrees(): Promise<PlantedTree[]> {
-  const { data, error } = await supabase
-    .from('focus_sessions')
-    .select('id, duration_minutes, completed_at')
-    .eq('succeeded', true)
-    .order('completed_at', { ascending: false });
-
-  if (error || !data) {
-    console.error('Failed to load planted trees:', error);
-    return [];
-  }
-
-  return data.map((row) => ({
-    id: row.id as string,
-    durationMinutes: row.duration_minutes as number,
-    plantedAt: new Date(row.completed_at as string),
-  }));
 }
 
 export type Launch = {

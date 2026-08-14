@@ -1,7 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,14 +9,15 @@ import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonCard } from '@/components/ui/skeleton';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useMonthOverview } from '@/hooks/queries/use-month-overview';
+import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { getMonthOverview, getStreakInfo, MonthOverview, StreakInfo } from '@/lib/streak';
 
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-const EMPTY_STREAK: StreakInfo = { streak: 0, weekDays: [false, false, false, false, false, false, false] };
 
 // Monday-first index (0 = Monday .. 6 = Sunday) for a given date's weekday.
 function mondayIndex(date: Date): number {
@@ -28,15 +27,10 @@ function mondayIndex(date: Date): number {
 
 export default function StreakOverviewScreen() {
   const COLORS = useThemeColors();
-  const [streakInfo, setStreakInfo] = useState<StreakInfo>(EMPTY_STREAK);
-  const [overview, setOverview] = useState<MonthOverview | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      getStreakInfo().then(setStreakInfo);
-      getMonthOverview().then(setOverview);
-    }, []),
-  );
+  const streakQuery = useStreak();
+  const overviewQuery = useMonthOverview();
+  const streakInfo = streakQuery.data ?? { streak: 0, weekDays: [false, false, false, false, false, false, false] };
+  const overview = overviewQuery.data ?? null;
 
   const leadingBlanks = overview ? mondayIndex(overview.days[0].date) : 0;
 
@@ -185,6 +179,12 @@ export default function StreakOverviewScreen() {
             Un jour compte dès que tu réponds à une question, termines un cours ou réussis une session de
             concentration.
           </ThemedText>
+
+          {overviewQuery.isPending ? <SkeletonCard height={280} /> : null}
+
+          {overviewQuery.isError ? (
+            <ErrorState title="Impossible de charger le calendrier" onRetry={() => overviewQuery.refetch()} />
+          ) : null}
 
           {overview ? (
             <ThemedView style={styles.card}>

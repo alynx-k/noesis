@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/auth';
+import { recordActivity } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 
 type ProgressContextValue = {
@@ -51,6 +52,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Failed to save course progress to Supabase:', error);
+    } else {
+      recordActivity();
     }
   };
 

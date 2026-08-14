@@ -19,7 +19,7 @@ import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
-import { getTreesPlantedCount } from '@/lib/focus-session';
+import { getSuccessfulSessionCount } from '@/lib/focus-session';
 import { getGradeProfile } from '@/lib/grade';
 
 export default function ProfileScreen() {
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
           setTotalCourses(courses.length);
         });
       });
-      getTreesPlantedCount().then(setTreesPlanted);
+      getSuccessfulSessionCount().then(setTreesPlanted);
     }, []),
   );
 

@@ -1,6 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -12,32 +11,23 @@ import { ScreenBackground } from '@/components/screen-background';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useAtlasOverview, useLaunches } from '@/hooks/queries/use-atlas';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { AtlasOverview, getAtlasOverview } from '@/lib/atlas';
-import { getPlantedTrees, PlantedTree } from '@/lib/focus-session';
 
 type Tab = 'atlas' | 'historique';
 
-const EMPTY_OVERVIEW: AtlasOverview = { entries: [], totalSessions: 0, unlockedCount: 0 };
-
 export default function GardenScreen() {
   const COLORS = useThemeColors();
-  const [overview, setOverview] = useState<AtlasOverview>(EMPTY_OVERVIEW);
-  const [launches, setLaunches] = useState<PlantedTree[]>([]);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('atlas');
+  const overviewQuery = useAtlasOverview();
+  const launchesQuery = useLaunches();
 
-  useFocusEffect(
-    useCallback(() => {
-      Promise.all([getAtlasOverview(), getPlantedTrees()]).then(([atlasOverview, tree]) => {
-        setOverview(atlasOverview);
-        setLaunches(tree);
-        setLoading(false);
-      });
-    }, []),
-  );
+  const overview = overviewQuery.data ?? { entries: [], totalSessions: 0, unlockedCount: 0 };
+  const launches = launchesQuery.data ?? [];
 
   const totalDestinations = overview.entries.length;
   const progressRatio = totalDestinations > 0 ? overview.unlockedCount / totalDestinations : 0;
@@ -243,7 +233,15 @@ export default function GardenScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {tab === 'atlas' ? (
+          {tab === 'atlas' && overviewQuery.isPending ? <SkeletonList count={4} cardHeight={140} /> : null}
+          {tab === 'atlas' && overviewQuery.isError ? (
+            <ErrorState
+              title="Impossible de charger l'atlas"
+              onRetry={() => overviewQuery.refetch()}
+            />
+          ) : null}
+
+          {tab === 'atlas' && overviewQuery.isSuccess ? (
             <>
               <View style={styles.progressCard}>
                 <View style={styles.progressHeader}>
@@ -287,7 +285,14 @@ export default function GardenScreen() {
                 ))}
               </View>
             </>
-          ) : (
+          ) : null}
+
+          {tab === 'historique' && launchesQuery.isPending ? <SkeletonList count={3} cardHeight={64} /> : null}
+          {tab === 'historique' && launchesQuery.isError ? (
+            <ErrorState title="Impossible de charger l'historique" onRetry={() => launchesQuery.refetch()} />
+          ) : null}
+
+          {tab === 'historique' && launchesQuery.isSuccess ? (
             <>
               <ThemedText style={styles.subtitle}>
                 {launches.length > 0
@@ -295,11 +300,11 @@ export default function GardenScreen() {
                   : ''}
               </ThemedText>
 
-              {!loading && launches.length === 0 ? (
+              {launches.length === 0 ? (
                 <ThemedView style={styles.emptyCard}>
-                  <ThemedText style={styles.emptyTitle}>Aucun lancement pour l'instant</ThemedText>
+                  <ThemedText style={styles.emptyTitle}>Aucun lancement pour l&apos;instant</ThemedText>
                   <ThemedText style={styles.emptyText}>
-                    Termine une session de concentration jusqu'au bout pour réussir ton premier lancement.
+                    Termine une session de concentration jusqu&apos;au bout pour réussir ton premier lancement.
                   </ThemedText>
                 </ThemedView>
               ) : (
@@ -311,14 +316,14 @@ export default function GardenScreen() {
                       style={styles.launchSlot}>
                       <RocketIcon size={36} />
                       <ThemedText style={styles.launchDate}>
-                        {launch.plantedAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        {launch.completedAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       </ThemedText>
                     </Animated.View>
                   ))}
                 </View>
               )}
             </>
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </ScreenBackground>

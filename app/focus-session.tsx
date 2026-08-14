@@ -487,7 +487,7 @@ export default function FocusSessionScreen() {
             <LaunchPreview />
             <ThemedText style={styles.title}>Session de concentration</ThemedText>
             <ThemedText style={styles.subtitle}>
-              Choisis une durée. La fusée décolle et s'éloigne pendant la session — elle retombe si tu quittes
+              Choisis une durée. La fusée décolle et s&apos;éloigne pendant la session — elle retombe si tu quittes
               Noesis (autre app, verrouillage) avant la fin.
             </ThemedText>
 
@@ -530,8 +530,8 @@ export default function FocusSessionScreen() {
             <ThemedText style={styles.nightTimer}>{formatTime(remainingSeconds)}</ThemedText>
             <ThemedText style={styles.nightMilestone}>{milestoneLabel(progress)}</ThemedText>
             <ThemedText style={styles.nightSubtitle}>
-              Tu peux consulter d'autres écrans de Noesis, la fusée continue son vol. Elle retombe seulement si
-              tu quittes l'app.
+              Tu peux consulter d&apos;autres écrans de Noesis, la fusée continue son vol. Elle retombe seulement si
+              tu quittes l&apos;app.
             </ThemedText>
             <BouncyPressable style={styles.nightSecondaryButton} onPress={handleBrowseElsewhere}>
               <ThemedText style={styles.nightSecondaryButtonText}>Continuer sur Noesis</ThemedText>
@@ -553,7 +553,7 @@ export default function FocusSessionScreen() {
               Tu es resté concentré {durationMinutes} minutes complètes. Bravo.
             </ThemedText>
             <BouncyPressable style={styles.primaryButton} onPress={handleBackHome}>
-              <ThemedText style={styles.primaryButtonText}>Retour à l'accueil</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>Retour à l&apos;accueil</ThemedText>
             </BouncyPressable>
             <BouncyPressable style={styles.nightSecondaryButton} onPress={handleViewAtlas}>
               <ThemedText style={styles.nightSecondaryButtonText}>Voir mon atlas spatial</ThemedText>
@@ -571,7 +571,7 @@ export default function FocusSessionScreen() {
               <ThemedText style={styles.primaryButtonText}>Réessayer</ThemedText>
             </BouncyPressable>
             <BouncyPressable style={styles.secondaryButton} onPress={handleBackHome}>
-              <ThemedText style={styles.secondaryButtonText}>Retour à l'accueil</ThemedText>
+              <ThemedText style={styles.secondaryButtonText}>Retour à l&apos;accueil</ThemedText>
             </BouncyPressable>
           </View>
         ) : null}
