@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { ReactNode } from 'react';
 import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -25,6 +26,9 @@ export function BouncyPressable({ children, style, onPressIn, onPressOut, ...res
         // being pressed rather than a flat image shrinking.
         scale.value = withSpring(0.96, { damping: 15, stiffness: 420 });
         depth.value = withSpring(1, { damping: 15, stiffness: 420 });
+        if (process.env.EXPO_OS === 'ios') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
