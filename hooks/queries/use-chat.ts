@@ -1,38 +1,83 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/auth';
-import { ChatMessage, getChatMessages, getOrCreateChatSession, saveChatMessage } from '@/lib/chat';
+import {
+  ChatMessage,
+  createChatSession,
+  deleteChatSession,
+  getChatMessages,
+  listChatSessions,
+  renameChatSession,
+  saveChatMessage,
+} from '@/lib/chat';
 
-async function fetchChatSession(userId: string): Promise<{ sessionId: string; messages: ChatMessage[] }> {
-  const sessionId = await getOrCreateChatSession(userId);
-  const messages = await getChatMessages(sessionId);
-  return { sessionId, messages };
-}
-
-export function useChatSession() {
+export function useChatSessions() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['chat-session', user?.id],
-    queryFn: () => fetchChatSession(user!.id),
+    queryKey: ['chat-sessions', user?.id],
+    queryFn: () => listChatSessions(user!.id),
     enabled: !!user,
   });
 }
 
-export function useSaveChatMessage(sessionId: string | undefined) {
+export function useChatMessages(sessionId: string | null) {
+  return useQuery({
+    queryKey: ['chat-messages', sessionId],
+    queryFn: () => getChatMessages(sessionId!),
+    enabled: !!sessionId,
+  });
+}
+
+export function useCreateChatSession() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (message: ChatMessage) => {
-      if (!sessionId) throw new Error('No active chat session');
-      return saveChatMessage(sessionId, message);
-    },
+    mutationFn: () => createChatSession(user!.id),
     onSuccess: () => {
-      // Doesn't need to refetch the message list — the chat UI already holds
-      // the message locally the instant it's sent — just keeps the cached
-      // session fresh for the next time this screen mounts.
-      queryClient.invalidateQueries({ queryKey: ['chat-session', user?.id], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions', user?.id] });
+    },
+  });
+}
+
+export function useSaveChatMessage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ sessionId, message }: { sessionId: string; message: ChatMessage }) =>
+      saveChatMessage(sessionId, message),
+    onSuccess: (_data, variables) => {
+      // The chat UI already holds the message locally the instant it's
+      // sent, so no need to refetch the message list itself — just keep the
+      // cached session (title/order in the sidebar) fresh.
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.sessionId], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions', user?.id] });
+    },
+  });
+}
+
+export function useRenameChatSession() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) => renameChatSession(sessionId, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions', user?.id] });
+    },
+  });
+}
+
+export function useDeleteChatSession() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: (sessionId: string) => deleteChatSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions', user?.id] });
     },
   });
 }

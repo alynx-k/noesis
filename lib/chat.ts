@@ -2,32 +2,52 @@ import { supabase } from '@/lib/supabase';
 
 export type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-// One ongoing session per user, created lazily — see the migration comment
-// for why this isn't a multi-thread inbox.
-export async function getOrCreateChatSession(userId: string): Promise<string> {
-  const { data: existing, error: fetchError } = await supabase
+export type ChatSessionSummary = {
+  id: string;
+  title: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const TITLE_MAX_LENGTH = 40;
+
+// First few words of the opening message, not a real summary — cheap,
+// synchronous, and reads exactly like what the user typed rather than an
+// AI-generated paraphrase they didn't ask for.
+export function deriveSessionTitle(firstMessage: string): string {
+  const cleaned = firstMessage.trim().replace(/\s+/g, ' ');
+  if (cleaned.length <= TITLE_MAX_LENGTH) {
+    return cleaned;
+  }
+  return cleaned.slice(0, TITLE_MAX_LENGTH).trimEnd() + '…';
+}
+
+export async function listChatSessions(userId: string): Promise<ChatSessionSummary[]> {
+  const { data, error } = await supabase
     .from('chat_sessions')
-    .select('id')
+    .select('id, title, created_at, updated_at')
     .eq('user_id', userId)
-    .maybeSingle();
+    .order('updated_at', { ascending: false });
 
-  if (fetchError) {
-    throw new Error(fetchError.message);
-  }
-  if (existing) {
-    return existing.id as string;
+  if (error) {
+    throw new Error(error.message);
   }
 
-  const { data: created, error: insertError } = await supabase
-    .from('chat_sessions')
-    .insert({ user_id: userId })
-    .select('id')
-    .single();
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    title: row.title as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+}
 
-  if (insertError || !created) {
-    throw new Error(insertError?.message ?? 'Impossible de démarrer la conversation.');
+export async function createChatSession(userId: string): Promise<string> {
+  const { data, error } = await supabase.from('chat_sessions').insert({ user_id: userId }).select('id').single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Impossible de créer la conversation.');
   }
-  return created.id as string;
+  return data.id as string;
 }
 
 export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
@@ -52,5 +72,19 @@ export async function saveChatMessage(sessionId: string, message: ChatMessage): 
 
   if (error) {
     console.error('Failed to save chat message:', error);
+  }
+}
+
+export async function renameChatSession(sessionId: string, title: string): Promise<void> {
+  const { error } = await supabase.from('chat_sessions').update({ title }).eq('id', sessionId);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deleteChatSession(sessionId: string): Promise<void> {
+  const { error } = await supabase.from('chat_sessions').delete().eq('id', sessionId);
+  if (error) {
+    throw new Error(error.message);
   }
 }

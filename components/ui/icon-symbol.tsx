@@ -46,6 +46,12 @@ const MAPPING = {
   'doc.on.doc': 'content-copy',
   'speaker.wave.2.fill': 'volume-up',
   'stop.fill': 'stop',
+  'line.3.horizontal': 'menu',
+  'plus': 'add',
+  'trash.fill': 'delete',
+  'pencil': 'edit',
+  'ellipsis': 'more-horiz',
+  'xmark': 'close',
 } as IconMapping;
 
 /**
