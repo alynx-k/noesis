@@ -91,6 +91,7 @@ function AppNavigator() {
             <Stack.Screen name="flashcard-deck" options={{ headerShown: false }} />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="ai-chat" options={{ headerShown: false }} />
+            <Stack.Screen name="homework" options={{ headerShown: false }} />
             <Stack.Screen name="correct-homework" options={{ headerShown: false }} />
             <Stack.Screen name="prepare-homework" options={{ headerShown: false }} />
           </Stack.Protected>

@@ -2,27 +2,19 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AiTutorChatBody } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
-import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { SkeletonText } from '@/components/ui/skeleton';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
-import { useChatSession, useSaveChatMessage } from '@/hooks/queries/use-chat';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { ChatMessage } from '@/lib/chat';
 
-export default function AiChatScreen() {
+// Single entry point for both homework flows — previously two separate,
+// visually redundant cards sitting above the chat on ai-chat.tsx. Now one
+// "Devoirs" card leads here, where the choice is explicit.
+export default function HomeworkChooserScreen() {
   const COLORS = useThemeColors();
-  const sessionQuery = useChatSession();
-  const saveMessage = useSaveChatMessage(sessionQuery.data?.sessionId);
-
-  const handleMessage = (message: ChatMessage) => {
-    saveMessage.mutate(message);
-  };
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -34,7 +26,7 @@ export default function AiChatScreen() {
       justifyContent: 'space-between',
       paddingHorizontal: SPACING.screen,
       paddingTop: SPACING.tight,
-      paddingBottom: SPACING.tight,
+      paddingBottom: SPACING.section,
     },
     backButton: {
       width: 36,
@@ -53,35 +45,34 @@ export default function AiChatScreen() {
       ...TYPOGRAPHY.title,
       color: COLORS.text,
     },
-    actionsRow: {
-      flexDirection: 'row',
-      gap: SPACING.tight,
+    content: {
       paddingHorizontal: SPACING.screen,
-      paddingBottom: SPACING.element,
+      gap: SPACING.element,
     },
-    actionCard: {
-      flex: 1,
+    optionCard: {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
-      padding: SPACING.element,
-      gap: SPACING.tight,
+      padding: SPACING.section,
       ...cardBorder(COLORS),
     },
-    actionIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+    optionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       backgroundColor: COLORS.accentSoft,
       alignItems: 'center',
       justifyContent: 'center',
+      marginBottom: SPACING.element,
     },
-    actionLabel: {
-      ...TYPOGRAPHY.body,
-      fontWeight: '700',
+    optionTitle: {
+      ...TYPOGRAPHY.title,
+      fontSize: 18,
       color: COLORS.text,
+      marginBottom: 4,
     },
-    loadingArea: {
-      padding: SPACING.screen,
+    optionSubtitle: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
     },
   });
 
@@ -93,35 +84,31 @@ export default function AiChatScreen() {
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
             <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
           </BouncyPressable>
-          <ThemedText style={styles.headerTitle}>Assistant IA</ThemedText>
+          <ThemedText style={styles.headerTitle}>Devoirs</ThemedText>
           <View style={styles.backButton} />
         </View>
 
-        <View style={styles.actionsRow}>
-          <BouncyPressable style={styles.actionCard} onPress={() => router.push('/homework')}>
-            <View style={styles.actionIcon}>
-              <IconSymbol name="doc.text.fill" size={16} color={COLORS.accent} />
+        <View style={styles.content}>
+          <BouncyPressable style={styles.optionCard} onPress={() => router.push('/correct-homework')}>
+            <View style={styles.optionIcon}>
+              <IconSymbol name="doc.text.fill" size={20} color={COLORS.accent} />
             </View>
-            <ThemedText style={styles.actionLabel}>Devoirs</ThemedText>
+            <ThemedText style={styles.optionTitle}>Corriger un devoir</ThemedText>
+            <ThemedText style={styles.optionSubtitle}>
+              Prends ton devoir en photo, l&apos;IA le corrige à partir de ton cours.
+            </ThemedText>
+          </BouncyPressable>
+
+          <BouncyPressable style={styles.optionCard} onPress={() => router.push('/prepare-homework')}>
+            <View style={styles.optionIcon}>
+              <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
+            </View>
+            <ThemedText style={styles.optionTitle}>Me préparer pour un devoir</ThemedText>
+            <ThemedText style={styles.optionSubtitle}>
+              Choisis tes cours, l&apos;IA génère un test et un plan de révision.
+            </ThemedText>
           </BouncyPressable>
         </View>
-
-        {sessionQuery.isPending ? (
-          <View style={styles.loadingArea}>
-            <SkeletonText lines={3} />
-          </View>
-        ) : null}
-
-        {sessionQuery.isError ? (
-          <ErrorState
-            title="Impossible de charger la conversation"
-            onRetry={() => sessionQuery.refetch()}
-          />
-        ) : null}
-
-        {sessionQuery.isSuccess ? (
-          <AiTutorChatBody initialMessages={sessionQuery.data.messages} onMessage={handleMessage} />
-        ) : null}
       </SafeAreaView>
     </ScreenBackground>
   );
