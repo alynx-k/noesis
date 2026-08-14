@@ -1,5 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { DataTable } from '@/components/data-table';
@@ -21,11 +23,16 @@ function FixationBlock({ fixation }: { fixation: CourseFixation }) {
       borderRadius: RADIUS,
       padding: SPACING.element,
     },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 6,
+    },
     label: {
       ...TYPOGRAPHY.label,
       color: COLORS.accent,
       textTransform: 'uppercase',
-      marginBottom: 6,
     },
     question: {
       ...TYPOGRAPHY.body,
@@ -53,17 +60,22 @@ function FixationBlock({ fixation }: { fixation: CourseFixation }) {
   });
 
   return (
-    <View style={styles.box}>
-      <ThemedText style={styles.label}>Je m&apos;exerce</ThemedText>
+    <Animated.View style={styles.box} layout={LinearTransition.springify().damping(18)}>
+      <View style={styles.labelRow}>
+        <Ionicons name="create-outline" size={15} color={COLORS.accent} />
+        <ThemedText style={styles.label}>Je m&apos;exerce</ThemedText>
+      </View>
       <ThemedText style={styles.question}>{fixation.question}</ThemedText>
       {revealed ? (
-        <ThemedText style={styles.solution}>{fixation.solution}</ThemedText>
+        <Animated.View entering={FadeIn.duration(250)}>
+          <ThemedText style={styles.solution}>{fixation.solution}</ThemedText>
+        </Animated.View>
       ) : (
         <BouncyPressable style={styles.revealButton} onPress={() => setRevealed(true)}>
           <ThemedText style={styles.revealButtonText}>Voir la correction</ThemedText>
         </BouncyPressable>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -98,11 +110,16 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
       borderLeftWidth: 4,
       borderLeftColor: COLORS.accent,
     },
+    propertyLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
     propertyLabel: {
       ...TYPOGRAPHY.label,
       color: COLORS.accent,
       textTransform: 'uppercase',
-      marginBottom: 4,
     },
     propertyText: {
       ...TYPOGRAPHY.body,
@@ -113,12 +130,19 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
       backgroundColor: COLORS.lockedBackground,
       borderRadius: RADIUS,
       padding: SPACING.element,
+      borderLeftWidth: 4,
+      borderLeftColor: COLORS.mutedText,
+    },
+    exampleLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
     },
     exampleLabel: {
       ...TYPOGRAPHY.label,
       color: COLORS.mutedText,
       textTransform: 'uppercase',
-      marginBottom: 4,
     },
     exampleStatement: {
       ...TYPOGRAPHY.body,
@@ -154,14 +178,20 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
 
       {section.property ? (
         <View style={styles.propertyBox}>
-          <ThemedText style={styles.propertyLabel}>{section.property.label}</ThemedText>
+          <View style={styles.propertyLabelRow}>
+            <Ionicons name="bulb-outline" size={15} color={COLORS.accent} />
+            <ThemedText style={styles.propertyLabel}>{section.property.label}</ThemedText>
+          </View>
           <ThemedText style={styles.propertyText}>{section.property.text}</ThemedText>
         </View>
       ) : null}
 
       {section.example ? (
         <View style={styles.exampleBox}>
-          <ThemedText style={styles.exampleLabel}>Exemple</ThemedText>
+          <View style={styles.exampleLabelRow}>
+            <Ionicons name="book-outline" size={15} color={COLORS.mutedText} />
+            <ThemedText style={styles.exampleLabel}>Exemple</ThemedText>
+          </View>
           <ThemedText style={styles.exampleStatement}>{section.example.statement}</ThemedText>
           <ThemedText style={styles.exampleSolution}>{section.example.solution}</ThemedText>
         </View>
@@ -217,11 +247,15 @@ export function CourseContent({ content }: CourseContentProps) {
       <ThemedText style={styles.situation}>{content.situation.text}</ThemedText>
 
       {content.sections.map((section, index) => (
-        <SectionView key={index} section={section} isLast={index === content.sections.length - 1} />
+        <Animated.View key={index} entering={FadeInDown.delay(index * 60).springify().damping(18)}>
+          <SectionView section={section} isLast={index === content.sections.length - 1} />
+        </Animated.View>
       ))}
 
       {content.evaluation ? (
-        <View style={styles.evaluationBox}>
+        <Animated.View
+          style={styles.evaluationBox}
+          entering={FadeInDown.delay(content.sections.length * 60).springify().damping(18)}>
           <ThemedText style={styles.evaluationLabel}>Situation d&apos;évaluation</ThemedText>
           <ThemedText style={styles.evaluationScenario}>{content.evaluation.scenario}</ThemedText>
           {content.evaluation.questions.map((question, index) => (
@@ -229,7 +263,7 @@ export function CourseContent({ content }: CourseContentProps) {
               {index + 1}. {question}
             </ThemedText>
           ))}
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );
