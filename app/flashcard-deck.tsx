@@ -7,7 +7,6 @@ import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } f
 import { AiTutorChat } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { DataTable } from '@/components/data-table';
-import { GridBackground } from '@/components/grid-background';
 import { HighlightedText } from '@/components/highlighted-text';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -315,7 +314,6 @@ export default function FlashcardDeckScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>

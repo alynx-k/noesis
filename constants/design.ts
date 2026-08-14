@@ -14,7 +14,6 @@ export const LIGHT_COLORS = {
   // read as tappable against the cream background (plain `border` is too
   // close to `background` for that).
   borderStrong: '#D9D4C4',
-  gridLine: '#E4E1D6',
   text: '#14181B',
   mutedText: '#6B7280',
   placeholderText: '#9AA1A9',
@@ -35,7 +34,6 @@ export const DARK_COLORS: typeof LIGHT_COLORS = {
   surface: '#1E2025',
   border: '#2A2C31',
   borderStrong: '#3D3F46',
-  gridLine: '#232530',
   text: '#F1F2F4',
   mutedText: '#9BA1AC',
   placeholderText: '#6E7480',

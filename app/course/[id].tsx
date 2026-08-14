@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CourseContent } from '@/components/course-content';
 import { FloatingBar } from '@/components/floating-bar';
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ErrorState } from '@/components/ui/error-state';
@@ -70,7 +69,6 @@ export default function CourseScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         {course ? (
           <>

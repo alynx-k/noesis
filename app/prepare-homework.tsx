@@ -4,7 +4,6 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -333,7 +332,6 @@ export default function PrepareHomeworkScreen() {
   if (stage === 'subject') {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {header('Me prépare', () => router.back())}
@@ -365,7 +363,6 @@ export default function PrepareHomeworkScreen() {
   if (stage === 'courses') {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {header('Choisis tes cours', () => setStage('subject'))}
@@ -410,7 +407,6 @@ export default function PrepareHomeworkScreen() {
     const currentQuestion = questions[currentIndex];
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -447,7 +443,6 @@ export default function PrepareHomeworkScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {header('Résultats', () => router.back())}

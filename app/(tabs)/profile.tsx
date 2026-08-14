@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -225,7 +224,6 @@ export default function ProfileScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <Animated.View entering={FadeIn.duration(400)}>

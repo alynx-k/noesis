@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GradePicker } from '@/components/grade-picker';
-import { GridBackground } from '@/components/grid-background';
 import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -199,7 +198,6 @@ export default function SettingsScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>

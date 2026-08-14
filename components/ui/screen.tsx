@@ -2,14 +2,12 @@ import { ReactNode } from 'react';
 import { ScrollView, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { SPACING } from '@/constants/design';
 
 type ScreenProps = {
   children: ReactNode;
   scroll?: boolean;
-  grid?: boolean;
   edges?: Edge[];
   padded?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -17,14 +15,12 @@ type ScreenProps = {
   color?: string;
 };
 
-// Standardizes the app's default screen root — ScreenBackground + optional
-// grid texture + SafeAreaView + optional scroll — so the graph-paper motif
-// (previously applied to only about half the screens) becomes the default
-// every screen opts into rather than something each screen re-derives.
+// Standardizes the app's default screen root — a uniform cream/dark
+// background + SafeAreaView + optional scroll — so every screen shares the
+// same flat background instead of each re-deriving it.
 export function Screen({
   children,
   scroll = false,
-  grid = true,
   edges = ['top', 'bottom'],
   padded = true,
   style,
@@ -35,7 +31,6 @@ export function Screen({
 
   return (
     <ScreenBackground color={color}>
-      {grid ? <GridBackground /> : null}
       <SafeAreaView style={styles.safeArea} edges={edges}>
         {scroll ? (
           <ScrollView

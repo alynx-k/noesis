@@ -7,7 +7,6 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
-import { GridBackground } from '@/components/grid-background';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -477,7 +476,6 @@ export default function FocusSessionScreen() {
 
   return (
     <ScreenBackground color={isNight ? '#1C1650' : COLORS.background}>
-      {!isNight ? <GridBackground /> : null}
       {phase === 'running' ? <NightSkyBackdrop progress={progress} landed={false} /> : null}
       {phase === 'success' ? <NightSkyBackdrop progress={1} landed celebrate /> : null}
 

@@ -8,8 +8,6 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { FlameIcon } from '@/components/flame-icon';
-import { GridBackground } from '@/components/grid-background';
-import { GridCutoff } from '@/components/grid-cutoff';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -211,7 +209,6 @@ export default function HomeScreen() {
   if (profileQuery.isPending) {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <View style={styles.scrollContent}>
             <Skeleton height={34} width="70%" style={{ marginBottom: SPACING.element }} />
@@ -229,7 +226,6 @@ export default function HomeScreen() {
   if (profileQuery.isError) {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <ErrorState
             title="Impossible de charger ton profil"
@@ -247,8 +243,6 @@ export default function HomeScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
-      <GridCutoff />
       <View style={styles.haloWrap} pointerEvents="none">
         <Halo color={HALO_COLORS.gold} size={220} opacity={0.22} />
       </View>

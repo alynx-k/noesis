@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AiTutorChat } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -315,7 +314,6 @@ export default function ExerciseScreen() {
   if (exerciseQuery.isPending) {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={[styles.safeArea, styles.centered]} edges={['top', 'bottom']}>
           <ActivityIndicator color={COLORS.accent} size="large" />
         </SafeAreaView>
@@ -326,7 +324,6 @@ export default function ExerciseScreen() {
   if (exerciseQuery.isError) {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <ErrorState
             title="Impossible de charger l'exercice"
@@ -341,7 +338,6 @@ export default function ExerciseScreen() {
   if (isFinished) {
     return (
       <ScreenBackground>
-        <GridBackground />
         <SafeAreaView style={[styles.safeArea, styles.centered]} edges={['top', 'bottom']}>
           <CelebrationBurst />
           <ThemedText style={styles.title}>Exercice terminé, bravo !</ThemedText>
@@ -352,7 +348,6 @@ export default function ExerciseScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.container}

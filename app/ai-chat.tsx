@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AiTutorChatBody } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ErrorState } from '@/components/ui/error-state';
@@ -87,7 +86,6 @@ export default function AiChatScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>

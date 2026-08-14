@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
 import { PlanetIcon } from '@/components/planet-icon';
 import { ScreenBackground } from '@/components/screen-background';
 import { RocketIcon } from '@/components/rocket-icon';
@@ -207,7 +206,6 @@ export default function GardenScreen() {
 
   return (
     <ScreenBackground>
-      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
