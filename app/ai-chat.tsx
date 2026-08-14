@@ -4,18 +4,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AiTutorChatBody } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { GridBackground } from '@/components/grid-background';
+import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonText } from '@/components/ui/skeleton';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useChatSession, useSaveChatMessage } from '@/hooks/queries/use-chat';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { ChatMessage } from '@/lib/chat';
 
 export default function AiChatScreen() {
   const COLORS = useThemeColors();
+  const sessionQuery = useChatSession();
+  const saveMessage = useSaveChatMessage(sessionQuery.data?.sessionId);
+
+  const handleMessage = (message: ChatMessage) => {
+    saveMessage.mutate(message);
+  };
 
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: COLORS.background,
     },
     header: {
       flexDirection: 'row',
@@ -69,34 +80,55 @@ export default function AiChatScreen() {
       fontWeight: '700',
       color: COLORS.text,
     },
+    loadingArea: {
+      padding: SPACING.screen,
+    },
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
-          <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
-        </BouncyPressable>
-        <ThemedText style={styles.headerTitle}>Assistant IA</ThemedText>
-        <View style={styles.backButton} />
-      </View>
+    <ScreenBackground>
+      <GridBackground />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
+            <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
+          </BouncyPressable>
+          <ThemedText style={styles.headerTitle}>Assistant IA</ThemedText>
+          <View style={styles.backButton} />
+        </View>
 
-      <View style={styles.actionsRow}>
-        <BouncyPressable style={styles.actionCard} onPress={() => router.push('/correct-homework')}>
-          <View style={styles.actionIcon}>
-            <IconSymbol name="doc.text.fill" size={16} color={COLORS.accent} />
-          </View>
-          <ThemedText style={styles.actionLabel}>Corrige mon devoir</ThemedText>
-        </BouncyPressable>
-        <BouncyPressable style={styles.actionCard} onPress={() => router.push('/prepare-homework')}>
-          <View style={styles.actionIcon}>
-            <IconSymbol name="checkmark.circle.fill" size={16} color={COLORS.accent} />
-          </View>
-          <ThemedText style={styles.actionLabel}>Me prépare pour un devoir</ThemedText>
-        </BouncyPressable>
-      </View>
+        <View style={styles.actionsRow}>
+          <BouncyPressable style={styles.actionCard} onPress={() => router.push('/correct-homework')}>
+            <View style={styles.actionIcon}>
+              <IconSymbol name="doc.text.fill" size={16} color={COLORS.accent} />
+            </View>
+            <ThemedText style={styles.actionLabel}>Corrige mon devoir</ThemedText>
+          </BouncyPressable>
+          <BouncyPressable style={styles.actionCard} onPress={() => router.push('/prepare-homework')}>
+            <View style={styles.actionIcon}>
+              <IconSymbol name="checkmark.circle.fill" size={16} color={COLORS.accent} />
+            </View>
+            <ThemedText style={styles.actionLabel}>Me prépare pour un devoir</ThemedText>
+          </BouncyPressable>
+        </View>
 
-      <AiTutorChatBody />
-    </SafeAreaView>
+        {sessionQuery.isPending ? (
+          <View style={styles.loadingArea}>
+            <SkeletonText lines={3} />
+          </View>
+        ) : null}
+
+        {sessionQuery.isError ? (
+          <ErrorState
+            title="Impossible de charger la conversation"
+            onRetry={() => sessionQuery.refetch()}
+          />
+        ) : null}
+
+        {sessionQuery.isSuccess ? (
+          <AiTutorChatBody initialMessages={sessionQuery.data.messages} onMessage={handleMessage} />
+        ) : null}
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }

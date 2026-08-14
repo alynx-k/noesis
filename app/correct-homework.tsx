@@ -5,6 +5,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { GridBackground } from '@/components/grid-background';
+import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
@@ -86,7 +88,6 @@ export default function CorrectHomeworkScreen() {
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: COLORS.background,
     },
     scrollContent: {
       padding: SPACING.screen,
@@ -212,7 +213,9 @@ export default function CorrectHomeworkScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <ScreenBackground>
+      <GridBackground />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <BouncyPressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
@@ -281,6 +284,7 @@ export default function CorrectHomeworkScreen() {
           </>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }

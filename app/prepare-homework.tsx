@@ -4,7 +4,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { GridBackground } from '@/components/grid-background';
+import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
@@ -37,6 +40,7 @@ export default function PrepareHomeworkScreen() {
   const COLORS = useThemeColors();
   const [stage, setStage] = useState<Stage>('subject');
   const [availableSubjects, setAvailableSubjects] = useState(DISCIPLINES);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
   const [loadingCourses, setLoadingCourses] = useState(false);
@@ -53,21 +57,25 @@ export default function PrepareHomeworkScreen() {
   );
 
   useEffect(() => {
-    Promise.all([getLv2(), getGradeProfile()]).then(([lv2Choice, profile]) => {
-      const disciplineIdsForGrade = profile ? getDisciplineIdsFor(profile.grade, profile.serie) : DISCIPLINES.map((d) => d.id);
-      setAvailableSubjects(
-        DISCIPLINES.filter(
-          (d) =>
-            disciplineIdsForGrade.includes(d.id) &&
-            ((d.id !== 'espagnol' && d.id !== 'allemand') || d.id === lv2Choice),
-        ),
-      );
-    });
+    Promise.all([getLv2(), getGradeProfile()])
+      .then(([lv2Choice, profile]) => {
+        const disciplineIdsForGrade = profile ? getDisciplineIdsFor(profile.grade, profile.serie) : DISCIPLINES.map((d) => d.id);
+        setAvailableSubjects(
+          DISCIPLINES.filter(
+            (d) =>
+              disciplineIdsForGrade.includes(d.id) &&
+              ((d.id !== 'espagnol' && d.id !== 'allemand') || d.id === lv2Choice),
+          ),
+        );
+      })
+      .catch(() => setError('Impossible de charger tes matières, réessaie.'))
+      .finally(() => setLoadingSubjects(false));
   }, []);
 
   const handleSelectSubject = async (disciplineId: string) => {
     setSelectedCourseIds(new Set());
     setLoadingCourses(true);
+    setError(null);
     setStage('courses');
 
     const profile = await getGradeProfile();
@@ -143,7 +151,6 @@ export default function PrepareHomeworkScreen() {
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: COLORS.background,
     },
     scrollContent: {
       padding: SPACING.screen,
@@ -325,103 +332,123 @@ export default function PrepareHomeworkScreen() {
 
   if (stage === 'subject') {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {header('Me prépare', () => router.back())}
-          <ThemedText style={styles.subtitle}>Choisis la matière sur laquelle tu veux t&apos;entraîner.</ThemedText>
-          {availableSubjects
-            .filter((d) => d.available)
-            .map((discipline) => (
-              <BouncyPressable
-                key={discipline.id}
-                style={styles.row}
-                onPress={() => handleSelectSubject(discipline.id)}>
-                <ThemedText style={styles.rowText}>{discipline.label}</ThemedText>
-                <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
-              </BouncyPressable>
-            ))}
-        </ScrollView>
-      </SafeAreaView>
+      <ScreenBackground>
+        <GridBackground />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {header('Me prépare', () => router.back())}
+            <ThemedText style={styles.subtitle}>Choisis la matière sur laquelle tu veux t&apos;entraîner.</ThemedText>
+
+            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+
+            {loadingSubjects ? (
+              <SkeletonList count={4} cardHeight={52} />
+            ) : (
+              availableSubjects
+                .filter((d) => d.available)
+                .map((discipline) => (
+                  <BouncyPressable
+                    key={discipline.id}
+                    style={styles.row}
+                    onPress={() => handleSelectSubject(discipline.id)}>
+                    <ThemedText style={styles.rowText}>{discipline.label}</ThemedText>
+                    <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
+                  </BouncyPressable>
+                ))
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
   if (stage === 'courses') {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {header('Choisis tes cours', () => setStage('subject'))}
-          <ThemedText style={styles.subtitle}>
-            Sélectionne un ou plusieurs cours — le test portera sur leur contenu.
-          </ThemedText>
+      <ScreenBackground>
+        <GridBackground />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {header('Choisis tes cours', () => setStage('subject'))}
+            <ThemedText style={styles.subtitle}>
+              Sélectionne un ou plusieurs cours — le test portera sur leur contenu.
+            </ThemedText>
 
-          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-          {loadingCourses ? (
-            <ThemedText style={styles.subtitle}>Chargement...</ThemedText>
-          ) : (
-            courses.map((course) => {
-              const selected = selectedCourseIds.has(course.id);
-              return (
-                <BouncyPressable
-                  key={course.id}
-                  style={[styles.row, selected && styles.rowSelected]}
-                  onPress={() => toggleCourse(course.id)}>
-                  <ThemedText style={[styles.rowText, selected && styles.rowTextSelected]}>{course.title}</ThemedText>
-                  {selected ? <IconSymbol name="checkmark" size={16} color={COLORS.accentText} /> : null}
-                </BouncyPressable>
-              );
-            })
-          )}
+            {loadingCourses ? (
+              <SkeletonList count={4} cardHeight={52} />
+            ) : courses.length === 0 ? (
+              <ThemedText style={styles.subtitle}>Aucun cours disponible pour cette matière.</ThemedText>
+            ) : (
+              courses.map((course) => {
+                const selected = selectedCourseIds.has(course.id);
+                return (
+                  <BouncyPressable
+                    key={course.id}
+                    style={[styles.row, selected && styles.rowSelected]}
+                    onPress={() => toggleCourse(course.id)}>
+                    <ThemedText style={[styles.rowText, selected && styles.rowTextSelected]}>{course.title}</ThemedText>
+                    {selected ? <IconSymbol name="checkmark" size={16} color={COLORS.accentText} /> : null}
+                  </BouncyPressable>
+                );
+              })
+            )}
 
-          <BouncyPressable
-            style={[styles.primaryButton, (selectedCourseIds.size === 0 || preparing) && styles.primaryButtonDisabled]}
-            onPress={handleGenerate}
-            disabled={selectedCourseIds.size === 0 || preparing}>
-            <ThemedText style={styles.primaryButtonText}>{preparing ? 'Préparation...' : 'Générer le test'}</ThemedText>
-          </BouncyPressable>
-        </ScrollView>
-      </SafeAreaView>
+            <BouncyPressable
+              style={[styles.primaryButton, (selectedCourseIds.size === 0 || preparing) && styles.primaryButtonDisabled]}
+              onPress={handleGenerate}
+              disabled={selectedCourseIds.size === 0 || preparing}>
+              <ThemedText style={styles.primaryButtonText}>{preparing ? 'Préparation...' : 'Générer le test'}</ThemedText>
+            </BouncyPressable>
+          </ScrollView>
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
   if (stage === 'test') {
     const currentQuestion = questions[currentIndex];
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            {header('Test', () => setStage('courses'))}
-            <ThemedText style={styles.progress}>
-              Question {currentIndex + 1}/{questions.length}
-            </ThemedText>
-            <ThemedText style={styles.courseBadge}>{currentQuestion.courseTitle}</ThemedText>
-            <ThemedText style={styles.question}>{currentQuestion.question}</ThemedText>
-
-            <TextInput
-              style={styles.input}
-              multiline
-              editable={!grading}
-              placeholder="Écris ta réponse ici..."
-              placeholderTextColor={COLORS.placeholderText}
-              value={answers[currentIndex]}
-              onChangeText={updateAnswer}
-            />
-
-            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-
-            <BouncyPressable style={styles.primaryButton} onPress={handleNext} disabled={grading}>
-              <ThemedText style={styles.primaryButtonText}>
-                {grading ? 'Correction...' : currentIndex + 1 < questions.length ? 'Suivant' : 'Terminer'}
+      <ScreenBackground>
+        <GridBackground />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              {header('Test', () => setStage('courses'))}
+              <ThemedText style={styles.progress}>
+                Question {currentIndex + 1}/{questions.length}
               </ThemedText>
-            </BouncyPressable>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+              <ThemedText style={styles.courseBadge}>{currentQuestion.courseTitle}</ThemedText>
+              <ThemedText style={styles.question}>{currentQuestion.question}</ThemedText>
+
+              <TextInput
+                style={styles.input}
+                multiline
+                editable={!grading}
+                placeholder="Écris ta réponse ici..."
+                placeholderTextColor={COLORS.placeholderText}
+                value={answers[currentIndex]}
+                onChangeText={updateAnswer}
+              />
+
+              {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+
+              <BouncyPressable style={styles.primaryButton} onPress={handleNext} disabled={grading}>
+                <ThemedText style={styles.primaryButtonText}>
+                  {grading ? 'Correction...' : currentIndex + 1 < questions.length ? 'Suivant' : 'Terminer'}
+                </ThemedText>
+              </BouncyPressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <ScreenBackground>
+      <GridBackground />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {header('Résultats', () => router.back())}
 
@@ -454,6 +481,7 @@ export default function PrepareHomeworkScreen() {
           </>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }

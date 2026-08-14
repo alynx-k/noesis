@@ -51,14 +51,28 @@ type AiTutorChatBodyProps = {
   // the floating (position: absolute) tab bar; the Modal wrapper doesn't,
   // since its SafeAreaView already reserves the bottom inset.
   bottomInset?: number;
+  // Opt-in persistence — only the standalone IA tab (app/ai-chat.tsx) passes
+  // these, to resume/save a real conversation history. The contextual modal
+  // helper (exercises, flashcard fiches) omits them and stays ephemeral by
+  // design: it's scoped to one question/deck, not a conversation worth
+  // resuming.
+  initialMessages?: ChatMessage[];
+  onMessage?: (message: ChatMessage) => void;
 };
 
 // Core chat UI, reusable both standalone (the IA tab, embedded directly in
 // its own screen) and wrapped in a Modal (contextual help from exercises and
 // flashcard fiches — see AiTutorChat below).
-export function AiTutorChatBody({ context, tone = 'light', suggestions = [], bottomInset = 0 }: AiTutorChatBodyProps) {
+export function AiTutorChatBody({
+  context,
+  tone = 'light',
+  suggestions = [],
+  bottomInset = 0,
+  initialMessages = [],
+  onMessage,
+}: AiTutorChatBodyProps) {
   const COLORS = useThemeColors();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +84,10 @@ export function AiTutorChatBody({ context, tone = 'light', suggestions = [], bot
     }
 
     setError(null);
-    const updatedMessages: ChatMessage[] = [...messages, { role: 'user', content: text }];
+    const userMessage: ChatMessage = { role: 'user', content: text };
+    const updatedMessages: ChatMessage[] = [...messages, userMessage];
     setMessages(updatedMessages);
+    onMessage?.(userMessage);
     setInput('');
     setSending(true);
 
@@ -87,7 +103,9 @@ export function AiTutorChatBody({ context, tone = 'light', suggestions = [], bot
       return;
     }
 
-    setMessages((previous) => [...previous, { role: 'assistant', content: data.reply as string }]);
+    const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply as string };
+    setMessages((previous) => [...previous, assistantMessage]);
+    onMessage?.(assistantMessage);
   };
 
   const styles = StyleSheet.create({
