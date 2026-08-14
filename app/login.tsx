@@ -1,75 +1,37 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
 import { ThemedText } from '@/components/themed-text';
-import { ScreenBackground } from '@/components/screen-background';
-import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
-import { useAuth } from '@/context/auth';
-import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { Button } from '@/components/ui/button';
+import { Screen } from '@/components/ui/screen';
+import { TextField } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
+import { GRADIENTS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useLoginForm } from '@/hooks/use-login-form';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
 const LOGO_ASSET = require('../assets/images/splash-logo.png');
 
 export default function LoginScreen() {
   const COLORS = useThemeColors();
-  const { signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSignIn = async () => {
-    setError(null);
-    setSubmitting(true);
-    const { error } = await signIn(email, password);
-    setSubmitting(false);
-    if (error) {
-      setError(error);
-      return;
-    }
-    router.replace('/');
-  };
-
-  const handleSignUp = async () => {
-    setError(null);
-    setSubmitting(true);
-    const { error } = await signUp(email, password);
-    setSubmitting(false);
-    if (error) {
-      setError(error);
-      return;
-    }
-    router.replace('/');
-  };
-
-  const handleOAuth = async (provider: 'google' | 'apple') => {
-    setError(null);
-    setSubmitting(true);
-    const { error } = await (provider === 'google' ? signInWithGoogle() : signInWithApple());
-    setSubmitting(false);
-    if (error) {
-      setError(error);
-      return;
-    }
-    router.replace('/');
-  };
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    submitting,
+    handleSignIn,
+    handleSignUp,
+    handleOAuth,
+  } = useLoginForm();
 
   const styles = StyleSheet.create({
-    safeArea: {
-      flex: 1,
-    },
     container: {
       flex: 1,
-    },
-    scrollContent: {
-      padding: SPACING.screen,
-      flexGrow: 1,
       justifyContent: 'center',
     },
     logoBadge: {
@@ -102,48 +64,12 @@ export default function LoginScreen() {
       textAlign: 'center',
       marginBottom: SPACING.section,
     },
-    input: {
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      padding: 16,
-      fontSize: 16,
-      color: COLORS.text,
-      marginBottom: SPACING.element,
-      ...cardBorder(COLORS),
-    },
     error: {
       color: COLORS.danger,
       marginBottom: SPACING.element,
     },
-    primaryButton: {
-      backgroundColor: COLORS.accent,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 16,
-      alignItems: 'center',
-      marginTop: SPACING.element,
-      shadowColor: COLORS.accent,
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 3,
-    },
-    primaryButtonText: {
-      color: COLORS.accentText,
-      fontSize: 16,
-      fontWeight: '700',
-    },
     secondaryButton: {
-      borderWidth: 1.5,
-      borderColor: COLORS.accent,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 16,
-      alignItems: 'center',
       marginTop: SPACING.element,
-    },
-    secondaryButtonText: {
-      color: COLORS.accent,
-      fontSize: 16,
-      fontWeight: '700',
     },
     dividerRow: {
       flexDirection: 'row',
@@ -165,11 +91,12 @@ export default function LoginScreen() {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 10,
-      backgroundColor: COLORS.surface,
-      borderRadius: PILL_RADIUS,
+      borderRadius: 999,
       paddingVertical: 16,
       marginTop: SPACING.element,
-      ...cardBorder(COLORS),
+      backgroundColor: COLORS.surface,
+      borderWidth: 1,
+      borderColor: COLORS.border,
     },
     oauthButtonText: {
       color: COLORS.text,
@@ -178,86 +105,79 @@ export default function LoginScreen() {
     },
   });
 
+  const onOAuthPress = async (provider: 'google' | 'apple') => {
+    const result = await handleOAuth(provider);
+    if (result?.error) {
+      toast.show(result.error, { variant: 'error' });
+    }
+  };
+
   return (
-    <ScreenBackground>
-      <GridBackground />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            <Animated.View entering={FadeInDown.duration(500).springify().damping(16)}>
-              <LinearGradient
-                colors={GRADIENTS.hero}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoBadge}>
-                <Image source={LOGO_ASSET} style={styles.logoImage} resizeMode="contain" />
-              </LinearGradient>
-              <ThemedText style={styles.title}>Noesis</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Connecte-toi ou crée un compte pour suivre ta progression.
-              </ThemedText>
-            </Animated.View>
+    <Screen scroll edges={['top', 'bottom']} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Animated.View entering={FadeInDown.duration(500).springify().damping(16)}>
+          <LinearGradient
+            colors={GRADIENTS.hero}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.logoBadge}>
+            <Image source={LOGO_ASSET} style={styles.logoImage} resizeMode="contain" />
+          </LinearGradient>
+          <ThemedText style={styles.title}>Noesis</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Connecte-toi ou crée un compte pour suivre ta progression.
+          </ThemedText>
+        </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(80).duration(500).springify().damping(16)}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={COLORS.placeholderText}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Mot de passe"
-                placeholderTextColor={COLORS.placeholderText}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+        <Animated.View entering={FadeInDown.delay(80).duration(500).springify().damping(16)}>
+          <TextField
+            label="E-mail"
+            placeholder="toi@exemple.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextField
+            label="Mot de passe"
+            placeholder="••••••••"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
 
-              {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-              <BouncyPressable style={styles.primaryButton} onPress={handleSignIn} disabled={submitting}>
-                <ThemedText style={styles.primaryButtonText}>Se connecter</ThemedText>
-              </BouncyPressable>
+          <Button label="Se connecter" onPress={handleSignIn} loading={submitting} />
+          <Button
+            label="Créer un compte"
+            onPress={handleSignUp}
+            variant="secondary"
+            loading={submitting}
+            style={styles.secondaryButton}
+          />
+        </Animated.View>
 
-              <BouncyPressable style={styles.secondaryButton} onPress={handleSignUp} disabled={submitting}>
-                <ThemedText style={styles.secondaryButtonText}>Créer un compte</ThemedText>
-              </BouncyPressable>
-            </Animated.View>
+        <Animated.View entering={FadeInDown.delay(160).duration(500).springify().damping(16)}>
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <ThemedText style={styles.dividerText}>ou</ThemedText>
+            <View style={styles.dividerLine} />
+          </View>
 
-            <Animated.View entering={FadeInDown.delay(160).duration(500).springify().damping(16)}>
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <ThemedText style={styles.dividerText}>ou</ThemedText>
-                <View style={styles.dividerLine} />
-              </View>
+          <BouncyPressable style={styles.oauthButton} onPress={() => onOAuthPress('google')} disabled={submitting}>
+            <Ionicons name="logo-google" size={20} color={COLORS.text} />
+            <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
+          </BouncyPressable>
 
-              <BouncyPressable
-                style={styles.oauthButton}
-                onPress={() => handleOAuth('google')}
-                disabled={submitting}
-              >
-                <Ionicons name="logo-google" size={20} color={COLORS.text} />
-                <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
-              </BouncyPressable>
-
-              {Platform.OS === 'ios' ? (
-                <BouncyPressable
-                  style={styles.oauthButton}
-                  onPress={() => handleOAuth('apple')}
-                  disabled={submitting}
-                >
-                  <Ionicons name="logo-apple" size={20} color={COLORS.text} />
-                  <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
-                </BouncyPressable>
-              ) : null}
-            </Animated.View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </ScreenBackground>
+          {Platform.OS === 'ios' ? (
+            <BouncyPressable style={styles.oauthButton} onPress={() => onOAuthPress('apple')} disabled={submitting}>
+              <Ionicons name="logo-apple" size={20} color={COLORS.text} />
+              <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
+            </BouncyPressable>
+          ) : null}
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }

@@ -1,22 +1,20 @@
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { GridBackground } from '@/components/grid-background';
-import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
-import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { Button } from '@/components/ui/button';
+import { Screen } from '@/components/ui/screen';
+import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { Subject, SUBJECT_LABELS } from '@/constants/courses';
 import { GradeId, SeriesId } from '@/constants/grades';
-import { useAuth } from '@/context/auth';
+import { useRecordPlacementHandled } from '@/hooks/queries/use-placement';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
 import { getGradeProfile } from '@/lib/grade';
 import { applyPlacement } from '@/lib/placement';
-import { markPlacementHandled } from '@/lib/placement-storage';
+import { useAuth } from '@/context/auth';
 
 const SUBJECTS: Subject[] = ['geographie', 'histoire'];
 
@@ -27,7 +25,8 @@ export default function PlacementScreen() {
   const [serie, setSerie] = useState<SeriesId | null>(null);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [selections, setSelections] = useState<Partial<Record<Subject, string>>>({});
-  const [submitting, setSubmitting] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const recordHandled = useRecordPlacementHandled();
 
   useEffect(() => {
     getGradeProfile().then((profile) => {
@@ -46,33 +45,23 @@ export default function PlacementScreen() {
     }));
   };
 
-  const finish = async () => {
-    await markPlacementHandled();
-    router.replace('/');
-  };
-
   const handleSkip = () => {
-    finish();
+    recordHandled.mutate(true);
   };
 
   const handleValidate = async () => {
-    if (!user || !gradeId || submitting) {
+    if (!user || !gradeId || applying) {
       return;
     }
-    setSubmitting(true);
+    setApplying(true);
     await applyPlacement(user.id, gradeId, selections, serie);
-    setSubmitting(false);
-    finish();
+    setApplying(false);
+    recordHandled.mutate(false);
   };
 
+  const submitting = applying || recordHandled.isPending;
+
   const styles = StyleSheet.create({
-    safeArea: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: SPACING.screen,
-      paddingBottom: 40,
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -133,74 +122,61 @@ export default function PlacementScreen() {
       color: COLORS.accentText,
     },
     validateButton: {
-      backgroundColor: COLORS.accent,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 16,
-      alignItems: 'center',
       marginTop: SPACING.tight,
-    },
-    validateButtonText: {
-      color: COLORS.accentText,
-      fontSize: 16,
-      fontWeight: '700',
     },
   });
 
   return (
-    <ScreenBackground>
-      <GridBackground />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <ThemedText style={styles.title}>Où en es-tu dans ton programme ?</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Indique ce que tu as déjà vu en classe pour débloquer directement la suite — ou passe cette étape.
-              </ThemedText>
+    <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <ThemedText style={styles.title}>Où en es-tu dans ton programme ?</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Indique ce que tu as déjà vu en classe pour débloquer directement la suite — ou passe cette étape.
+          </ThemedText>
+        </View>
+        <BouncyPressable style={styles.skipButton} onPress={handleSkip} disabled={submitting}>
+          <ThemedText style={styles.skipButtonText}>Passer</ThemedText>
+        </BouncyPressable>
+      </View>
+
+      {SUBJECTS.map((subject, subjectIndex) => {
+        const coursesForSubject = courses.filter((course) => course.subject === subject);
+        if (coursesForSubject.length === 0) {
+          return null;
+        }
+
+        return (
+          <Animated.View
+            key={subject}
+            entering={FadeInDown.delay(subjectIndex * 80).springify().damping(16)}
+            style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>{SUBJECT_LABELS[subject]}</ThemedText>
+            <View style={styles.list}>
+              {coursesForSubject.map((course) => {
+                const isSelected = selections[subject] === course.id;
+                return (
+                  <BouncyPressable
+                    key={course.id}
+                    style={[styles.row, isSelected && styles.rowSelected]}
+                    onPress={() => handleToggle(subject, course.id)}>
+                    <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>
+                      {course.title}
+                    </ThemedText>
+                  </BouncyPressable>
+                );
+              })}
             </View>
-            <BouncyPressable style={styles.skipButton} onPress={handleSkip} disabled={submitting}>
-              <ThemedText style={styles.skipButtonText}>Passer</ThemedText>
-            </BouncyPressable>
-          </View>
+          </Animated.View>
+        );
+      })}
 
-          {SUBJECTS.map((subject, subjectIndex) => {
-            const coursesForSubject = courses.filter((course) => course.subject === subject);
-            if (coursesForSubject.length === 0) {
-              return null;
-            }
-
-            return (
-              <Animated.View
-                key={subject}
-                entering={FadeInDown.delay(subjectIndex * 80).springify().damping(16)}
-                style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>{SUBJECT_LABELS[subject]}</ThemedText>
-                <View style={styles.list}>
-                  {coursesForSubject.map((course) => {
-                    const isSelected = selections[subject] === course.id;
-                    return (
-                      <BouncyPressable
-                        key={course.id}
-                        style={[styles.row, isSelected && styles.rowSelected]}
-                        onPress={() => handleToggle(subject, course.id)}>
-                        <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>
-                          {course.title}
-                        </ThemedText>
-                      </BouncyPressable>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-            );
-          })}
-
-          <BouncyPressable style={styles.validateButton} onPress={handleValidate} disabled={submitting}>
-            <ThemedText style={styles.validateButtonText}>
-              {submitting ? 'Enregistrement...' : 'Valider'}
-            </ThemedText>
-          </BouncyPressable>
-        </ScrollView>
-      </SafeAreaView>
-    </ScreenBackground>
+      <Button
+        label={submitting ? 'Enregistrement...' : 'Valider'}
+        onPress={handleValidate}
+        loading={submitting}
+        style={styles.validateButton}
+      />
+    </Screen>
   );
 }

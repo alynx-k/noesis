@@ -1,7 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,9 +22,7 @@ import { Lv2Id } from '@/constants/lv2';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { getGradeProfile } from '@/lib/grade';
-import { getLv2 } from '@/lib/lv2';
-import { hasHandledPlacement } from '@/lib/placement-storage';
+import { getGateProfile } from '@/lib/profile';
 import { getStreakInfo, StreakInfo } from '@/lib/streak';
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -47,56 +45,29 @@ function formatTime(totalSeconds: number): string {
 
 export default function HomeScreen() {
   const COLORS = useThemeColors();
-  const { session, user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { phase: focusPhase, remainingSeconds } = useFocusSession();
   const tabBarHeight = useBottomTabBarHeight();
-  const [checkingGrade, setCheckingGrade] = useState(true);
-  const [checkingLv2, setCheckingLv2] = useState(true);
-  const [checkingPlacement, setCheckingPlacement] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [lv2, setLv2State] = useState<Lv2Id | null>(null);
   const [gradeId, setGradeId] = useState<GradeId | null>(null);
   const [serie, setSerie] = useState<SeriesId | null>(null);
   const [streakInfo, setStreakInfo] = useState<StreakInfo>(EMPTY_STREAK);
 
+  // No gating/redirect logic here anymore — Stack.Protected in app/_layout.tsx
+  // guarantees session+grade+lv2+placement are all satisfied before this
+  // screen can even mount. This just loads what it needs to render.
   useFocusEffect(
     useCallback(() => {
-      if (authLoading) {
-        return;
-      }
-      if (!session) {
-        router.replace('/login');
-        return;
-      }
-
-      getGradeProfile().then((profile) => {
-        if (!profile) {
-          router.replace('/select-grade');
-          return;
-        }
-        setGradeId(profile.grade);
-        setSerie(profile.serie);
-        setCheckingGrade(false);
-
-        getLv2().then((lv2Choice) => {
-          if (!lv2Choice) {
-            router.replace('/select-language');
-            return;
-          }
-          setLv2State(lv2Choice);
-          setCheckingLv2(false);
-
-          hasHandledPlacement().then((handled) => {
-            if (!handled) {
-              router.replace('/placement');
-              return;
-            }
-            setCheckingPlacement(false);
-          });
-        });
+      getGateProfile().then((profile) => {
+        setGradeId(profile?.grade ?? null);
+        setSerie(profile?.serie ?? null);
+        setLv2State(profile?.lv2 ?? null);
+        setLoadingProfile(false);
       });
 
       getStreakInfo().then(setStreakInfo);
-    }, [authLoading, session]),
+    }, []),
   );
 
   const styles = StyleSheet.create({
@@ -276,7 +247,7 @@ export default function HomeScreen() {
     },
   });
 
-  if (authLoading || checkingGrade || checkingLv2 || checkingPlacement) {
+  if (loadingProfile) {
     return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']} />;
   }
 
