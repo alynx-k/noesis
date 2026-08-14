@@ -33,7 +33,11 @@ function toDateStrings(values: (string | null)[]): string[] {
 // A day counts toward the streak as soon as there's any real activity that
 // day: at least one graded answer, a completed course, or a successful
 // focus session. (Document scanning will join this list once it exists.)
-async function getActiveDays(): Promise<Set<string>> {
+// Exported for lib/notification-scheduler.ts, which needs the same
+// activity-day set to detect "session done today" and days-since-last-
+// activity — kept as the single source of truth rather than duplicating
+// these three queries there.
+export async function getActiveDays(): Promise<Set<string>> {
   const [answerAttempts, courseProgress, focusSessions] = await Promise.all([
     supabase.from('answer_attempts').select('created_at'),
     supabase.from('course_progress').select('completed_at').eq('completed', true).not('completed_at', 'is', null),
