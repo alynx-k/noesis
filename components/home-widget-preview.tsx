@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { StreakBadge } from '@/components/streak-badge';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -224,20 +225,6 @@ export function HomeWidgetPreview() {
       justifyContent: 'space-between',
       alignSelf: 'stretch',
     },
-    streakPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-      backgroundColor: COLORS.lockedBackground,
-    },
-    streakText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: COLORS.text,
-    },
     matiereText: {
       ...TYPOGRAPHY.caption,
       color: COLORS.mutedText,
@@ -292,10 +279,7 @@ export function HomeWidgetPreview() {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={styles.streakPill}>
-          <IconSymbol name="flame.fill" size={16} color="#FF7A30" />
-          <ThemedText style={styles.streakText}>{data.streak}</ThemedText>
-        </View>
+        <StreakBadge streak={data.streak} />
         <ThemedText style={styles.matiereText} numberOfLines={1}>
           {data.matiere}
         </ThemedText>

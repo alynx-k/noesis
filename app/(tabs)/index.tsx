@@ -7,9 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { FlameIcon } from '@/components/flame-icon';
 import { HomeWidgetPreview } from '@/components/home-widget-preview';
 import { RocketIcon } from '@/components/rocket-icon';
+import { StreakBadge } from '@/components/streak-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { ErrorState } from '@/components/ui/error-state';
@@ -90,21 +90,6 @@ export default function HomeScreen() {
     },
     streakTitle: {
       ...TYPOGRAPHY.body,
-      fontWeight: '700',
-      color: COLORS.text,
-    },
-    streakPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      borderRadius: 999,
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-      // Fallback so the pill is never invisible if the gradient fails to paint.
-      backgroundColor: '#C9B8FF',
-    },
-    streakPillText: {
-      fontSize: 13,
       fontWeight: '700',
       color: COLORS.text,
     },
@@ -261,24 +246,7 @@ export default function HomeScreen() {
               <BouncyPressable style={styles.streakCard}>
                 <View style={styles.streakHeader}>
                   <ThemedText style={styles.streakTitle}>Série de révision</ThemedText>
-                  {streakQuery.isPending ? (
-                    <Skeleton width={56} height={26} radius={999} />
-                  ) : (
-                    <LinearGradient
-                      colors={GRADIENTS.badge}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.streakPill}>
-                      {streakQuery.isError ? (
-                        <Ionicons name="warning" size={14} color={COLORS.text} />
-                      ) : (
-                        <FlameIcon size={18} />
-                      )}
-                      <ThemedText style={styles.streakPillText}>
-                        {streakQuery.isError ? '—' : streakInfo.streak}
-                      </ThemedText>
-                    </LinearGradient>
-                  )}
+                  <StreakBadge streak={streakInfo.streak} isPending={streakQuery.isPending} isError={streakQuery.isError} />
                 </View>
                 <View style={styles.weekRow}>
                   {WEEKDAY_LABELS.map((label, index) => {
