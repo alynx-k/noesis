@@ -40,6 +40,12 @@ const MAPPING = {
   'character.book.closed.fill': 'language',
   'brain.head.profile': 'psychology',
   'desktopcomputer': 'computer',
+  'hand.thumbsup.fill': 'thumb-up',
+  'hand.thumbsdown.fill': 'thumb-down',
+  'arrow.clockwise': 'refresh',
+  'doc.on.doc': 'content-copy',
+  'speaker.wave.2.fill': 'volume-up',
+  'stop.fill': 'stop',
 } as IconMapping;
 
 /**

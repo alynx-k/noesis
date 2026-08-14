@@ -5,49 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { MessageActions } from '@/components/message-actions';
+import { StreamingText } from '@/components/streaming-text';
 import { ThemedText } from '@/components/themed-text';
-import { ThinkingBubble } from '@/components/thinking-bubble';
+import { ThinkingPill } from '@/components/thinking-pill';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, ThemeColors, useThemeColors } from '@/hooks/use-theme-colors';
 import { supabase } from '@/lib/supabase';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
-
-// Splits a reply into its natural paragraphs (falling back to sentences for
-// a single dense paragraph) so RevealingText below can reveal it top to
-// bottom in a handful of chunks rather than either "all at once" or an
-// overly granular per-word cascade.
-function splitIntoRevealChunks(text: string): string[] {
-  const paragraphs = text.split(/\n+/).filter((chunk) => chunk.trim().length > 0);
-  if (paragraphs.length > 1) {
-    return paragraphs;
-  }
-  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g);
-  if (sentences && sentences.length > 1) {
-    return sentences.map((sentence) => sentence.trim()).filter(Boolean);
-  }
-  return [text];
-}
-
-// Reveals a freshly-generated assistant reply progressively, top to bottom:
-// each chunk fades + slides in from a slight upward offset, with a short
-// stagger between chunks — the "line by line, fading away as it settles"
-// effect requested for new AI replies. Only ever mounted once per message
-// (see freshMessageIndex in AiTutorChatBody), so it never replays on
-// historical messages or on unrelated re-renders.
-function RevealingText({ text, style }: { text: string; style: object }) {
-  const chunks = splitIntoRevealChunks(text);
-  return (
-    <View>
-      {chunks.map((chunk, index) => (
-        <Animated.View key={index} entering={FadeIn.delay(index * 180).duration(420)}>
-          <ThemedText style={style}>{chunk}</ThemedText>
-        </Animated.View>
-      ))}
-    </View>
-  );
-}
 
 export type TutorContext =
   | { type: 'exercise'; courseId: string; questionNumber: number }
@@ -113,14 +80,30 @@ export function AiTutorChatBody({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Index of the reply that just arrived from the API this session — the
-  // only message rendered with the line-by-line RevealingText treatment, so
-  // resumed/historical messages render as plain static text.
-  const [freshMessageIndex, setFreshMessageIndex] = useState<number | null>(null);
+  // Index of the message currently mid-stream (word-by-word reveal) — the
+  // action row under it stays hidden until the reveal finishes, matching
+  // Gemini's "icons appear once the answer is fully written" behavior.
+  const [streamingIndex, setStreamingIndex] = useState<number | null>(null);
+  // Index of the assistant message currently being regenerated in place —
+  // shows the thinking pill where its text used to be, rather than a new
+  // exchange appended at the bottom.
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const toneStyles = getToneStyles(COLORS, tone);
+  const busy = sending || regeneratingIndex !== null;
+
+  const requestReply = async (conversation: ChatMessage[]): Promise<string | null> => {
+    const { data, error: invokeError } = await supabase.functions.invoke('ai-tutor', {
+      body: { messages: conversation, context },
+    });
+    if (invokeError || !data?.reply) {
+      console.error('Failed to get tutor reply:', invokeError, data);
+      return null;
+    }
+    return data.reply as string;
+  };
 
   const sendMessage = async (text: string) => {
-    if (!text || sending) {
+    if (!text || busy) {
       return;
     }
 
@@ -132,25 +115,46 @@ export function AiTutorChatBody({
     setInput('');
     setSending(true);
 
-    const { data, error: invokeError } = await supabase.functions.invoke('ai-tutor', {
-      body: { messages: updatedMessages, context },
-    });
-
+    const reply = await requestReply(updatedMessages);
     setSending(false);
 
-    if (invokeError || !data?.reply) {
-      console.error('Failed to get tutor reply:', invokeError, data);
+    if (!reply) {
       setError("Erreur pendant la réponse, réessaie.");
       return;
     }
 
-    const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply as string };
+    const assistantMessage: ChatMessage = { role: 'assistant', content: reply };
     setMessages((previous) => {
       const next = [...previous, assistantMessage];
-      setFreshMessageIndex(next.length - 1);
+      setStreamingIndex(next.length - 1);
       return next;
     });
     onMessage?.(assistantMessage);
+  };
+
+  const handleRegenerate = async (index: number) => {
+    if (busy) {
+      return;
+    }
+
+    setError(null);
+    setRegeneratingIndex(index);
+    // Everything before this reply, ending with the user question that
+    // produced it — regenerating asks the same question again rather than
+    // continuing the conversation past this point.
+    const conversation = messages.slice(0, index);
+    const reply = await requestReply(conversation);
+    setRegeneratingIndex(null);
+
+    if (!reply) {
+      setError("Erreur pendant la réponse, réessaie.");
+      return;
+    }
+
+    setMessages((previous) =>
+      previous.map((message, i) => (i === index ? { role: 'assistant', content: reply } : message)),
+    );
+    setStreamingIndex(index);
   };
 
   const styles = StyleSheet.create({
@@ -199,18 +203,19 @@ export function AiTutorChatBody({
       backgroundColor: COLORS.accent,
       alignSelf: 'flex-end',
     },
-    bubbleAssistant: {
-      backgroundColor: COLORS.surface,
-      alignSelf: 'flex-start',
-      ...cardBorder(COLORS),
-    },
     bubbleTextUser: {
       ...TYPOGRAPHY.body,
       color: COLORS.accentText,
     },
+    // Bot replies render straight on the screen background — no card, no
+    // border — full-width and left-aligned, Gemini-style.
+    assistantBlock: {
+      alignSelf: 'stretch',
+      marginBottom: SPACING.tight,
+    },
     bubbleTextAssistant: {
       ...TYPOGRAPHY.body,
-      color: COLORS.text,
+      color: tone === 'light' ? COLORS.text : COLORS.accentText,
     },
     error: {
       color: COLORS.danger,
@@ -280,23 +285,49 @@ export function AiTutorChatBody({
           </View>
         ) : null}
 
-        {messages.map((message, index) => (
-          <View
-            key={index}
-            style={[styles.bubble, message.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant]}>
-            {message.role === 'assistant' && index === freshMessageIndex ? (
-              <RevealingText text={message.content} style={styles.bubbleTextAssistant} />
-            ) : (
-              <ThemedText style={message.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextAssistant}>
-                {message.content}
-              </ThemedText>
-            )}
-          </View>
-        ))}
+        {messages.map((message, index) => {
+          if (message.role === 'user') {
+            return (
+              <View key={index} style={[styles.bubble, styles.bubbleUser]}>
+                <ThemedText style={styles.bubbleTextUser}>{message.content}</ThemedText>
+              </View>
+            );
+          }
+
+          if (index === regeneratingIndex) {
+            return (
+              <View key={index} style={styles.assistantBlock}>
+                <ThinkingPill />
+              </View>
+            );
+          }
+
+          const isStreaming = index === streamingIndex;
+
+          return (
+            <View key={index} style={styles.assistantBlock}>
+              {isStreaming ? (
+                <StreamingText
+                  text={message.content}
+                  style={styles.bubbleTextAssistant}
+                  onComplete={() => setStreamingIndex((current) => (current === index ? null : current))}
+                />
+              ) : (
+                <ThemedText style={styles.bubbleTextAssistant}>{message.content}</ThemedText>
+              )}
+
+              {!isStreaming ? (
+                <Animated.View entering={FadeIn.duration(300)}>
+                  <MessageActions text={message.content} onRegenerate={() => handleRegenerate(index)} />
+                </Animated.View>
+              ) : null}
+            </View>
+          );
+        })}
 
         {sending ? (
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(250)}>
-            <ThinkingBubble />
+            <ThinkingPill />
           </Animated.View>
         ) : null}
 
@@ -312,16 +343,16 @@ export function AiTutorChatBody({
         <TextInput
           style={styles.input}
           multiline
-          editable={!sending}
+          editable={!busy}
           placeholder="Écris ta question..."
           placeholderTextColor={COLORS.placeholderText}
           value={input}
           onChangeText={setInput}
         />
         <BouncyPressable
-          style={[styles.sendButton, (!input.trim() || sending) && styles.sendButtonDisabled]}
+          style={[styles.sendButton, (!input.trim() || busy) && styles.sendButtonDisabled]}
           onPress={() => sendMessage(input.trim())}
-          disabled={!input.trim() || sending}>
+          disabled={!input.trim() || busy}>
           <IconSymbol name="paperplane.fill" size={18} color={COLORS.accentText} />
         </BouncyPressable>
       </View>
