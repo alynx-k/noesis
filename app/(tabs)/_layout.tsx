@@ -4,6 +4,7 @@ import { StyleSheet, useColorScheme } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BLUR } from '@/constants/design';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
 export default function TabsLayout() {
@@ -32,7 +33,7 @@ export default function TabsLayout() {
         tabBarButton: HapticTab,
         tabBarLabelStyle: styles.label,
         tabBarBackground: () => (
-          <BlurView intensity={80} tint={scheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+          <BlurView intensity={BLUR.standard} tint={scheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         ),
         tabBarStyle: styles.tabBar,
       }}>

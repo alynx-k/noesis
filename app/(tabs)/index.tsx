@@ -1,8 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -14,20 +13,18 @@ import { GridCutoff } from '@/components/grid-cutoff';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
+import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Skeleton, SkeletonCard, SkeletonList } from '@/components/ui/skeleton';
 import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
-import { GradeId, SeriesId } from '@/constants/grades';
-import { Lv2Id } from '@/constants/lv2';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
+import { useProfile } from '@/hooks/queries/use-profile';
+import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { getGateProfile } from '@/lib/profile';
-import { getStreakInfo, StreakInfo } from '@/lib/streak';
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-const EMPTY_STREAK: StreakInfo = { streak: 0, weekDays: [false, false, false, false, false, false, false] };
 
 function firstNameFromEmail(email: string | undefined | null): string {
   if (!email) {
@@ -48,27 +45,14 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { phase: focusPhase, remainingSeconds } = useFocusSession();
   const tabBarHeight = useBottomTabBarHeight();
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [lv2, setLv2State] = useState<Lv2Id | null>(null);
-  const [gradeId, setGradeId] = useState<GradeId | null>(null);
-  const [serie, setSerie] = useState<SeriesId | null>(null);
-  const [streakInfo, setStreakInfo] = useState<StreakInfo>(EMPTY_STREAK);
 
   // No gating/redirect logic here anymore — Stack.Protected in app/_layout.tsx
   // guarantees session+grade+lv2+placement are all satisfied before this
-  // screen can even mount. This just loads what it needs to render.
-  useFocusEffect(
-    useCallback(() => {
-      getGateProfile().then((profile) => {
-        setGradeId(profile?.grade ?? null);
-        setSerie(profile?.serie ?? null);
-        setLv2State(profile?.lv2 ?? null);
-        setLoadingProfile(false);
-      });
-
-      getStreakInfo().then(setStreakInfo);
-    }, []),
-  );
+  // screen can even mount. This just loads what it needs to render, and each
+  // widget degrades independently: a failed streak fetch doesn't blank the
+  // subject grid, only the profile fetch (which the grid needs) does.
+  const profileQuery = useProfile();
+  const streakQuery = useStreak();
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -247,16 +231,47 @@ export default function HomeScreen() {
     },
   });
 
-  if (loadingProfile) {
-    return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']} />;
+  if (profileQuery.isPending) {
+    return (
+      <ScreenBackground>
+        <GridBackground />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <View style={styles.scrollContent}>
+            <Skeleton height={34} width="70%" style={{ marginBottom: SPACING.element }} />
+            <SkeletonCard height={104} />
+            <View style={{ height: SPACING.element }} />
+            <SkeletonCard height={80} />
+            <View style={{ height: SPACING.section }} />
+            <SkeletonList count={4} cardHeight={90} />
+          </View>
+        </SafeAreaView>
+      </ScreenBackground>
+    );
   }
 
-  const disciplineIdsForGrade = gradeId ? getDisciplineIdsFor(gradeId, serie) : [];
+  if (profileQuery.isError) {
+    return (
+      <ScreenBackground>
+        <GridBackground />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ErrorState
+            title="Impossible de charger ton profil"
+            description="Vérifie ta connexion et réessaie."
+            onRetry={() => profileQuery.refetch()}
+          />
+        </SafeAreaView>
+      </ScreenBackground>
+    );
+  }
+
+  const profile = profileQuery.data;
+  const disciplineIdsForGrade = profile?.grade ? getDisciplineIdsFor(profile.grade, profile.serie) : [];
   const visibleDisciplines = DISCIPLINES.filter(
     (discipline) =>
       disciplineIdsForGrade.includes(discipline.id) &&
-      ((discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === lv2),
+      ((discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === profile?.lv2),
   );
+  const streakInfo = streakQuery.data ?? { streak: 0, weekDays: [false, false, false, false, false, false, false] };
 
   const firstName = firstNameFromEmail(user?.email);
 
@@ -275,14 +290,24 @@ export default function HomeScreen() {
             <BouncyPressable style={styles.streakCard}>
               <View style={styles.streakHeader}>
                 <ThemedText style={styles.streakTitle}>Série de révision</ThemedText>
-                <LinearGradient
-                  colors={GRADIENTS.badge}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.streakPill}>
-                  <FlameIcon size={18} />
-                  <ThemedText style={styles.streakPillText}>{streakInfo.streak}</ThemedText>
-                </LinearGradient>
+                {streakQuery.isPending ? (
+                  <Skeleton width={56} height={26} radius={999} />
+                ) : (
+                  <LinearGradient
+                    colors={GRADIENTS.badge}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.streakPill}>
+                    {streakQuery.isError ? (
+                      <Ionicons name="warning" size={14} color={COLORS.text} />
+                    ) : (
+                      <FlameIcon size={18} />
+                    )}
+                    <ThemedText style={styles.streakPillText}>
+                      {streakQuery.isError ? '—' : streakInfo.streak}
+                    </ThemedText>
+                  </LinearGradient>
+                )}
               </View>
               <View style={styles.weekRow}>
                 {WEEKDAY_LABELS.map((label, index) => {
