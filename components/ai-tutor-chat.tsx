@@ -1,16 +1,53 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
+import { ThinkingBubble } from '@/components/thinking-bubble';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, ThemeColors, useThemeColors } from '@/hooks/use-theme-colors';
 import { supabase } from '@/lib/supabase';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+// Splits a reply into its natural paragraphs (falling back to sentences for
+// a single dense paragraph) so RevealingText below can reveal it top to
+// bottom in a handful of chunks rather than either "all at once" or an
+// overly granular per-word cascade.
+function splitIntoRevealChunks(text: string): string[] {
+  const paragraphs = text.split(/\n+/).filter((chunk) => chunk.trim().length > 0);
+  if (paragraphs.length > 1) {
+    return paragraphs;
+  }
+  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g);
+  if (sentences && sentences.length > 1) {
+    return sentences.map((sentence) => sentence.trim()).filter(Boolean);
+  }
+  return [text];
+}
+
+// Reveals a freshly-generated assistant reply progressively, top to bottom:
+// each chunk fades + slides in from a slight upward offset, with a short
+// stagger between chunks — the "line by line, fading away as it settles"
+// effect requested for new AI replies. Only ever mounted once per message
+// (see freshMessageIndex in AiTutorChatBody), so it never replays on
+// historical messages or on unrelated re-renders.
+function RevealingText({ text, style }: { text: string; style: object }) {
+  const chunks = splitIntoRevealChunks(text);
+  return (
+    <View>
+      {chunks.map((chunk, index) => (
+        <Animated.View key={index} entering={FadeIn.delay(index * 180).duration(420)}>
+          <ThemedText style={style}>{chunk}</ThemedText>
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
 
 export type TutorContext =
   | { type: 'exercise'; courseId: string; questionNumber: number }
@@ -76,6 +113,10 @@ export function AiTutorChatBody({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Index of the reply that just arrived from the API this session — the
+  // only message rendered with the line-by-line RevealingText treatment, so
+  // resumed/historical messages render as plain static text.
+  const [freshMessageIndex, setFreshMessageIndex] = useState<number | null>(null);
   const toneStyles = getToneStyles(COLORS, tone);
 
   const sendMessage = async (text: string) => {
@@ -104,7 +145,11 @@ export function AiTutorChatBody({
     }
 
     const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply as string };
-    setMessages((previous) => [...previous, assistantMessage]);
+    setMessages((previous) => {
+      const next = [...previous, assistantMessage];
+      setFreshMessageIndex(next.length - 1);
+      return next;
+    });
     onMessage?.(assistantMessage);
   };
 
@@ -239,16 +284,20 @@ export function AiTutorChatBody({
           <View
             key={index}
             style={[styles.bubble, message.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant]}>
-            <ThemedText style={message.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextAssistant}>
-              {message.content}
-            </ThemedText>
+            {message.role === 'assistant' && index === freshMessageIndex ? (
+              <RevealingText text={message.content} style={styles.bubbleTextAssistant} />
+            ) : (
+              <ThemedText style={message.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextAssistant}>
+                {message.content}
+              </ThemedText>
+            )}
           </View>
         ))}
 
         {sending ? (
-          <View style={[styles.bubble, styles.bubbleAssistant]}>
-            <ActivityIndicator color={COLORS.accent} />
-          </View>
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(250)}>
+            <ThinkingBubble />
+          </Animated.View>
         ) : null}
 
         {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
