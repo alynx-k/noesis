@@ -1,7 +1,31 @@
 import { Discipline, DISCIPLINES } from '@/constants/disciplines';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
-import { getNextReviewDate } from '@/lib/spaced-repetition';
+import { getNextReviewDate, getNextReviewDates } from '@/lib/spaced-repetition';
 import { supabase } from '@/lib/supabase';
+
+export type NextUpCourse = {
+  courseId: string;
+  courseTitle: string;
+  dueDate: Date;
+};
+
+// Lightweight version of loadCourseHistory below, for the Home screen's
+// "reprise rapide" card — that one fetches answer_attempts per course (2
+// round trips per course, fine for the dedicated history screen, much too
+// heavy for a homepage widget), this only needs the single nearest due date.
+export async function getNextUpCourse(grade: string, serie: string | null = null): Promise<NextUpCourse | null> {
+  const courses = await getCoursesForGrade(grade, serie);
+  const dates = await getNextReviewDates(courses.map((course) => course.id));
+
+  let nextUp: NextUpCourse | null = null;
+  for (const course of courses) {
+    const due = dates[course.id];
+    if (due && (!nextUp || due < nextUp.dueDate)) {
+      nextUp = { courseId: course.id, courseTitle: course.title, dueDate: due };
+    }
+  }
+  return nextUp;
+}
 
 export type ErrorType = 'étourderie' | 'confusion' | 'méthode';
 
