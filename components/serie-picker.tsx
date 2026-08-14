@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -46,15 +47,16 @@ export function SeriePicker({ grade, selectedSerie, onSelect }: SeriePickerProps
 
   return (
     <View style={styles.list}>
-      {series.map((serie) => {
+      {series.map((serie, index) => {
         const isSelected = serie.id === selectedSerie;
         return (
-          <BouncyPressable
-            key={serie.id}
-            style={[styles.row, isSelected && styles.rowSelected]}
-            onPress={() => onSelect(serie.id)}>
-            <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{serie.label}</ThemedText>
-          </BouncyPressable>
+          <Animated.View key={serie.id} entering={FadeInDown.delay(index * 50).springify().damping(16)}>
+            <BouncyPressable
+              style={[styles.row, isSelected && styles.rowSelected]}
+              onPress={() => onSelect(serie.id)}>
+              <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{serie.label}</ThemedText>
+            </BouncyPressable>
+          </Animated.View>
         );
       })}
     </View>

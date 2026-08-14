@@ -1,16 +1,20 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GridBackground } from '@/components/grid-background';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
-import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+
+const LOGO_ASSET = require('../assets/images/splash-logo.png');
 
 export default function LoginScreen() {
   const COLORS = useThemeColors();
@@ -62,12 +66,29 @@ export default function LoginScreen() {
     },
     container: {
       flex: 1,
-      backgroundColor: COLORS.background,
     },
     scrollContent: {
       padding: SPACING.screen,
       flexGrow: 1,
       justifyContent: 'center',
+    },
+    logoBadge: {
+      width: 76,
+      height: 76,
+      borderRadius: 22,
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.element,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6,
+    },
+    logoImage: {
+      width: 44,
+      height: 44,
     },
     title: {
       ...TYPOGRAPHY.largeTitle,
@@ -100,6 +121,11 @@ export default function LoginScreen() {
       paddingVertical: 16,
       alignItems: 'center',
       marginTop: SPACING.element,
+      shadowColor: COLORS.accent,
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
     },
     primaryButtonText: {
       color: COLORS.accentText,
@@ -157,65 +183,78 @@ export default function LoginScreen() {
       <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <ThemedText style={styles.title}>Noesis</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Connecte-toi ou crée un compte pour suivre ta progression.
-            </ThemedText>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <Animated.View entering={FadeInDown.duration(500).springify().damping(16)}>
+              <LinearGradient
+                colors={GRADIENTS.hero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.logoBadge}>
+                <Image source={LOGO_ASSET} style={styles.logoImage} resizeMode="contain" />
+              </LinearGradient>
+              <ThemedText style={styles.title}>Noesis</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Connecte-toi ou crée un compte pour suivre ta progression.
+              </ThemedText>
+            </Animated.View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={COLORS.placeholderText}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Mot de passe"
-              placeholderTextColor={COLORS.placeholderText}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <Animated.View entering={FadeInDown.delay(80).duration(500).springify().damping(16)}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={COLORS.placeholderText}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Mot de passe"
+                placeholderTextColor={COLORS.placeholderText}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
 
-            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+              {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-            <BouncyPressable style={styles.primaryButton} onPress={handleSignIn} disabled={submitting}>
-              <ThemedText style={styles.primaryButtonText}>Se connecter</ThemedText>
-            </BouncyPressable>
+              <BouncyPressable style={styles.primaryButton} onPress={handleSignIn} disabled={submitting}>
+                <ThemedText style={styles.primaryButtonText}>Se connecter</ThemedText>
+              </BouncyPressable>
 
-            <BouncyPressable style={styles.secondaryButton} onPress={handleSignUp} disabled={submitting}>
-              <ThemedText style={styles.secondaryButtonText}>Créer un compte</ThemedText>
-            </BouncyPressable>
+              <BouncyPressable style={styles.secondaryButton} onPress={handleSignUp} disabled={submitting}>
+                <ThemedText style={styles.secondaryButtonText}>Créer un compte</ThemedText>
+              </BouncyPressable>
+            </Animated.View>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <ThemedText style={styles.dividerText}>ou</ThemedText>
-              <View style={styles.dividerLine} />
-            </View>
+            <Animated.View entering={FadeInDown.delay(160).duration(500).springify().damping(16)}>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <ThemedText style={styles.dividerText}>ou</ThemedText>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <BouncyPressable
-              style={styles.oauthButton}
-              onPress={() => handleOAuth('google')}
-              disabled={submitting}
-            >
-              <Ionicons name="logo-google" size={20} color={COLORS.text} />
-              <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
-            </BouncyPressable>
-
-            {Platform.OS === 'ios' ? (
               <BouncyPressable
                 style={styles.oauthButton}
-                onPress={() => handleOAuth('apple')}
+                onPress={() => handleOAuth('google')}
                 disabled={submitting}
               >
-                <Ionicons name="logo-apple" size={20} color={COLORS.text} />
-                <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
+                <Ionicons name="logo-google" size={20} color={COLORS.text} />
+                <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
               </BouncyPressable>
-            ) : null}
+
+              {Platform.OS === 'ios' ? (
+                <BouncyPressable
+                  style={styles.oauthButton}
+                  onPress={() => handleOAuth('apple')}
+                  disabled={submitting}
+                >
+                  <Ionicons name="logo-apple" size={20} color={COLORS.text} />
+                  <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
+                </BouncyPressable>
+              ) : null}
+            </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

@@ -2,10 +2,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { GridBackground } from '@/components/grid-background';
 import { Lv2Picker } from '@/components/lv2-picker';
+import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { Lv2Id } from '@/constants/lv2';
 import { useAuth } from '@/context/auth';
@@ -34,9 +36,6 @@ export default function SelectLanguageScreen() {
   };
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-    },
     safeArea: {
       flex: 1,
       padding: SPACING.screen,
@@ -59,13 +58,16 @@ export default function SelectLanguageScreen() {
   });
 
   return (
-    <ThemedView style={styles.container}>
+    <ScreenBackground>
+      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ThemedText style={styles.title}>Quelle LV2 étudies-tu ?</ThemedText>
-        <ThemedText style={styles.subtitle}>Espagnol ou Allemand, selon ce que tu apprends à l'école.</ThemedText>
-        {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+        <Animated.View entering={FadeInDown.duration(400).springify().damping(16)}>
+          <ThemedText style={styles.title}>Quelle LV2 étudies-tu ?</ThemedText>
+          <ThemedText style={styles.subtitle}>Espagnol ou Allemand, selon ce que tu apprends à l&apos;école.</ThemedText>
+          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+        </Animated.View>
         <Lv2Picker onSelect={handleSelect} />
       </SafeAreaView>
-    </ThemedView>
+    </ScreenBackground>
   );
 }

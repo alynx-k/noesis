@@ -2,12 +2,14 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GradePicker } from '@/components/grade-picker';
+import { GridBackground } from '@/components/grid-background';
+import { ScreenBackground } from '@/components/screen-background';
 import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GradeId, isLyceeGrade, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
@@ -50,7 +52,6 @@ export default function SelectGradeScreen() {
     },
     container: {
       flex: 1,
-      backgroundColor: COLORS.background,
       padding: SPACING.screen,
     },
     title: {
@@ -79,34 +80,40 @@ export default function SelectGradeScreen() {
 
   if (pendingGrade) {
     return (
-      <ThemedView style={styles.container}>
+      <ScreenBackground>
+        <GridBackground />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-          <BouncyPressable style={styles.backLink} onPress={() => setPendingGrade(null)}>
-            <ThemedText style={styles.backLinkText}>‹ Changer de classe</ThemedText>
-          </BouncyPressable>
-          <ThemedText style={styles.title}>Quelle est ta série ?</ThemedText>
-          <ThemedText style={styles.subtitle}>Les matières changent selon ta série.</ThemedText>
+          <Animated.View style={styles.container} entering={FadeInDown.duration(400).springify().damping(16)}>
+            <BouncyPressable style={styles.backLink} onPress={() => setPendingGrade(null)}>
+              <ThemedText style={styles.backLinkText}>‹ Changer de classe</ThemedText>
+            </BouncyPressable>
+            <ThemedText style={styles.title}>Quelle est ta série ?</ThemedText>
+            <ThemedText style={styles.subtitle}>Les matières changent selon ta série.</ThemedText>
 
-          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-          <SeriePicker grade={pendingGrade} onSelect={(serie) => finalize(pendingGrade, serie)} />
+            <SeriePicker grade={pendingGrade} onSelect={(serie) => finalize(pendingGrade, serie)} />
+          </Animated.View>
         </SafeAreaView>
-      </ThemedView>
+      </ScreenBackground>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ScreenBackground>
+      <GridBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ThemedText style={styles.title}>Dans quelle classe es-tu ?</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Choisis ta classe pour commencer à réviser.
-        </ThemedText>
+        <Animated.View style={styles.container} entering={FadeInDown.duration(400).springify().damping(16)}>
+          <ThemedText style={styles.title}>Dans quelle classe es-tu ?</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Choisis ta classe pour commencer à réviser.
+          </ThemedText>
 
-        {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-        <GradePicker onSelect={handleSelectGrade} />
+          <GradePicker onSelect={handleSelectGrade} />
+        </Animated.View>
       </SafeAreaView>
-    </ThemedView>
+    </ScreenBackground>
   );
 }

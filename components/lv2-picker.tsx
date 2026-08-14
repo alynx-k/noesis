@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -43,16 +44,17 @@ export function Lv2Picker({ selected, onSelect }: Lv2PickerProps) {
 
   return (
     <View style={styles.list}>
-      {LV2_OPTIONS.map((option) => {
+      {LV2_OPTIONS.map((option, index) => {
         const isSelected = option.id === selected;
 
         return (
-          <BouncyPressable
-            key={option.id}
-            style={[styles.row, isSelected && styles.rowSelected]}
-            onPress={() => onSelect(option.id)}>
-            <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{option.label}</ThemedText>
-          </BouncyPressable>
+          <Animated.View key={option.id} entering={FadeInDown.delay(index * 50).springify().damping(16)}>
+            <BouncyPressable
+              style={[styles.row, isSelected && styles.rowSelected]}
+              onPress={() => onSelect(option.id)}>
+              <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>{option.label}</ThemedText>
+            </BouncyPressable>
+          </Animated.View>
         );
       })}
     </View>
