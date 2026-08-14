@@ -8,6 +8,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { FlameIcon } from '@/components/flame-icon';
+import { HomeWidgetPreview } from '@/components/home-widget-preview';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -253,6 +254,8 @@ export default function HomeScreen() {
               Hey 👋 On révise{'\n'}
               <ThemedText style={styles.greetingName}>{firstName}</ThemedText> ?
             </ThemedText>
+
+            <HomeWidgetPreview />
 
             <Link href="/streak-overview" asChild>
               <BouncyPressable style={styles.streakCard}>
