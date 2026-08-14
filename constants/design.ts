@@ -146,6 +146,21 @@ export const Z_INDEX = {
   modal: 200,
 };
 
+// The site's cubic-bezier(0.16,1,0.3,1) "ease" — a fast-out, gentle-settle
+// curve, distinct from Reanimated's default easings. Stored as plain control
+// points (not an Easing.bezier(...) call) so this file stays framework-free;
+// screens do Easing.bezier(...MOTION.easeControlPoints).
+export const MOTION_EASE_CONTROL_POINTS: readonly [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+// Ambient halo colors for soft background glows behind hero/header areas —
+// same hues as the website's floating hero blobs, used at low opacity behind
+// blurred circles rather than as flat fills.
+export const HALO_COLORS = {
+  violet: '#7C6FE0',
+  gold: '#F2C879',
+  teal: '#0F6E56',
+} as const;
+
 export const SPACING = {
   xs: 4,
   tight: 8,
@@ -154,17 +169,37 @@ export const SPACING = {
   screen: 24,
 };
 
+// Named font families for the two Fraunces weights loaded in app/_layout.tsx
+// (via useFonts) — screens reference these constants rather than the raw
+// string, so a weight swap only needs to happen here.
+export const FONT_DISPLAY = 'Fraunces_600SemiBold';
+export const FONT_DISPLAY_ITALIC = 'Fraunces_600SemiBold_Italic';
+export const FONT_DISPLAY_BOLD = 'Fraunces_700Bold';
+
+// largeTitle/title/displayItalic use the Fraunces display face (loaded as
+// its own weight-specific font file, so no separate fontWeight — mixing the
+// two can make RN fail to resolve the exact variant on Android). Everything
+// else stays on the system/sans face for legibility at small sizes.
 export const TYPOGRAPHY = {
   largeTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '800' as const,
-    letterSpacing: -0.3,
+    fontFamily: FONT_DISPLAY,
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.4,
   },
   title: {
+    fontFamily: FONT_DISPLAY,
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '700' as const,
+    letterSpacing: -0.2,
+  },
+  // Reserved for one hero moment per screen at most — matches the site's
+  // hero-title italic accent span, not a general-purpose style.
+  displayItalic: {
+    fontFamily: FONT_DISPLAY_ITALIC,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.2,
   },
   label: {
     fontSize: 13,

@@ -1,8 +1,9 @@
 import { ActivityIndicator, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
-import { PILL_RADIUS } from '@/constants/design';
+import { ELEVATION, PILL_RADIUS } from '@/constants/design';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
@@ -19,10 +20,17 @@ type ButtonProps = {
 export function Button({ label, onPress, variant = 'primary', loading = false, disabled = false, style }: ButtonProps) {
   const COLORS = useThemeColors();
   const isDisabled = disabled || loading;
+  // Diagonal shine sweep on press — the interaction-driven equivalent of the
+  // website's .btn-primary hover sweep (mobile has no hover, only press).
+  const shine = useSharedValue(-1);
+
+  const shineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shine.value * 140 }, { rotate: '20deg' }],
+  }));
 
   const variantStyles: Record<ButtonVariant, { container: ViewStyle; text: { color: string } }> = {
     primary: {
-      container: { backgroundColor: COLORS.accent },
+      container: { backgroundColor: COLORS.accent, ...ELEVATION.sm, shadowColor: COLORS.accent },
       text: { color: COLORS.accentText },
     },
     secondary: {
@@ -45,7 +53,15 @@ export function Button({ label, onPress, variant = 'primary', loading = false, d
     <BouncyPressable
       style={[styles.base, container, isDisabled && styles.disabled, style]}
       onPress={onPress}
+      onPressIn={() => {
+        if (variant !== 'primary') return;
+        shine.value = -1;
+        shine.value = withTiming(1, { duration: 450 });
+      }}
       disabled={isDisabled}>
+      {variant === 'primary' ? (
+        <Animated.View style={[styles.shine, shineStyle]} pointerEvents="none" />
+      ) : null}
       {loading ? (
         <ActivityIndicator color={text.color} />
       ) : (
@@ -62,6 +78,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   label: {
     fontSize: 16,
@@ -69,5 +86,13 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
+  },
+  shine: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    width: 40,
+    left: '30%',
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
 });
