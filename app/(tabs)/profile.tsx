@@ -9,11 +9,8 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ScreenBackground } from '@/components/screen-background';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Skeleton } from '@/components/ui/skeleton';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
-import { DESTINATIONS } from '@/constants/destinations';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
 import { useSuccessfulSessionCount } from '@/hooks/queries/use-atlas';
@@ -30,25 +27,6 @@ export default function ProfileScreen() {
   const sessionCountQuery = useSuccessfulSessionCount();
   const totalCourses = coursesQuery.data?.length ?? 0;
   const treesPlanted = sessionCountQuery.data ?? 0;
-
-  // Turns a bare "0" into something to fill up rather than a dead end —
-  // the courses gauge fills toward the grade's full syllabus, the rockets
-  // gauge fills toward the next atlas destination (see constants/destinations.ts,
-  // also used by garden.tsx/focus-session.tsx's unlock logic).
-  const courseProgress = totalCourses > 0 ? Math.min(1, completedCourseIds.length / totalCourses) : 0;
-  const nextDestination = DESTINATIONS.find((destination) => destination.threshold > treesPlanted) ?? null;
-  const rocketProgress = nextDestination ? Math.min(1, treesPlanted / nextDestination.threshold) : 1;
-  const rocketGaugeLabel = nextDestination
-    ? `Encore ${nextDestination.threshold - treesPlanted} pour ${nextDestination.name}`
-    : 'Toutes les destinations débloquées !';
-  const courseGaugeLabel =
-    totalCourses === 0
-      ? ''
-      : completedCourseIds.length === 0
-        ? 'Termine ton premier cours !'
-        : completedCourseIds.length >= totalCourses
-          ? 'Tous les cours terminés !'
-          : `Encore ${totalCourses - completedCourseIds.length} pour finir`;
 
   const displayName = getDisplayName(user);
   const initial = displayName.charAt(0).toUpperCase();
@@ -95,107 +73,6 @@ export default function ProfileScreen() {
       marginBottom: SPACING.tight,
       marginTop: SPACING.element,
     },
-    card: {
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      padding: SPACING.element,
-      marginBottom: SPACING.tight,
-      ...cardBorder(COLORS),
-    },
-    statsRow: {
-      flexDirection: 'row',
-      gap: SPACING.tight,
-      marginBottom: SPACING.element,
-    },
-    // Fixed minHeight so both stat cards line up exactly, regardless of small
-    // content differences between them.
-    statCard: {
-      flex: 1,
-      minHeight: 150,
-    },
-    rocketCardWrapper: {
-      borderRadius: RADIUS,
-      overflow: 'hidden',
-    },
-    rocketCard: {
-      flex: 1,
-      borderRadius: RADIUS,
-      padding: SPACING.element,
-      // Fallback so the card is never invisible if the gradient fails to paint.
-      backgroundColor: '#4B3F94',
-    },
-    // Matches badgeIcon's 36px + marginBottom footprint exactly, so this card
-    // has the same content height as the "Cours terminés" card next to it.
-    rocketIconSlot: {
-      height: 36,
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      marginBottom: SPACING.tight,
-    },
-    rocketCardLabel: {
-      ...TYPOGRAPHY.caption,
-      color: 'rgba(255,255,255,0.85)',
-      marginBottom: 4,
-    },
-    rocketCardNumber: {
-      ...TYPOGRAPHY.largeTitle,
-      color: COLORS.accentText,
-    },
-    badgeIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: SPACING.tight,
-      // Fallback so the badge is never invisible if the gradient fails to paint.
-      backgroundColor: '#8F7BF0',
-    },
-    statLabel: {
-      ...TYPOGRAPHY.caption,
-      color: COLORS.mutedText,
-      marginBottom: 4,
-    },
-    statNumberRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-    },
-    statNumber: {
-      ...TYPOGRAPHY.largeTitle,
-      color: COLORS.text,
-    },
-    statNumberTotal: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.mutedText,
-      marginLeft: 2,
-    },
-    gaugeTrack: {
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.lockedBackground,
-      overflow: 'hidden',
-      marginTop: SPACING.tight,
-    },
-    gaugeTrackOnDark: {
-      backgroundColor: 'rgba(255,255,255,0.18)',
-    },
-    gaugeFill: {
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.accent,
-    },
-    gaugeFillOnDark: {
-      backgroundColor: '#F2C879',
-    },
-    gaugeLabel: {
-      ...TYPOGRAPHY.caption,
-      fontSize: 11,
-      color: COLORS.mutedText,
-      marginTop: 6,
-    },
-    gaugeLabelOnDark: {
-      color: 'rgba(255,255,255,0.85)',
-    },
     historyRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -203,6 +80,7 @@ export default function ProfileScreen() {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
       padding: SPACING.element,
+      marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
     },
     historyIcon: {
@@ -213,11 +91,18 @@ export default function ProfileScreen() {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    historyText: {
+      flex: 1,
+    },
     historyLabel: {
       ...TYPOGRAPHY.body,
       fontWeight: '700',
       color: COLORS.text,
-      flex: 1,
+    },
+    historySubtitle: {
+      ...TYPOGRAPHY.caption,
+      color: COLORS.mutedText,
+      marginTop: 2,
     },
   });
 
@@ -240,70 +125,39 @@ export default function ProfileScreen() {
             <ThemedText style={styles.title}>{displayName}</ThemedText>
 
             <ThemedText style={styles.sectionTitle}>Apprentissage</ThemedText>
-            <View style={styles.statsRow}>
-              <ThemedView style={[styles.card, styles.statCard]}>
-                <LinearGradient colors={GRADIENTS.badge} style={styles.badgeIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                  <IconSymbol name="checkmark" size={18} color={COLORS.accentText} />
-                </LinearGradient>
-                <ThemedText style={styles.statLabel}>Cours terminés</ThemedText>
-                {coursesQuery.isPending ? (
-                  <Skeleton width={70} height={28} />
-                ) : (
-                  <>
-                    <View style={styles.statNumberRow}>
-                      <Animated.Text key={completedCourseIds.length} entering={FadeIn.duration(350)} style={styles.statNumber}>
-                        {completedCourseIds.length}
-                      </Animated.Text>
-                      <ThemedText style={styles.statNumberTotal}>/{totalCourses}</ThemedText>
-                    </View>
-                    <View style={styles.gaugeTrack}>
-                      <View style={[styles.gaugeFill, { width: `${courseProgress * 100}%` }]} />
-                    </View>
-                    {courseGaugeLabel ? (
-                      <ThemedText style={styles.gaugeLabel} numberOfLines={2}>
-                        {courseGaugeLabel}
-                      </ThemedText>
-                    ) : null}
-                  </>
-                )}
-              </ThemedView>
-              <Link href="/garden" asChild>
-                <BouncyPressable style={[styles.statCard, styles.rocketCardWrapper]}>
-                  <LinearGradient
-                    colors={GRADIENTS.cosmic}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.rocketCard}>
-                    <View style={styles.rocketIconSlot}>
-                      <RocketIcon size={26} floating />
-                    </View>
-                    <ThemedText style={styles.rocketCardLabel}>Fusées lancées</ThemedText>
-                    {sessionCountQuery.isPending ? (
-                      <Skeleton width={40} height={28} style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
-                    ) : (
-                      <>
-                        <Animated.Text key={treesPlanted} entering={FadeIn.duration(350)} style={styles.rocketCardNumber}>
-                          {treesPlanted}
-                        </Animated.Text>
-                        <View style={[styles.gaugeTrack, styles.gaugeTrackOnDark]}>
-                          <View style={[styles.gaugeFill, styles.gaugeFillOnDark, { width: `${rocketProgress * 100}%` }]} />
-                        </View>
-                        <ThemedText style={[styles.gaugeLabel, styles.gaugeLabelOnDark]} numberOfLines={2}>
-                          {rocketGaugeLabel}
-                        </ThemedText>
-                      </>
-                    )}
-                  </LinearGradient>
-                </BouncyPressable>
-              </Link>
-            </View>
+            <Link href="/garden" asChild>
+              <BouncyPressable style={styles.historyRow}>
+                <View style={styles.historyIcon}>
+                  {/* Static here — RocketIcon's floating bob is for hero
+                      placements (Home's focus card, the launch preview),
+                      not a small icon badge in a plain stat row. */}
+                  <RocketIcon size={20} />
+                </View>
+                <View style={styles.historyText}>
+                  <ThemedText style={styles.historyLabel}>Fusées lancées</ThemedText>
+                  {!sessionCountQuery.isPending ? (
+                    <ThemedText style={styles.historySubtitle}>
+                      {treesPlanted} lancée{treesPlanted > 1 ? 's' : ''}
+                    </ThemedText>
+                  ) : null}
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
+              </BouncyPressable>
+            </Link>
 
             <Link href="/course-history" asChild>
               <BouncyPressable style={styles.historyRow}>
                 <View style={styles.historyIcon}>
                   <IconSymbol name="doc.text.fill" size={18} color={COLORS.accent} />
                 </View>
-                <ThemedText style={styles.historyLabel}>Historique des cours</ThemedText>
+                <View style={styles.historyText}>
+                  <ThemedText style={styles.historyLabel}>Historique des cours</ThemedText>
+                  {!coursesQuery.isPending ? (
+                    <ThemedText style={styles.historySubtitle}>
+                      {completedCourseIds.length}/{totalCourses} terminés
+                    </ThemedText>
+                  ) : null}
+                </View>
                 <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
               </BouncyPressable>
             </Link>

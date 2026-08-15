@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useProgress } from '@/context/progress';
 import { useCourseHistory } from '@/hooks/queries/use-course-history';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseHistoryEntry, CourseHistorySection, ErrorType } from '@/lib/course-history';
@@ -149,7 +150,17 @@ function DisciplineSection({ section, isLast }: { section: CourseHistorySection;
 export default function CourseHistoryScreen() {
   const COLORS = useThemeColors();
   const historyQuery = useCourseHistory();
-  const sections = historyQuery.data ?? [];
+  const { completedCourseIds } = useProgress();
+  // This screen shows only what's actually finished, not the full syllabus
+  // useCourseHistory loads (every course for the grade, so DisciplineSection
+  // can be grouped/rendered without a second fetch) — filtering here keeps
+  // that hook generic instead of baking "completed-only" into its query.
+  const sections = (historyQuery.data ?? [])
+    .map((section) => ({
+      ...section,
+      courses: section.courses.filter((course) => completedCourseIds.includes(course.courseId)),
+    }))
+    .filter((section) => section.courses.length > 0);
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -210,8 +221,8 @@ export default function CourseHistoryScreen() {
           {historyQuery.isSuccess && sections.length === 0 ? (
             <EmptyState
               icon="time-outline"
-              title="Aucun cours pour l'instant"
-              description="Ton historique apparaîtra ici dès que tu auras commencé un cours."
+              title="Aucun cours terminé pour l'instant"
+              description="Les cours que tu termines apparaîtront ici."
             />
           ) : null}
 
