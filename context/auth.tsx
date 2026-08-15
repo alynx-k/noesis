@@ -20,6 +20,14 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signInWithApple: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  // True right after an email/password or OAuth sign-in/sign-up actually
+  // succeeds — never set by the cold-boot session restore, only by a user
+  // action taken this app session. Lets the gate hold its loading screen
+  // for a minimum duration on that specific transition, without also
+  // delaying every ordinary app reopen (session restore) by the same
+  // amount.
+  justAuthenticated: boolean;
+  clearJustAuthenticated: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -27,6 +35,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [justAuthenticated, setJustAuthenticated] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -45,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) {
+      setJustAuthenticated(true);
+    }
     return { error: error?.message ?? null };
   };
 
@@ -52,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { prenom } } });
     if (error) {
       return { error: error.message, needsConfirmation: false };
+    }
+    if (data.session) {
+      setJustAuthenticated(true);
     }
     return { error: null, needsConfirmation: !data.session };
   };
@@ -83,6 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    if (!exchangeError) {
+      setJustAuthenticated(true);
+    }
     return { error: exchangeError?.message ?? null };
   };
 
@@ -91,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setJustAuthenticated(false);
   };
 
   return (
@@ -105,6 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithApple,
         signOut,
+        justAuthenticated,
+        clearJustAuthenticated: () => setJustAuthenticated(false),
       }}
     >
       {children}
