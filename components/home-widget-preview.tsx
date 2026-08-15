@@ -49,7 +49,7 @@ const PANTHER_SIZE = 92;
 // for BROKEN. Continuous ambient motion tied to state, not a mount-time
 // entrance effect — same discipline as the login screen's rotating ring
 // and the AI chat's ThinkingPill.
-function MascotPanther({ state }: { state: WidgetState }) {
+export function MascotPanther({ state }: { state: WidgetState }) {
   const motion = useSharedValue(0);
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AiTutorChatBody } from '@/components/ai-tutor-chat';
+import { AiTutorChatBody, GENERAL_TUTOR_SUGGESTIONS } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ChatSidebar } from '@/components/chat-sidebar';
 import { ScreenBackground } from '@/components/screen-background';
@@ -68,7 +68,13 @@ function ChatSessionView({
     }
   };
 
-  return <AiTutorChatBody initialMessages={initialMessages} onMessage={handleMessage} />;
+  return (
+    <AiTutorChatBody
+      initialMessages={initialMessages}
+      onMessage={handleMessage}
+      suggestions={GENERAL_TUTOR_SUGGESTIONS}
+    />
+  );
 }
 
 export default function AiChatScreen() {

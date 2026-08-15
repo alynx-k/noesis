@@ -37,6 +37,16 @@ function getToneStyles(COLORS: ThemeColors, tone: Tone) {
       };
 }
 
+// Shown above the input on the standalone IA tab (app/ai-chat.tsx), which
+// has no exercise/fiche context to derive suggestions from — generic
+// prompts that cover the tab's three stated use cases (question, devoir,
+// révision) rather than leaving the input's empty state suggestion-less.
+export const GENERAL_TUTOR_SUGGESTIONS = [
+  'Explique-moi ce théorème',
+  'Résume mon cours',
+  'Aide-moi à réviser pour un contrôle',
+];
+
 function getDefaultSuggestions(context: TutorContext | undefined): string[] {
   if (!context) {
     return [];

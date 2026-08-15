@@ -1,16 +1,21 @@
+import { BlurView } from 'expo-blur';
 import { useState } from 'react';
-import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
+import { Dimensions, Platform, Pressable, SectionList, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeOut, SlideInLeft, SlideOutLeft } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { MascotPanther } from '@/components/home-widget-preview';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ELEVATION, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { ChatSessionSummary } from '@/lib/chat';
 
-const SIDEBAR_WIDTH = 300;
+// Fraction of screen height the sheet grows to at most — a fixed pixel
+// height would either clip on small phones or leave an oddly small sheet
+// on tablets/large screens.
+const SHEET_MAX_HEIGHT_RATIO = 0.82;
 
 type SessionGroup = { title: string; data: ChatSessionSummary[] };
 
@@ -75,6 +80,7 @@ export function ChatSidebar({
   onDeleteSession,
 }: ChatSidebarProps) {
   const COLORS = useThemeColors();
+  const scheme = useColorScheme();
   const [renamingSession, setRenamingSession] = useState<ChatSessionSummary | null>(null);
   const [deletingSession, setDeletingSession] = useState<ChatSessionSummary | null>(null);
 
@@ -86,6 +92,7 @@ export function ChatSidebar({
       right: 0,
       bottom: 0,
       zIndex: Z_INDEX.modal,
+      justifyContent: 'flex-end',
     },
     backdrop: {
       position: 'absolute',
@@ -93,17 +100,30 @@ export function ChatSidebar({
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      overflow: 'hidden',
     },
-    panel: {
-      width: SIDEBAR_WIDTH,
-      maxWidth: '85%',
-      height: '100%',
+    backdropTint: {
+      flex: 1,
+      backgroundColor: scheme === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(20,24,27,0.18)',
+    },
+    sheet: {
+      maxHeight: Dimensions.get('window').height * SHEET_MAX_HEIGHT_RATIO,
       backgroundColor: COLORS.surface,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
       ...ELEVATION.lg,
     },
     flex: {
       flex: 1,
+    },
+    grabber: {
+      alignSelf: 'center',
+      width: 40,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: COLORS.borderStrong,
+      marginTop: 10,
+      marginBottom: 4,
     },
     header: {
       flexDirection: 'row',
@@ -141,6 +161,7 @@ export function ChatSidebar({
       fontSize: 15,
     },
     listContent: {
+      flexGrow: 1,
       paddingHorizontal: SPACING.tight,
       paddingBottom: SPACING.section,
     },
@@ -154,12 +175,25 @@ export function ChatSidebar({
       marginBottom: SPACING.xs,
       marginLeft: SPACING.tight,
     },
-    emptyText: {
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: SPACING.section,
+      paddingTop: SPACING.section,
+      paddingBottom: SPACING.section,
+      gap: SPACING.tight,
+    },
+    emptyTitle: {
       ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      textAlign: 'center',
+    },
+    emptyText: {
+      ...TYPOGRAPHY.caption,
       color: COLORS.mutedText,
       textAlign: 'center',
-      marginTop: SPACING.section,
-      paddingHorizontal: SPACING.element,
     },
   });
 
@@ -171,12 +205,20 @@ export function ChatSidebar({
 
   return (
     <View style={styles.overlay}>
-      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.backdrop}>
+      <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={styles.backdrop}>
+        <BlurView
+          intensity={40}
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+          style={StyleSheet.absoluteFill}>
+          <View style={styles.backdropTint} />
+        </BlurView>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      <Animated.View entering={SlideInLeft.duration(280)} exiting={SlideOutLeft.duration(220)} style={styles.panel}>
-        <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+      <Animated.View entering={SlideInDown.duration(300)} exiting={SlideOutDown.duration(240)} style={styles.sheet}>
+        <SafeAreaView style={styles.flex} edges={['bottom']}>
+          <View style={styles.grabber} />
           <View style={styles.header}>
             <ThemedText style={styles.headerTitle}>Discussions</ThemedText>
             <BouncyPressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
@@ -203,7 +245,13 @@ export function ChatSidebar({
                 onDelete={() => setDeletingSession(item)}
               />
             )}
-            ListEmptyComponent={<ThemedText style={styles.emptyText}>Aucune conversation pour l&apos;instant</ThemedText>}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <MascotPanther state="NEW" />
+                <ThemedText style={styles.emptyTitle}>Pose ta première question à ton tuteur IA !</ThemedText>
+                <ThemedText style={styles.emptyText}>Tes discussions apparaîtront ici, groupées par date.</ThemedText>
+              </View>
+            }
           />
         </SafeAreaView>
       </Animated.View>
