@@ -14,6 +14,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Halo } from '@/components/ui/halo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, HALO_COLORS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
@@ -146,6 +147,73 @@ export default function HomeScreen() {
       // Fallback so the card is never invisible if the gradient fails to paint.
       backgroundColor: '#4B3F94',
     },
+    sectionTitle: {
+      ...TYPOGRAPHY.title,
+      color: COLORS.text,
+      marginTop: SPACING.section,
+      marginBottom: SPACING.element,
+    },
+    subjectGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    subjectGridItem: {
+      width: '48%',
+      marginBottom: SPACING.tight,
+    },
+    subjectCard: {
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      // Fixed height so every card lines up regardless of label length —
+      // without this, a two-line label (e.g. "Histoire-Géographie") makes
+      // its card taller than its single-line neighbors.
+      minHeight: 132,
+      justifyContent: 'center',
+      ...cardBorder(COLORS),
+    },
+    subjectIconBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.tight,
+      backgroundColor: COLORS.accent,
+    },
+    subjectIconBadgeLocked: {
+      backgroundColor: COLORS.lockedBackground,
+    },
+    subjectCardTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    subjectCardLocked: {
+      backgroundColor: COLORS.lockedBackground,
+      borderColor: COLORS.borderStrong,
+    },
+    subjectCardTitleLocked: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '600',
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
+    },
+    subjectBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: COLORS.surface,
+      borderRadius: 999,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderColor: COLORS.borderStrong,
+    },
+    subjectBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
   });
 
   if (profileQuery.isPending) {
@@ -181,6 +249,13 @@ export default function HomeScreen() {
 
   const nextUp = nextUpQuery.data;
   const firstName = getDisplayName(user);
+  const profile = profileQuery.data;
+  const disciplineIdsForGrade = profile?.grade ? getDisciplineIdsFor(profile.grade, profile.serie) : [];
+  const visibleDisciplines = DISCIPLINES.filter(
+    (discipline) =>
+      disciplineIdsForGrade.includes(discipline.id) &&
+      ((discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === profile?.lv2),
+  );
 
   return (
     <ScreenBackground>
@@ -255,6 +330,48 @@ export default function HomeScreen() {
                 </LinearGradient>
               </BouncyPressable>
             </Link>
+
+            <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>
+            <View style={styles.subjectGrid}>
+              {visibleDisciplines.map((discipline) => {
+                if (!discipline.available) {
+                  return (
+                    <View key={discipline.id} style={styles.subjectGridItem}>
+                      <View style={[styles.subjectCard, styles.subjectCardLocked]}>
+                        <View style={[styles.subjectIconBadge, styles.subjectIconBadgeLocked]}>
+                          <IconSymbol name={discipline.icon} size={20} color={COLORS.text} />
+                        </View>
+                        <ThemedText style={styles.subjectCardTitleLocked} numberOfLines={2}>
+                          {discipline.label}
+                        </ThemedText>
+                        <View style={styles.subjectBadge}>
+                          <ThemedText style={styles.subjectBadgeText}>Bientôt disponible</ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                }
+
+                return (
+                  <View key={discipline.id} style={styles.subjectGridItem}>
+                    <Link href={{ pathname: '/subject/[disciplineId]', params: { disciplineId: discipline.id } }} asChild>
+                      <BouncyPressable style={styles.subjectCard}>
+                        <LinearGradient
+                          colors={discipline.gradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.subjectIconBadge}>
+                          <IconSymbol name={discipline.icon} size={20} color={COLORS.accentText} />
+                        </LinearGradient>
+                        <ThemedText style={styles.subjectCardTitle} numberOfLines={2}>
+                          {discipline.label}
+                        </ThemedText>
+                      </BouncyPressable>
+                    </Link>
+                  </View>
+                );
+              })}
+            </View>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>

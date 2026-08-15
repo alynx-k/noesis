@@ -45,10 +45,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="cours"
+        name="communaute"
         options={{
-          title: 'Cours',
-          tabBarIcon: ({ color, size }) => <IconSymbol name="book.fill" color={color} size={size} />,
+          title: 'Communauté',
+          tabBarIcon: ({ color, size }) => <IconSymbol name="trophy.fill" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { MascotPanther } from '@/components/mascot-panther';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ELEVATION, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
@@ -184,6 +183,15 @@ export function ChatSidebar({
       paddingBottom: SPACING.section,
       gap: SPACING.tight,
     },
+    emptyIconBadge: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
     emptyTitle: {
       ...TYPOGRAPHY.body,
       fontWeight: '700',
@@ -247,7 +255,9 @@ export function ChatSidebar({
             )}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <MascotPanther state="NEW" />
+                <View style={styles.emptyIconBadge}>
+                  <IconSymbol name="sparkles" size={26} color={COLORS.accent} />
+                </View>
                 <ThemedText style={styles.emptyTitle}>Pose ta première question à ton tuteur IA !</ThemedText>
                 <ThemedText style={styles.emptyText}>Tes discussions apparaîtront ici, groupées par date.</ThemedText>
               </View>
