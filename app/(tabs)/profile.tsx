@@ -127,12 +127,20 @@ export default function ProfileScreen() {
             <ThemedText style={styles.sectionTitle}>Apprentissage</ThemedText>
             <Link href="/garden" asChild>
               <BouncyPressable style={styles.historyRow}>
-                <View style={styles.historyIcon}>
+                {/* Same footprint/row as Historique des cours below, but a
+                    gradient badge (matching the rocket's own launch colors)
+                    instead of the flat accentSoft one — the row shrank to
+                    match, the color identity didn't have to. */}
+                <LinearGradient
+                  colors={GRADIENTS.cosmic}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.historyIcon}>
                   {/* Static here — RocketIcon's floating bob is for hero
                       placements (Home's focus card, the launch preview),
                       not a small icon badge in a plain stat row. */}
                   <RocketIcon size={20} />
-                </View>
+                </LinearGradient>
                 <View style={styles.historyText}>
                   <ThemedText style={styles.historyLabel}>Fusées lancées</ThemedText>
                   {!sessionCountQuery.isPending ? (
