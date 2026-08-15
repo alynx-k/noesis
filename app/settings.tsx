@@ -15,6 +15,7 @@ import { toast } from '@/components/ui/toast';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GRADES, GradeId, isLyceeGrade, SERIES_BY_GRADE, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
+import { useTour } from '@/context/tour';
 import { useGradeProfile, useUpdateGrade } from '@/hooks/queries/use-grade-profile';
 import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
@@ -30,6 +31,7 @@ const SIGN_OUT_MIN_DURATION_MS = 5000;
 export default function SettingsScreen() {
   const COLORS = useThemeColors();
   const { user, signOut } = useAuth();
+  const tour = useTour();
   const gradeProfileQuery = useGradeProfile();
   const gradeProfile = gradeProfileQuery.data ?? null;
   const updateGradeMutation = useUpdateGrade();
@@ -109,6 +111,10 @@ export default function SettingsScreen() {
       return;
     }
     finalizeGradeChange(grade, null);
+  };
+
+  const handleReplayTour = () => {
+    tour.start();
   };
 
   const handleSignOutPress = () => {
@@ -302,6 +308,18 @@ export default function SettingsScreen() {
               thumbColor={COLORS.surface}
             />
           </View>
+
+          <ThemedText style={styles.sectionTitle}>Aide</ThemedText>
+          <BouncyPressable style={styles.row} onPress={handleReplayTour}>
+            <View style={styles.rowIcon}>
+              <IconSymbol name="lightbulb.fill" size={18} color={COLORS.mutedText} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText style={styles.rowLabel}>Découverte de l&apos;app</ThemedText>
+              <ThemedText style={styles.rowValue}>Revoir le tutoriel</ThemedText>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
+          </BouncyPressable>
 
           <BouncyPressable style={styles.signOutButton} onPress={handleSignOutPress} disabled={isLoggingOut}>
             {isLoggingOut ? (

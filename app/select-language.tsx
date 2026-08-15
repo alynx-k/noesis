@@ -10,6 +10,7 @@ import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { Lv2Id } from '@/constants/lv2';
 import { useSetLv2 } from '@/hooks/queries/use-onboarding';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { markTourPending } from '@/lib/tour';
 
 export default function SelectLanguageScreen() {
   const COLORS = useThemeColors();
@@ -32,7 +33,13 @@ export default function SelectLanguageScreen() {
     const result = await setLv2.mutateAsync(selectedLv2);
     if (result.error) {
       setError(result.error);
+      return;
     }
+    // Home's mount effect consumes this the moment the gate lands there —
+    // this is the last onboarding step, so it's the one reliable place to
+    // mark "just-onboarded", distinct from a returning user reopening the
+    // app to the same Home screen.
+    await markTourPending();
     // No manual navigation: the profile query invalidation on success makes
     // the root gate re-resolve, and Stack.Protected redirects automatically.
   };

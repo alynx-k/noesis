@@ -52,6 +52,7 @@ const MAPPING = {
   'pencil': 'edit',
   'ellipsis': 'more-horiz',
   'xmark': 'close',
+  'lightbulb.fill': 'lightbulb',
 } as IconMapping;
 
 /**

@@ -2,6 +2,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -18,10 +19,12 @@ import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, HALO_COLORS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
+import { useTour, useTourTarget } from '@/context/tour';
 import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { getDisplayName } from '@/lib/profile';
+import { consumeTourPending } from '@/lib/tour';
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -41,6 +44,24 @@ export default function HomeScreen() {
   // streak or next-up fetch doesn't blank the rest of the screen.
   const profileQuery = useProfile();
   const nextUpQuery = useNextUpCourse();
+  const tour = useTour();
+  const greetingTarget = useTourTarget('home-greeting');
+  const focusTarget = useTourTarget('home-focus-session');
+  const aiTarget = useTourTarget('home-ai-chat');
+  const subjectsTarget = useTourTarget('home-subjects');
+
+  // Starts the guided tour exactly once, right after a brand-new account
+  // finishes onboarding — see select-language.tsx (sets the flag) and
+  // lib/tour.ts (consumeTourPending clears it in the same call, so a
+  // remount here can't start it twice).
+  useEffect(() => {
+    consumeTourPending().then((shouldStart) => {
+      if (shouldStart) {
+        tour.start();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -265,10 +286,12 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <Animated.View entering={FadeIn.duration(450)}>
-            <ThemedText style={styles.greeting}>
-              Hey 👋 On révise{'\n'}
-              <ThemedText style={styles.greetingName}>{firstName}</ThemedText> ?
-            </ThemedText>
+            <View ref={greetingTarget.ref} onLayout={greetingTarget.onLayout}>
+              <ThemedText style={styles.greeting}>
+                Hey 👋 On révise{'\n'}
+                <ThemedText style={styles.greetingName}>{firstName}</ThemedText> ?
+              </ThemedText>
+            </View>
 
             {nextUp ? (
               <Link href={{ pathname: '/course/[id]', params: { id: nextUp.courseId } }} asChild>
@@ -287,51 +310,57 @@ export default function HomeScreen() {
               </Link>
             ) : null}
 
-            <Link href="/focus-session" asChild>
-              <BouncyPressable style={styles.focusCardWrapper}>
-                <LinearGradient
-                  colors={GRADIENTS.hero}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.focusCard}>
-                  <View style={styles.actionIconBadge}>
-                    <RocketIcon size={26} floating />
-                  </View>
-                  <View style={styles.focusCardText}>
-                    <ThemedText style={styles.focusCardTitle}>
-                      {focusPhase === 'running' ? 'Session en cours' : 'Session de concentration'}
-                    </ThemedText>
-                    <ThemedText style={styles.focusCardSubtitle}>
-                      {focusPhase === 'running'
-                        ? `${formatTime(remainingSeconds)} restantes — la fusée vole`
-                        : 'Lance une fusée et reste concentré 20 minutes 🚀'}
-                    </ThemedText>
-                  </View>
-                </LinearGradient>
-              </BouncyPressable>
-            </Link>
+            <View ref={focusTarget.ref} onLayout={focusTarget.onLayout}>
+              <Link href="/focus-session" asChild>
+                <BouncyPressable style={styles.focusCardWrapper}>
+                  <LinearGradient
+                    colors={GRADIENTS.hero}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.focusCard}>
+                    <View style={styles.actionIconBadge}>
+                      <RocketIcon size={26} floating />
+                    </View>
+                    <View style={styles.focusCardText}>
+                      <ThemedText style={styles.focusCardTitle}>
+                        {focusPhase === 'running' ? 'Session en cours' : 'Session de concentration'}
+                      </ThemedText>
+                      <ThemedText style={styles.focusCardSubtitle}>
+                        {focusPhase === 'running'
+                          ? `${formatTime(remainingSeconds)} restantes — la fusée vole`
+                          : 'Lance une fusée et reste concentré 20 minutes 🚀'}
+                      </ThemedText>
+                    </View>
+                  </LinearGradient>
+                </BouncyPressable>
+              </Link>
+            </View>
 
-            <Link href="/ai-chat" asChild>
-              <BouncyPressable style={styles.aiCardWrapper}>
-                <LinearGradient
-                  colors={GRADIENTS.cosmic}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.aiCard}>
-                  <View style={styles.actionIconBadge}>
-                    <IconSymbol name="sparkles" size={26} color={COLORS.accentText} />
-                  </View>
-                  <View style={styles.focusCardText}>
-                    <ThemedText style={styles.focusCardTitle}>Discuter avec ton tuteur IA</ThemedText>
-                    <ThemedText style={styles.focusCardSubtitle}>
-                      Pose une question, corrige un devoir, prépare-toi pour un contrôle
-                    </ThemedText>
-                  </View>
-                </LinearGradient>
-              </BouncyPressable>
-            </Link>
+            <View ref={aiTarget.ref} onLayout={aiTarget.onLayout}>
+              <Link href="/ai-chat" asChild>
+                <BouncyPressable style={styles.aiCardWrapper}>
+                  <LinearGradient
+                    colors={GRADIENTS.cosmic}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.aiCard}>
+                    <View style={styles.actionIconBadge}>
+                      <IconSymbol name="sparkles" size={26} color={COLORS.accentText} />
+                    </View>
+                    <View style={styles.focusCardText}>
+                      <ThemedText style={styles.focusCardTitle}>Discuter avec ton tuteur IA</ThemedText>
+                      <ThemedText style={styles.focusCardSubtitle}>
+                        Pose une question, corrige un devoir, prépare-toi pour un contrôle
+                      </ThemedText>
+                    </View>
+                  </LinearGradient>
+                </BouncyPressable>
+              </Link>
+            </View>
 
-            <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>
+            <View ref={subjectsTarget.ref} onLayout={subjectsTarget.onLayout}>
+              <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>
+            </View>
             <View style={styles.subjectGrid}>
               {visibleDisciplines.map((discipline) => {
                 if (!discipline.available) {

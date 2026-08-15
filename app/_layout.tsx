@@ -14,6 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { TourOverlay } from '@/components/tour-overlay';
 import { ErrorState } from '@/components/ui/error-state';
 import { LoadingBadge } from '@/components/ui/loading-badge';
 import { ToastProvider } from '@/components/ui/toast';
@@ -24,6 +25,7 @@ import { useNotificationScheduling } from '@/hooks/use-notification-scheduling';
 import { AuthProvider } from '@/context/auth';
 import { FocusSessionProvider } from '@/context/focus-session';
 import { ProgressProvider } from '@/context/progress';
+import { TourProvider } from '@/context/tour';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { queryClient } from '@/lib/query-client';
 import { initNotificationHandler } from '@/lib/notifications';
@@ -126,6 +128,7 @@ function AppNavigator() {
         {!showSplash && state === 'loading' && !error ? <GateLoadingOverlay message={loadingMessage} /> : null}
         {!showSplash && error ? <GateErrorOverlay onRetry={retry} /> : null}
         {showSplash ? <AnimatedSplash onFinish={() => setShowSplash(false)} /> : null}
+        <TourOverlay />
       </ToastProvider>
     </ThemeProvider>
   );
@@ -152,7 +155,9 @@ export default function RootLayout() {
       <AuthProvider>
         <ProgressProvider>
           <FocusSessionProvider>
-            <AppNavigator />
+            <TourProvider>
+              <AppNavigator />
+            </TourProvider>
           </FocusSessionProvider>
         </ProgressProvider>
       </AuthProvider>
