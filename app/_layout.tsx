@@ -11,7 +11,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/animated-splash';
 import { ErrorState } from '@/components/ui/error-state';
@@ -37,7 +37,7 @@ initNotificationHandler();
 function GateLoadingOverlay({ message }: { message: string }) {
   const COLORS = useThemeColors();
   return (
-    <View style={[styles.overlay, { backgroundColor: COLORS.background }]}>
+    <Animated.View exiting={FadeOut.duration(200)} style={[styles.overlay, { backgroundColor: COLORS.background }]}>
       <LoadingBadge icon="lock.fill" color={COLORS.accent} size={64} />
       {/* Keyed on the message so it cross-fades instead of jump-cutting as
           the gate moves through phases (session -> profil -> tableau de
@@ -46,7 +46,7 @@ function GateLoadingOverlay({ message }: { message: string }) {
       <Animated.Text key={message} entering={FadeIn.duration(200)} style={[styles.overlayTitle, { color: COLORS.text }]}>
         {message || 'Connexion en cours…'}
       </Animated.Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -91,7 +91,13 @@ function AppNavigator() {
       <ToastProvider>
         <Stack>
           <Stack.Protected guard={guards.ready}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* animation: 'none' — this screen mounts the instant the gate's
+                own loading overlay disappears, not from a user tapping
+                something. The overlay is a sibling, not a stack screen, so
+                without this the (still-mounted, just hidden) login screen
+                underneath was visibly mid-transition-out for a frame right
+                as the overlay came off — read as a flashing "double page". */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="subject/[disciplineId]" options={{ headerShown: false }} />
             <Stack.Screen name="course/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="exercise" options={{ headerShown: false }} />
@@ -107,13 +113,13 @@ function AppNavigator() {
             <Stack.Screen name="prepare-homework" options={{ headerShown: false }} />
           </Stack.Protected>
           <Stack.Protected guard={guards.auth}>
-            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false, animation: 'none' }} />
           </Stack.Protected>
           <Stack.Protected guard={guards.grade}>
-            <Stack.Screen name="select-grade" options={{ headerShown: false }} />
+            <Stack.Screen name="select-grade" options={{ headerShown: false, animation: 'none' }} />
           </Stack.Protected>
           <Stack.Protected guard={guards.lv2}>
-            <Stack.Screen name="select-language" options={{ headerShown: false }} />
+            <Stack.Screen name="select-language" options={{ headerShown: false, animation: 'none' }} />
           </Stack.Protected>
         </Stack>
         <StatusBar style="auto" />
