@@ -3,8 +3,6 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 const NOTIFICATIONS_ENABLED_KEY = 'noesis:notifications-enabled';
-const STREAK_REMINDER_ID_KEY = 'noesis:streak-reminder-id';
-const STREAK_REMINDER_HOUR = 18;
 
 // Registered once at app startup (see app/_layout.tsx): controls whether a
 // notification banner shows while the app is in the foreground. Without
@@ -49,30 +47,6 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return status === 'granted';
 }
 
-export async function scheduleDailyStreakReminder(): Promise<void> {
-  await cancelDailyStreakReminder();
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Ta série de révision',
-      body: "N'oublie pas ta série aujourd'hui !",
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: STREAK_REMINDER_HOUR,
-      minute: 0,
-    },
-  });
-  await AsyncStorage.setItem(STREAK_REMINDER_ID_KEY, identifier);
-}
-
-export async function cancelDailyStreakReminder(): Promise<void> {
-  const identifier = await AsyncStorage.getItem(STREAK_REMINDER_ID_KEY);
-  if (identifier) {
-    await Notifications.cancelScheduledNotificationAsync(identifier);
-    await AsyncStorage.removeItem(STREAK_REMINDER_ID_KEY);
-  }
-}
-
 function reviewReminderStorageKey(courseId: string): string {
   return `noesis:review-reminder-id:${courseId}`;
 }
@@ -109,5 +83,4 @@ export async function cancelReviewReminder(courseId: string): Promise<void> {
 
 export async function cancelAllReminders(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  await AsyncStorage.multiRemove([STREAK_REMINDER_ID_KEY]);
 }

@@ -5,6 +5,7 @@ import { Destination } from '@/constants/destinations';
 import { useAuth } from '@/context/auth';
 import { destinationForSequence, newlyUnlockedDestination } from '@/lib/atlas';
 import { finishFocusSession, getSuccessfulSessionCount, startFocusSession } from '@/lib/focus-session';
+import { cancelTodayNotifications } from '@/lib/notification-scheduler';
 import { recordActivity } from '@/lib/streak';
 
 type Phase = 'idle' | 'running' | 'success' | 'failed';
@@ -65,6 +66,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
     if (sessionIdRef.current) {
       finishFocusSession(sessionIdRef.current, true);
       recordActivity();
+      cancelTodayNotifications();
     }
   }, []);
 

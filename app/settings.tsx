@@ -14,14 +14,11 @@ import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GRADES, GradeId, isLyceeGrade, SERIES_BY_GRADE, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
 import { useGradeProfile, useUpdateGrade } from '@/hooks/queries/use-grade-profile';
+import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import {
-  cancelAllReminders,
-  isNotificationsEnabled,
-  requestNotificationPermissions,
-  scheduleDailyStreakReminder,
-  setNotificationsEnabled,
-} from '@/lib/notifications';
+import { cancelAllReminders, isNotificationsEnabled, requestNotificationPermissions } from '@/lib/notifications';
+import { cancelTodayNotifications, runDailyNotificationCycle, setPushNotificationsEnabled } from '@/lib/notification-scheduler';
+import { getDisplayName } from '@/lib/profile';
 
 export default function SettingsScreen() {
   const COLORS = useThemeColors();
@@ -29,6 +26,7 @@ export default function SettingsScreen() {
   const gradeProfileQuery = useGradeProfile();
   const gradeProfile = gradeProfileQuery.data ?? null;
   const updateGradeMutation = useUpdateGrade();
+  const nextUpQuery = useNextUpCourse();
   const [showGradePicker, setShowGradePicker] = useState(false);
   const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
   const [gradeChangeError, setGradeChangeError] = useState<string | null>(null);
@@ -45,12 +43,18 @@ export default function SettingsScreen() {
         setNotificationsOn(false);
         return;
       }
-      await scheduleDailyStreakReminder();
-      await setNotificationsEnabled(true);
+      await setPushNotificationsEnabled(true);
       setNotificationsOn(true);
+      // Evaluate right away rather than waiting for tomorrow's app-open
+      // cycle, so flipping the toggle on feels immediate.
+      await runDailyNotificationCycle({
+        prenom: getDisplayName(user),
+        matiere: nextUpQuery.data?.courseTitle ?? 'tes cours',
+      });
     } else {
       await cancelAllReminders();
-      await setNotificationsEnabled(false);
+      await cancelTodayNotifications();
+      await setPushNotificationsEnabled(false);
       setNotificationsOn(false);
     }
   };

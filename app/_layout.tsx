@@ -18,6 +18,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { ToastProvider } from '@/components/ui/toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useGateState } from '@/hooks/use-gate-state';
+import { useNotificationScheduling } from '@/hooks/use-notification-scheduling';
 import { AuthProvider } from '@/context/auth';
 import { FocusSessionProvider } from '@/context/focus-session';
 import { ProgressProvider } from '@/context/progress';
@@ -74,6 +75,8 @@ function AppNavigator() {
     lv2: state === 'needs-lv2',
     placement: state === 'needs-placement',
   };
+
+  useNotificationScheduling(guards.ready);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

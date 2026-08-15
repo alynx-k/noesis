@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/auth';
+import { cancelTodayNotifications } from '@/lib/notification-scheduler';
 import { recordActivity } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 
@@ -54,6 +55,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       console.error('Failed to save course progress to Supabase:', error);
     } else {
       recordActivity();
+      cancelTodayNotifications();
     }
   };
 
