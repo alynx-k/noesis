@@ -10,12 +10,15 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { ThemedText } from '@/components/themed-text';
 import { ErrorState } from '@/components/ui/error-state';
+import { LoadingBadge } from '@/components/ui/loading-badge';
 import { ToastProvider } from '@/components/ui/toast';
+import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useGateState } from '@/hooks/use-gate-state';
 import { useNotificationScheduling } from '@/hooks/use-notification-scheduling';
@@ -36,7 +39,8 @@ function GateLoadingOverlay() {
   const COLORS = useThemeColors();
   return (
     <View style={[styles.overlay, { backgroundColor: COLORS.background }]}>
-      <ActivityIndicator color={COLORS.accent} size="large" />
+      <LoadingBadge icon="lock.fill" color={COLORS.accent} size={64} />
+      <ThemedText style={[styles.overlayTitle, { color: COLORS.text }]}>Connexion en cours…</ThemedText>
     </View>
   );
 }
@@ -150,5 +154,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  overlayTitle: {
+    ...TYPOGRAPHY.body,
+    fontWeight: '700',
+    marginTop: SPACING.element,
   },
 });
