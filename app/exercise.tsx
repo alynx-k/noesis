@@ -12,7 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
 import { useExercise } from '@/hooks/queries/use-exercise';
@@ -24,6 +24,15 @@ import { supabase } from '@/lib/supabase';
 
 type Confidence = 'unsure' | 'sure' | null;
 type Verdict = 'correct' | 'partial' | 'incorrect';
+
+// Quick-insert symbols for calculation/fraction answers — RN's default
+// keyboard buries these behind the symbols page on most devices, so a
+// student writing "3/4" or "x^2" has to hunt for them every time.
+// Appended at the end of the current answer rather than at the cursor:
+// tracking/restoring cursor position through controlled TextInput
+// re-renders is fragile on RN, and "append" matches how a student actually
+// builds up a short numeric answer.
+const MATH_SYMBOLS = ['/', '^', '+', '-', '×'] as const;
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   correct: 'Correct',
@@ -224,8 +233,29 @@ export default function ExerciseScreen() {
       fontSize: 16,
       color: COLORS.text,
       textAlignVertical: 'top',
-      marginBottom: SPACING.section,
       ...cardBorder(COLORS),
+    },
+    mathToolbar: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: SPACING.tight,
+      marginBottom: SPACING.section,
+    },
+    mathKey: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: COLORS.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderBottomWidth: 3,
+      borderBottomColor: COLORS.borderStrong,
+      ...cardBorder(COLORS),
+    },
+    mathKeyText: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: COLORS.text,
     },
     confidenceRow: {
       flexDirection: 'row',
@@ -234,22 +264,30 @@ export default function ExerciseScreen() {
       backgroundColor: 'transparent',
     },
     confidenceButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       borderWidth: 1.5,
-      borderColor: COLORS.accent,
+      borderColor: COLORS.borderStrong,
       borderRadius: 999,
       paddingVertical: 8,
       paddingHorizontal: 18,
     },
-    confidenceButtonSelected: {
-      backgroundColor: COLORS.accent,
+    confidenceButtonUnsureSelected: {
+      backgroundColor: STATUS_COLORS.warning,
+      borderColor: STATUS_COLORS.warning,
+    },
+    confidenceButtonSureSelected: {
+      backgroundColor: FEEDBACK_COLORS.correct,
+      borderColor: FEEDBACK_COLORS.correct,
     },
     confidenceButtonText: {
-      color: COLORS.accent,
+      color: COLORS.mutedText,
       fontSize: 14,
       fontWeight: '700',
     },
     confidenceButtonTextSelected: {
-      color: COLORS.accentText,
+      color: '#FFFFFF',
     },
     verdictBadge: {
       borderRadius: RADIUS,
@@ -380,11 +418,25 @@ export default function ExerciseScreen() {
                 onChangeText={setAnswerText}
               />
 
+              <ThemedView style={styles.mathToolbar}>
+                {MATH_SYMBOLS.map((symbol) => (
+                  <BouncyPressable
+                    key={symbol}
+                    disabled={grading}
+                    style={styles.mathKey}
+                    onPress={() => setAnswerText((previous) => previous + symbol)}
+                    hitSlop={4}>
+                    <ThemedText style={styles.mathKeyText}>{symbol}</ThemedText>
+                  </BouncyPressable>
+                ))}
+              </ThemedView>
+
               <ThemedView style={styles.confidenceRow}>
                 <BouncyPressable
                   disabled={grading}
-                  style={[styles.confidenceButton, confidence === 'unsure' && styles.confidenceButtonSelected]}
+                  style={[styles.confidenceButton, confidence === 'unsure' && styles.confidenceButtonUnsureSelected]}
                   onPress={() => setConfidence('unsure')}>
+                  {confidence === 'unsure' ? <IconSymbol name="checkmark" size={14} color="#FFFFFF" /> : null}
                   <ThemedText
                     style={[
                       styles.confidenceButtonText,
@@ -395,8 +447,9 @@ export default function ExerciseScreen() {
                 </BouncyPressable>
                 <BouncyPressable
                   disabled={grading}
-                  style={[styles.confidenceButton, confidence === 'sure' && styles.confidenceButtonSelected]}
+                  style={[styles.confidenceButton, confidence === 'sure' && styles.confidenceButtonSureSelected]}
                   onPress={() => setConfidence('sure')}>
+                  {confidence === 'sure' ? <IconSymbol name="checkmark" size={14} color="#FFFFFF" /> : null}
                   <ThemedText
                     style={[styles.confidenceButtonText, confidence === 'sure' && styles.confidenceButtonTextSelected]}>
                     Sûr

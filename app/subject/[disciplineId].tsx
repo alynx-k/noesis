@@ -1,6 +1,7 @@
 import { Link, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -10,12 +11,13 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Screen } from '@/components/ui/screen';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { SUBJECT_LABELS } from '@/constants/courses';
-import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
 import { useProgress } from '@/context/progress';
 import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { useNextReviewDates } from '@/hooks/queries/use-spaced-repetition';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { CourseSummary } from '@/lib/courses';
 
 function subjectLabel(subject: string): string {
   return SUBJECT_LABELS[subject as keyof typeof SUBJECT_LABELS] ?? subject;
@@ -28,6 +30,7 @@ export default function SubjectScreen() {
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
   const coursesQuery = useCoursesForGrade();
+  const [lockedInfo, setLockedInfo] = useState<CourseSummary | null>(null);
 
   const courses = coursesQuery.data ?? [];
   const coursesForDiscipline = discipline ? courses.filter((course) => discipline.subjects.includes(course.subject)) : [];
@@ -89,6 +92,59 @@ export default function SubjectScreen() {
       flexShrink: 1,
       marginRight: SPACING.tight,
     },
+    lockDialogBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: SPACING.screen,
+      zIndex: Z_INDEX.modal,
+    },
+    lockDialogCard: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      alignItems: 'center',
+      gap: SPACING.tight,
+      ...cardBorder(COLORS),
+    },
+    lockDialogIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: COLORS.lockedBackground,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    lockDialogTitle: {
+      ...TYPOGRAPHY.title,
+      color: COLORS.text,
+      textAlign: 'center',
+    },
+    lockDialogMessage: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+    },
+    lockDialogButton: {
+      marginTop: SPACING.tight,
+      backgroundColor: COLORS.accent,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 12,
+      paddingHorizontal: 28,
+    },
+    lockDialogButtonText: {
+      color: COLORS.accentText,
+      fontWeight: '700',
+      fontSize: 15,
+    },
   });
 
   if (!discipline) {
@@ -149,10 +205,13 @@ export default function SubjectScreen() {
 
               if (isLocked) {
                 return (
-                  <View key={course.id} style={[styles.card, styles.cardLocked]}>
+                  <BouncyPressable
+                    key={course.id}
+                    style={[styles.card, styles.cardLocked]}
+                    onPress={() => setLockedInfo(course)}>
                     <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
                     <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
-                  </View>
+                  </BouncyPressable>
                 );
               }
 
@@ -194,6 +253,25 @@ export default function SubjectScreen() {
         />
       ) : null}
       </Animated.View>
+
+      {lockedInfo ? (
+        <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(150)} style={styles.lockDialogBackdrop}>
+          <View style={styles.lockDialogCard}>
+            <View style={styles.lockDialogIcon}>
+              <IconSymbol name="lock.fill" size={22} color={COLORS.locked} />
+            </View>
+            <ThemedText style={styles.lockDialogTitle}>Cours verrouillé</ThemedText>
+            <ThemedText style={styles.lockDialogMessage}>
+              {lockedInfo.requiresCourseId
+                ? `Termine « ${courses.find((c) => c.id === lockedInfo.requiresCourseId)?.title ?? 'le chapitre précédent'} » pour débloquer ce cours !`
+                : 'Termine le chapitre précédent pour débloquer ce cours !'}
+            </ThemedText>
+            <BouncyPressable style={styles.lockDialogButton} onPress={() => setLockedInfo(null)}>
+              <ThemedText style={styles.lockDialogButtonText}>Compris</ThemedText>
+            </BouncyPressable>
+          </View>
+        </Animated.View>
+      ) : null}
     </Screen>
   );
 }

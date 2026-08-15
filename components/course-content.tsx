@@ -84,26 +84,31 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
 
   const styles = StyleSheet.create({
     wrapper: {
-      marginBottom: SPACING.element,
+      marginBottom: SPACING.section,
     },
     heading: {
       ...TYPOGRAPHY.body,
+      fontSize: 18,
       fontWeight: '700',
-      color: COLORS.accent,
-      marginBottom: 6,
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
     },
     body: {
       ...TYPOGRAPHY.body,
+      fontSize: 17,
+      lineHeight: 26,
       color: COLORS.text,
     },
     highlight: {
       ...TYPOGRAPHY.body,
+      fontSize: 17,
+      lineHeight: 26,
       color: COLORS.accent,
       fontWeight: '700',
       textDecorationLine: 'underline',
     },
     propertyBox: {
-      marginTop: SPACING.tight,
+      marginTop: SPACING.element,
       borderRadius: RADIUS,
       padding: SPACING.element,
       ...cardBorder(COLORS),
@@ -113,8 +118,13 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
     propertyLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      alignSelf: 'flex-start',
       gap: 6,
-      marginBottom: 4,
+      backgroundColor: COLORS.accentSoft,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      marginBottom: SPACING.tight,
     },
     propertyLabel: {
       ...TYPOGRAPHY.label,
@@ -123,10 +133,12 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
     },
     propertyText: {
       ...TYPOGRAPHY.body,
+      fontSize: 16,
+      lineHeight: 24,
       color: COLORS.text,
     },
     exampleBox: {
-      marginTop: SPACING.tight,
+      marginTop: SPACING.element,
       backgroundColor: COLORS.lockedBackground,
       borderRadius: RADIUS,
       padding: SPACING.element,
@@ -136,8 +148,14 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
     exampleLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      alignSelf: 'flex-start',
       gap: 6,
-      marginBottom: 4,
+      backgroundColor: COLORS.surface,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      marginBottom: SPACING.tight,
+      ...cardBorder(COLORS),
     },
     exampleLabel: {
       ...TYPOGRAPHY.label,
@@ -146,12 +164,16 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
     },
     exampleStatement: {
       ...TYPOGRAPHY.body,
+      fontSize: 16,
+      lineHeight: 24,
       color: COLORS.text,
       fontStyle: 'italic',
       marginBottom: SPACING.tight,
     },
     exampleSolution: {
       ...TYPOGRAPHY.body,
+      fontSize: 16,
+      lineHeight: 24,
       color: COLORS.text,
     },
     separator: {
