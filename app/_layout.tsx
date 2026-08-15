@@ -11,10 +11,9 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/animated-splash';
-import { ThemedText } from '@/components/themed-text';
 import { ErrorState } from '@/components/ui/error-state';
 import { LoadingBadge } from '@/components/ui/loading-badge';
 import { ToastProvider } from '@/components/ui/toast';
@@ -35,12 +34,18 @@ initNotificationHandler();
 // is still pending after the cosmetic splash has finished — the
 // alternative is a blank white/black screen, which is exactly the failure
 // mode the rest of this rewrite exists to eliminate.
-function GateLoadingOverlay() {
+function GateLoadingOverlay({ message }: { message: string }) {
   const COLORS = useThemeColors();
   return (
     <View style={[styles.overlay, { backgroundColor: COLORS.background }]}>
       <LoadingBadge icon="lock.fill" color={COLORS.accent} size={64} />
-      <ThemedText style={[styles.overlayTitle, { color: COLORS.text }]}>Connexion en cours…</ThemedText>
+      {/* Keyed on the message so it cross-fades instead of jump-cutting as
+          the gate moves through phases (session -> profil -> tableau de
+          bord) — the changing text is what makes the wait read as active
+          progress rather than a stalled screen. */}
+      <Animated.Text key={message} entering={FadeIn.duration(200)} style={[styles.overlayTitle, { color: COLORS.text }]}>
+        {message || 'Connexion en cours…'}
+      </Animated.Text>
     </View>
   );
 }
@@ -63,7 +68,7 @@ function GateErrorOverlay({ onRetry }: { onRetry: () => void }) {
 // RootLayout, which is what mounts AuthProvider in the first place.
 function AppNavigator() {
   const colorScheme = useColorScheme();
-  const { state, error, retry } = useGateState();
+  const { state, error, retry, loadingMessage } = useGateState();
   // Purely a visual overlay shown for the first couple seconds regardless of
   // gate state — GateLoadingOverlay takes over below if resolution is still
   // pending once this finishes.
@@ -112,7 +117,7 @@ function AppNavigator() {
           </Stack.Protected>
         </Stack>
         <StatusBar style="auto" />
-        {!showSplash && state === 'loading' && !error ? <GateLoadingOverlay /> : null}
+        {!showSplash && state === 'loading' && !error ? <GateLoadingOverlay message={loadingMessage} /> : null}
         {!showSplash && error ? <GateErrorOverlay onRetry={retry} /> : null}
         {showSplash ? <AnimatedSplash onFinish={() => setShowSplash(false)} /> : null}
       </ToastProvider>

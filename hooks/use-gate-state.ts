@@ -10,12 +10,14 @@ import { getStreakInfo } from '@/lib/streak';
 export type GateState = 'loading' | 'needs-auth' | 'needs-grade' | 'needs-lv2' | 'ready';
 
 // Once a sign-in/sign-up actually goes through, hold the "Connexion en
-// cours..." screen for at least this long before revealing Home — long
-// enough to read as "the app checked everything properly" rather than a
-// flash. Deliberately scoped to justAuthenticated (see context/auth.tsx)
+// cours..." screen for at least this long before revealing Home. Paired
+// with the per-phase message below (rather than a flat unmoving screen) so
+// the wait reads as "the app is actually doing something" instead of stalling
+// — a static screen felt untrustworthy well before 5s, a progressing one
+// doesn't. Deliberately scoped to justAuthenticated (see context/auth.tsx)
 // so it only slows down the moment right after a login/signup submission,
 // not an ordinary app reopen with an already-active session.
-const POST_LOGIN_MIN_LOADING_MS = 10_000;
+const POST_LOGIN_MIN_LOADING_MS = 5_000;
 
 function usePostLoginFloor(justAuthenticated: boolean, clearJustAuthenticated: () => void) {
   const [floorActive, setFloorActive] = useState(false);
@@ -72,7 +74,12 @@ function useHomePrefetch(userId: string | undefined, grade: string | null, serie
   return done;
 }
 
-export function useGateState(): { state: GateState; error: Error | null; retry: () => void } {
+export function useGateState(): {
+  state: GateState;
+  error: Error | null;
+  retry: () => void;
+  loadingMessage: string;
+} {
   const { session, user, loading: authLoading, justAuthenticated, clearJustAuthenticated } = useAuth();
   const profileQuery = useProfile();
   const profile = profileQuery.data;
@@ -90,28 +97,28 @@ export function useGateState(): { state: GateState; error: Error | null; retry: 
   };
 
   if (authLoading) {
-    return { state: 'loading', error: null, retry };
+    return { state: 'loading', error: null, retry, loadingMessage: 'Vérification de la session…' };
   }
   if (!session) {
-    return { state: 'needs-auth', error: null, retry };
+    return { state: 'needs-auth', error: null, retry, loadingMessage: '' };
   }
   if (profileQuery.isPending) {
-    return { state: 'loading', error: null, retry };
+    return { state: 'loading', error: null, retry, loadingMessage: 'Chargement de ton profil…' };
   }
   if (profileQuery.isError) {
-    return { state: 'loading', error: profileQuery.error as Error, retry };
+    return { state: 'loading', error: profileQuery.error as Error, retry, loadingMessage: '' };
   }
   if (!profile || !profile.grade) {
-    return { state: 'needs-grade', error: null, retry };
+    return { state: 'needs-grade', error: null, retry, loadingMessage: '' };
   }
   if (!profile.lv2) {
-    return { state: 'needs-lv2', error: null, retry };
+    return { state: 'needs-lv2', error: null, retry, loadingMessage: '' };
   }
   if (!prefetchDone) {
-    return { state: 'loading', error: null, retry };
+    return { state: 'loading', error: null, retry, loadingMessage: 'Préparation de ton tableau de bord…' };
   }
   if (postLoginFloorActive) {
-    return { state: 'loading', error: null, retry };
+    return { state: 'loading', error: null, retry, loadingMessage: 'Presque prêt…' };
   }
-  return { state: 'ready', error: null, retry };
+  return { state: 'ready', error: null, retry, loadingMessage: '' };
 }
