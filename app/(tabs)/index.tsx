@@ -2,11 +2,13 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { FlameIcon } from '@/components/flame-icon';
 import { HomeWidgetPreview } from '@/components/home-widget-preview';
 import { RocketIcon } from '@/components/rocket-icon';
 import { StreakBadge } from '@/components/streak-badge';
@@ -32,6 +34,46 @@ function formatTime(totalSeconds: number): string {
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
+
+// Animates its fill in from 0 on mount rather than snapping straight to the
+// target width, so the week card reads as "filling up" instead of a static bar.
+function WeekProgressBar({ completed, total, trackColor }: { completed: number; total: number; trackColor: string }) {
+  const progress = useSharedValue(0);
+  const target = total > 0 ? completed / total : 0;
+
+  useEffect(() => {
+    progress.value = withTiming(target, { duration: 600, easing: Easing.out(Easing.cubic) });
+  }, [target, progress]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+
+  return (
+    <View style={[progressBarStyles.track, { backgroundColor: trackColor }]}>
+      <Animated.View style={fillStyle}>
+        <LinearGradient
+          colors={GRADIENTS.fire}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={progressBarStyles.fill}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+const progressBarStyles = StyleSheet.create({
+  track: {
+    height: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: 8,
+    borderRadius: 999,
+  },
+});
 
 export default function HomeScreen() {
   const COLORS = useThemeColors();
@@ -89,6 +131,7 @@ export default function HomeScreen() {
     weekRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      marginBottom: SPACING.element,
     },
     weekDay: {
       alignItems: 'center',
@@ -101,13 +144,15 @@ export default function HomeScreen() {
       backgroundColor: COLORS.lockedBackground,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    weekDayCircleDone: {
-      backgroundColor: COLORS.accent,
+      overflow: 'hidden',
     },
     weekDayLabel: {
       ...TYPOGRAPHY.caption,
       color: COLORS.mutedText,
+    },
+    weekDayLabelDone: {
+      color: COLORS.text,
+      fontWeight: '700',
     },
     nextUpCardWrapper: {
       borderRadius: RADIUS,
@@ -153,9 +198,19 @@ export default function HomeScreen() {
       padding: SPACING.element,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: SPACING.tight,
+      gap: SPACING.element,
       // Fallback so the card is never invisible if the gradient fails to paint.
       backgroundColor: '#7C6FE0',
+    },
+    actionIconBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255,255,255,0.16)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.28)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     focusCardText: {
       flexShrink: 1,
@@ -179,7 +234,7 @@ export default function HomeScreen() {
       padding: SPACING.element,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: SPACING.tight,
+      gap: SPACING.element,
       // Fallback so the card is never invisible if the gradient fails to paint.
       backgroundColor: '#4B3F94',
     },
@@ -246,14 +301,27 @@ export default function HomeScreen() {
                     const done = streakInfo.weekDays[index];
                     return (
                       <View key={label} style={styles.weekDay}>
-                        <View style={[styles.weekDayCircle, done && styles.weekDayCircleDone]}>
-                          {done ? <IconSymbol name="checkmark" size={16} color={COLORS.accentText} /> : null}
+                        <View style={styles.weekDayCircle}>
+                          {done ? (
+                            <LinearGradient
+                              colors={GRADIENTS.fire}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={StyleSheet.absoluteFill}
+                            />
+                          ) : null}
+                          {done ? <FlameIcon size={16} animated={false} /> : null}
                         </View>
-                        <ThemedText style={styles.weekDayLabel}>{label}</ThemedText>
+                        <ThemedText style={[styles.weekDayLabel, done && styles.weekDayLabelDone]}>{label}</ThemedText>
                       </View>
                     );
                   })}
                 </View>
+                <WeekProgressBar
+                  completed={streakInfo.weekDays.filter(Boolean).length}
+                  total={streakInfo.weekDays.length}
+                  trackColor={COLORS.lockedBackground}
+                />
               </BouncyPressable>
             </Link>
 
@@ -281,7 +349,9 @@ export default function HomeScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.focusCard}>
-                  <RocketIcon size={24} floating />
+                  <View style={styles.actionIconBadge}>
+                    <RocketIcon size={26} floating />
+                  </View>
                   <View style={styles.focusCardText}>
                     <ThemedText style={styles.focusCardTitle}>
                       {focusPhase === 'running' ? 'Session en cours' : 'Session de concentration'}
@@ -289,7 +359,7 @@ export default function HomeScreen() {
                     <ThemedText style={styles.focusCardSubtitle}>
                       {focusPhase === 'running'
                         ? `${formatTime(remainingSeconds)} restantes — la fusée vole`
-                        : 'Lance une fusée en restant concentré'}
+                        : 'Lance une fusée et reste concentré 20 minutes 🚀'}
                     </ThemedText>
                   </View>
                 </LinearGradient>
@@ -303,9 +373,11 @@ export default function HomeScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.aiCard}>
-                  <IconSymbol name="sparkles" size={24} color={COLORS.accentText} />
+                  <View style={styles.actionIconBadge}>
+                    <IconSymbol name="sparkles" size={26} color={COLORS.accentText} />
+                  </View>
                   <View style={styles.focusCardText}>
-                    <ThemedText style={styles.focusCardTitle}>Discuter avec l&apos;IA</ThemedText>
+                    <ThemedText style={styles.focusCardTitle}>Discuter avec ton tuteur IA</ThemedText>
                     <ThemedText style={styles.focusCardSubtitle}>
                       Pose une question, corrige un devoir, prépare-toi pour un contrôle
                     </ThemedText>
