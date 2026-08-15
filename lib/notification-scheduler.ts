@@ -161,8 +161,13 @@ async function fireImmediately(category: NotificationCategory, context: Notifica
 }
 
 // ---------------------------------------------------------------------
-// 1. SMART SCHEDULING — average study time over the last 7 days, minus 20
-// minutes, using the matching B/C/D category for that hour.
+// 1. SMART SCHEDULING — up to three touchpoints a day (morning, afternoon/
+// evening, night-danger) rather than a single pick: a lone daily nudge
+// reads as an easy-to-miss one-shot, three spaced ones actually keep the
+// day on the user's radar. One of the first two slots is personalized to
+// the user's 7-day average study time (minus 20 minutes); the other stays
+// a fixed anchor so there are always two "normal" touchpoints bracketing
+// it, plus the always-fixed night-danger slot.
 // ---------------------------------------------------------------------
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -170,6 +175,12 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 // matches the previous static daily-reminder hour (lib/notifications.ts).
 const DEFAULT_MINUTE_OF_DAY = 18 * 60;
 const SMART_NUDGE_OFFSET_MINUTES = 20;
+// Fixed anchors for the two non-personalized slots.
+const MORNING_ANCHOR_MINUTE = 9 * 60;
+const AFTERNOON_ANCHOR_MINUTE = 15 * 60;
+// Keep at least 60 minutes of daylight between the afternoon slot and
+// night-danger, so a late personalized time doesn't land right next to it.
+const LATEST_AFTERNOON_MINUTE = 20 * 60;
 
 // Mean minute-of-day (0-1439) across every graded answer, completed
 // course, and successful focus session in the last 7 days — a plain
@@ -222,38 +233,42 @@ function smartCategoryForHour(hour: number): 'B' | 'C' | 'D' {
   return 'D';
 }
 
-// Schedules today's smart B/C/D nudge: 20 minutes before the user's 7-day
-// average study time (smart scheduling on), at their chosen custom time
-// (smart scheduling off with a custom time set), or at the default hour
-// (neither). No-ops past that time today, if push is off/suppressed, or
-// disabled by settings — this needs to be re-run daily by the caller.
-export async function scheduleSmartDailyNotification(context: NotificationContext): Promise<void> {
-  if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed())) {
-    return;
-  }
-
-  let targetMinuteOfDay: number;
+// Decides which of the morning/afternoon slots gets personalized: whichever
+// half of the day the user's 7-day average (minus 20 minutes) falls into
+// keeps that computed time, the other slot stays at its fixed anchor. With
+// no history (smart scheduling on) or smart scheduling off, both slots use
+// their fixed anchors — except the afternoon one, which uses the custom
+// time if the user set one.
+async function computeSlotMinutes(): Promise<{ morning: number; afternoon: number }> {
   const smartEnabled = await isSmartSchedulingEnabled();
 
-  if (smartEnabled) {
-    const average = await computeAverageStudyMinuteOfDay();
-    targetMinuteOfDay = average !== null ? average - SMART_NUDGE_OFFSET_MINUTES : DEFAULT_MINUTE_OF_DAY;
-  } else {
+  if (!smartEnabled) {
     const customTime = await getCustomNotificationTime();
     const parsed = customTime ? parseTimeStringToMinutes(customTime) : null;
-    targetMinuteOfDay = parsed ?? DEFAULT_MINUTE_OF_DAY;
+    return { morning: MORNING_ANCHOR_MINUTE, afternoon: parsed ?? DEFAULT_MINUTE_OF_DAY };
   }
 
-  const fireDate = todayAtMinuteOfDay(targetMinuteOfDay);
+  const average = await computeAverageStudyMinuteOfDay();
+  if (average === null) {
+    return { morning: MORNING_ANCHOR_MINUTE, afternoon: DEFAULT_MINUTE_OF_DAY };
+  }
+
+  const target = Math.round(average - SMART_NUDGE_OFFSET_MINUTES);
+  if (target < 12 * 60) {
+    return { morning: Math.max(0, target), afternoon: AFTERNOON_ANCHOR_MINUTE };
+  }
+  return { morning: MORNING_ANCHOR_MINUTE, afternoon: Math.min(target, LATEST_AFTERNOON_MINUTE) };
+}
+
+const NIGHT_DANGER_HOUR = 21;
+
+async function scheduleAt(minuteOfDay: number, category: NotificationCategory, context: NotificationContext & { streak: number }): Promise<void> {
+  const fireDate = todayAtMinuteOfDay(minuteOfDay);
   if (!fireDate) {
     return;
   }
-
-  const { streak } = await getStreakInfo();
-  const category = smartCategoryForHour(fireDate.getHours());
   const template = getRandomTemplate(category);
-  const body = formatNotification(template.id, { ...context, streak });
-
+  const body = formatNotification(template.id, context);
   const identifier = await Notifications.scheduleNotificationAsync({
     content: { title: 'Noesis', body },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
@@ -261,34 +276,24 @@ export async function scheduleSmartDailyNotification(context: NotificationContex
   await trackTodayNotificationId(identifier);
 }
 
-// ---------------------------------------------------------------------
-// 2. NIGHT DANGER — pre-scheduled category E for 21h00 today, so it fires
-// via the OS even if the app isn't running by then. Cancelled along with
-// everything else the moment a session is validated (see 3.), so it only
-// actually reaches the user if today's session is still undone at 21h.
-// ---------------------------------------------------------------------
-
-const NIGHT_DANGER_HOUR = 21;
-
-export async function scheduleNightDangerNotification(context: NotificationContext): Promise<void> {
+// Schedules today's remaining touchpoints — morning + afternoon/evening
+// nudge (one of the two personalized, see computeSlotMinutes) plus the
+// fixed 21h00 night-danger fallback. Each slot no-ops independently once
+// its time has passed today, so opening the app later in the day just
+// means fewer of the three still get scheduled. No-ops entirely if push is
+// off/suppressed — this needs to be re-run daily by the caller.
+export async function scheduleTodayNotifications(context: NotificationContext): Promise<void> {
   if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed())) {
     return;
   }
 
-  const fireDate = todayAtMinuteOfDay(NIGHT_DANGER_HOUR * 60);
-  if (!fireDate) {
-    return;
-  }
-
   const { streak } = await getStreakInfo();
-  const template = getRandomTemplate('E');
-  const body = formatNotification(template.id, { ...context, streak });
+  const { morning, afternoon } = await computeSlotMinutes();
+  const fullContext = { ...context, streak };
 
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: { title: 'Noesis', body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
-  });
-  await trackTodayNotificationId(identifier);
+  await scheduleAt(morning, smartCategoryForHour(Math.floor(morning / 60)), fullContext);
+  await scheduleAt(afternoon, smartCategoryForHour(Math.floor(afternoon / 60)), fullContext);
+  await scheduleAt(NIGHT_DANGER_HOUR * 60, 'E', fullContext);
 }
 
 // ---------------------------------------------------------------------
@@ -346,6 +351,5 @@ export async function runDailyNotificationCycle(context: NotificationContext): P
     return;
   }
 
-  await scheduleSmartDailyNotification(context);
-  await scheduleNightDangerNotification(context);
+  await scheduleTodayNotifications(context);
 }
