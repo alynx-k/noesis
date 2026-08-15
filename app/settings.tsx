@@ -11,6 +11,7 @@ import { ScreenBackground } from '@/components/screen-background';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GRADES, GradeId, isLyceeGrade, SERIES_BY_GRADE, SeriesId } from '@/constants/grades';
 import { useAuth } from '@/context/auth';
@@ -116,29 +117,32 @@ export default function SettingsScreen() {
 
   const handleConfirmSignOut = async () => {
     setIsLoggingOut(true);
-    const startedAt = Date.now();
-    // signOut() calls Supabase's /auth/v1/logout to invalidate the session
-    // server-side — a real network round trip, so on its own its duration
-    // already tracks the user's connection (Noesis has no offline mode;
-    // every screen depends on reaching Supabase). We only add a floor on
-    // top of that real duration, never cap it: someone on a slow
-    // connection waits longer, exactly as they would for anything else in
-    // the app — this dialog just makes that wait legible instead of
-    // silent. If the call fails outright (no connection at all), we still
-    // clear the local session view and leave rather than strand the user
-    // on a spinner forever.
+    // Show the loading state for the full floor BEFORE touching the
+    // session at all — nothing here changes global auth state yet, so
+    // this screen stays mounted and the timer actually completes.
+    // (Calling signOut() first was the bug: Supabase fires its
+    // onAuthStateChange listener — context/auth.tsx — the moment the
+    // local session clears, which flips the root gate to "needs-auth" and
+    // makes Stack.Protected redirect to /login immediately, unmounting
+    // this screen mid-timer. The explicit router.replace('/login') that
+    // used to follow then raced that automatic redirect, which is what
+    // rendered the login screen twice.)
+    await new Promise((resolve) => setTimeout(resolve, SIGN_OUT_MIN_DURATION_MS));
+
     try {
       await signOut();
+      // No manual navigation here: signOut() clears the session, the
+      // gate reacts on its own and Stack.Protected redirects to /login —
+      // the same "let the gate do it" pattern the onboarding screens use.
+      // Its own network duration (a real call to Supabase's
+      // /auth/v1/logout) adds on top of the floor above, so a slow
+      // connection genuinely waits longer, never capped.
     } catch (error) {
-      console.error('Sign-out request failed, continuing with local sign-out:', error);
+      console.error('Sign-out request failed:', error);
+      toast.show('Impossible de se déconnecter, réessaie.', { variant: 'error' });
+      setIsLoggingOut(false);
+      setShowSignOutConfirm(false);
     }
-    const elapsed = Date.now() - startedAt;
-    if (elapsed < SIGN_OUT_MIN_DURATION_MS) {
-      await new Promise((resolve) => setTimeout(resolve, SIGN_OUT_MIN_DURATION_MS - elapsed));
-    }
-    router.replace('/login');
-    // No need to reset isLoggingOut/showSignOutConfirm afterward — this
-    // screen is about to unmount as the gate redirects to /login.
   };
 
   const styles = StyleSheet.create({
