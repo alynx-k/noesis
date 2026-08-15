@@ -6,6 +6,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 // screen without extra setup.
 const CORRECT_SOUND = require('../assets/sounds/correct.wav');
 const LESSON_COMPLETE_SOUND = require('../assets/sounds/lesson-complete.wav');
+const ACHIEVEMENT_SOUND = require('../assets/sounds/achievement.wav');
 
 // Without this, iOS mutes app audio whenever the hardware silent switch is
 // on — these are short feedback chimes, not music, so they should still
@@ -45,4 +46,10 @@ export function playCorrectSound(): void {
 // Finishing a lesson's exercises — a fuller, more celebratory chime.
 export function playLessonCompleteSound(): void {
   playOnce(LESSON_COMPLETE_SOUND, 0.6);
+}
+
+// Finishing a whole flashcard deck — the biggest, most "you did it" chime of
+// the three, paired with a longer on-screen celebration than the other two.
+export function playAchievementSound(): void {
+  playOnce(ACHIEVEMENT_SOUND, 0.7);
 }

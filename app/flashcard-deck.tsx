@@ -6,6 +6,7 @@ import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } f
 
 import { AiTutorChat } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { CelebrationBurst } from '@/components/celebration-burst';
 import { DataTable } from '@/components/data-table';
 import { HighlightedText } from '@/components/highlighted-text';
 import { ThemedText } from '@/components/themed-text';
@@ -13,10 +14,13 @@ import { ScreenBackground } from '@/components/screen-background';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonText } from '@/components/ui/skeleton';
-import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { useDeckCards, useDeckFiche } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { Fiche } from '@/lib/flashcards';
+import { playAchievementSound } from '@/lib/sound';
+
+const CELEBRATION_DURATION_MS = 10_000;
 
 type Tab = 'fiche' | 'cartes';
 
@@ -142,7 +146,18 @@ export default function FlashcardDeckScreen() {
   const [tabInitialized, setTabInitialized] = useState(false);
   const [index, setIndex] = useState(0);
   const [tutorVisible, setTutorVisible] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
   const flip = useSharedValue(0);
+
+  // Auto-dismiss after CELEBRATION_DURATION_MS — "Continuer" (below) lets the
+  // student cut it short instead of waiting out the full 10s.
+  useEffect(() => {
+    if (!celebrating) {
+      return;
+    }
+    const timeout = setTimeout(() => setCelebrating(false), CELEBRATION_DURATION_MS);
+    return () => clearTimeout(timeout);
+  }, [celebrating]);
 
   // Default to whichever tab actually has content, decided once the fiche
   // query resolves — after that the student's own tab choice takes over.
@@ -176,8 +191,14 @@ export default function FlashcardDeckScreen() {
     setIndex((previous) => Math.min(previous + 1, cards.length - 1));
   };
 
+  const handleFinishDeck = () => {
+    playAchievementSound();
+    setCelebrating(true);
+  };
+
   const currentCard = cards[index];
   const hasFiche = !!fiche && fiche.chapters.length > 0;
+  const isLastCard = index === cards.length - 1;
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -310,6 +331,35 @@ export default function FlashcardDeckScreen() {
       color: COLORS.mutedText,
       textAlign: 'center',
     },
+    celebrationOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      padding: SPACING.screen,
+      zIndex: Z_INDEX.modal,
+    },
+    celebrationCard: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.section,
+      alignItems: 'center',
+      ...cardBorder(COLORS),
+    },
+    celebrationTitle: {
+      ...TYPOGRAPHY.title,
+      color: COLORS.text,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    celebrationSubtitle: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+      marginBottom: SPACING.element,
+    },
   });
 
   return (
@@ -400,11 +450,8 @@ export default function FlashcardDeckScreen() {
                 disabled={index === 0}>
                 <ThemedText style={styles.navButtonText}>Précédent</ThemedText>
               </BouncyPressable>
-              <BouncyPressable
-                style={[styles.navButton, index === cards.length - 1 && styles.navButtonDisabled]}
-                onPress={handleNext}
-                disabled={index === cards.length - 1}>
-                <ThemedText style={styles.navButtonText}>Suivant</ThemedText>
+              <BouncyPressable style={styles.navButton} onPress={isLastCard ? handleFinishDeck : handleNext}>
+                <ThemedText style={styles.navButtonText}>{isLastCard ? 'Terminer' : 'Suivant'}</ThemedText>
               </BouncyPressable>
             </View>
           </View>
@@ -423,6 +470,21 @@ export default function FlashcardDeckScreen() {
           onClose={() => setTutorVisible(false)}
           context={{ type: 'fiche', deckId: id }}
         />
+      ) : null}
+
+      {celebrating ? (
+        <View style={styles.celebrationOverlay}>
+          <CelebrationBurst />
+          <View style={styles.celebrationCard}>
+            <ThemedText style={styles.celebrationTitle}>Bravo ! Fiche terminée 🎉</ThemedText>
+            <ThemedText style={styles.celebrationSubtitle}>
+              Tu as révisé les {cards.length} carte{cards.length > 1 ? 's' : ''} de ce paquet.
+            </ThemedText>
+            <BouncyPressable style={styles.navButton} onPress={() => setCelebrating(false)}>
+              <ThemedText style={styles.navButtonText}>Continuer</ThemedText>
+            </BouncyPressable>
+          </View>
+        </View>
       ) : null}
     </ScreenBackground>
   );
