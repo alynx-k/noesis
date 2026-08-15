@@ -1,13 +1,20 @@
 import type { Subject } from '@/constants/courses';
+import type { DisciplineId } from '@/constants/disciplines';
 import type { GradeId, SeriesId } from '@/constants/grades';
 import { getCoursesForGrade } from '@/lib/courses';
 import { supabase } from '@/lib/supabase';
 import { initializeNeutralReviewState } from '@/lib/spaced-repetition';
 
-// Server-persisted replacement for lib/placement-storage.ts's AsyncStorage
-// flag, so the "have I been through placement" state survives a reinstall.
-export async function getPlacementState(): Promise<{ handled: boolean }> {
-  const { data, error } = await supabase.from('placement_state').select('user_id').maybeSingle();
+// Server-persisted, per-discipline: "have they been through placement for
+// THIS subject" — the prompt shows once per discipline, the first time a
+// student opens it (app/subject/[disciplineId].tsx), not once globally at
+// onboarding. See supabase/migrations/20260818050000_placement_state_per_discipline.sql.
+export async function getPlacementState(disciplineId: DisciplineId): Promise<{ handled: boolean }> {
+  const { data, error } = await supabase
+    .from('placement_state')
+    .select('user_id')
+    .eq('discipline_id', disciplineId)
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -15,10 +22,14 @@ export async function getPlacementState(): Promise<{ handled: boolean }> {
   return { handled: !!data };
 }
 
-export async function recordPlacementHandled(userId: string, skipped: boolean): Promise<void> {
+export async function recordPlacementHandled(
+  userId: string,
+  disciplineId: DisciplineId,
+  skipped: boolean,
+): Promise<void> {
   const { error } = await supabase
     .from('placement_state')
-    .upsert({ user_id: userId, skipped, handled_at: new Date().toISOString() });
+    .upsert({ user_id: userId, discipline_id: disciplineId, skipped, handled_at: new Date().toISOString() });
 
   if (error) {
     throw new Error(error.message);

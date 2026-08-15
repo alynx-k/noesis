@@ -21,7 +21,7 @@ export const queryKeys = {
     forUser: (userId: string | undefined) => ['streak', userId] as const,
   },
   placement: {
-    forUser: (userId: string | undefined) => ['placement', userId] as const,
+    forDiscipline: (userId: string | undefined, disciplineId: string) => ['placement', userId, disciplineId] as const,
   },
   profile: {
     forUser: (userId: string | undefined) => ['profile', userId] as const,

@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { SubjectPlacementPrompt } from '@/components/subject-placement-prompt';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -15,6 +16,8 @@ import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/d
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
 import { useProgress } from '@/context/progress';
 import { useCoursesForGrade } from '@/hooks/queries/use-courses';
+import { usePlacementStatus } from '@/hooks/queries/use-placement';
+import { useProfile } from '@/hooks/queries/use-profile';
 import { useNextReviewDates } from '@/hooks/queries/use-spaced-repetition';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary } from '@/lib/courses';
@@ -30,6 +33,8 @@ export default function SubjectScreen() {
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
   const coursesQuery = useCoursesForGrade();
+  const profileQuery = useProfile();
+  const placementQuery = usePlacementStatus(disciplineId);
   const [lockedInfo, setLockedInfo] = useState<CourseSummary | null>(null);
 
   const courses = coursesQuery.data ?? [];
@@ -176,6 +181,12 @@ export default function SubjectScreen() {
     );
   }
 
+  // "Où en es-tu ?" — shown the first time this discipline is opened
+  // (placementQuery.data.handled false), once we actually have a grade to
+  // fetch courses against and the discipline's course list loaded.
+  const showPlacementPrompt =
+    placementQuery.isSuccess && !placementQuery.data.handled && !!profileQuery.data?.grade;
+
   return (
     <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
       <Animated.View entering={FadeIn.duration(400)}>
@@ -271,6 +282,17 @@ export default function SubjectScreen() {
             </BouncyPressable>
           </View>
         </Animated.View>
+      ) : null}
+
+      {profileQuery.data?.grade ? (
+        <SubjectPlacementPrompt
+          visible={showPlacementPrompt}
+          discipline={discipline}
+          courses={coursesForDiscipline}
+          grade={profileQuery.data.grade}
+          serie={profileQuery.data.serie}
+          onDone={() => placementQuery.refetch()}
+        />
       ) : null}
     </Screen>
   );

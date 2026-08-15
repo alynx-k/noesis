@@ -28,8 +28,8 @@ import { initNotificationHandler } from '@/lib/notifications';
 
 initNotificationHandler();
 
-// Full-screen overlay shown when gate resolution (session/profile/placement
-// queries) is still pending after the cosmetic splash has finished — the
+// Full-screen overlay shown when gate resolution (session/profile queries)
+// is still pending after the cosmetic splash has finished — the
 // alternative is a blank white/black screen, which is exactly the failure
 // mode the rest of this rewrite exists to eliminate.
 function GateLoadingOverlay() {
@@ -73,7 +73,6 @@ function AppNavigator() {
     auth: state === 'needs-auth' || state === 'loading',
     grade: state === 'needs-grade',
     lv2: state === 'needs-lv2',
-    placement: state === 'needs-placement',
   };
 
   useNotificationScheduling(guards.ready);
@@ -106,9 +105,6 @@ function AppNavigator() {
           </Stack.Protected>
           <Stack.Protected guard={guards.lv2}>
             <Stack.Screen name="select-language" options={{ headerShown: false }} />
-          </Stack.Protected>
-          <Stack.Protected guard={guards.placement}>
-            <Stack.Screen name="placement" options={{ headerShown: false }} />
           </Stack.Protected>
         </Stack>
         <StatusBar style="auto" />
