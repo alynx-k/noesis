@@ -25,3 +25,23 @@ export async function getStreakGoalDays(): Promise<number | null> {
   const value = await AsyncStorage.getItem(GOAL_KEY);
   return value ? parseInt(value, 10) : null;
 }
+
+// Dev-only escape hatch (see app/settings.tsx's __DEV__-gated preview row):
+// forces the modal open on the next Home focus regardless of the lifetime
+// flag or today's activity — otherwise previewing/tweaking Neo's design
+// means completing a real activity (or clearing app storage) every time.
+const PREVIEW_KEY = 'noesis:streak-celebration-preview';
+
+export async function requestStreakCelebrationPreview(): Promise<void> {
+  await AsyncStorage.setItem(PREVIEW_KEY, '1');
+}
+
+// Read-and-clear so it only fires once per request, not on every focus.
+export async function consumeStreakCelebrationPreview(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(PREVIEW_KEY);
+  if (value === '1') {
+    await AsyncStorage.removeItem(PREVIEW_KEY);
+    return true;
+  }
+  return false;
+}

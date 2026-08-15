@@ -20,6 +20,7 @@ import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { cancelAllReminders, isNotificationsEnabled, requestNotificationPermissions } from '@/lib/notifications';
 import { cancelTodayNotifications, runDailyNotificationCycle, setPushNotificationsEnabled } from '@/lib/notification-scheduler';
 import { getDisplayName } from '@/lib/profile';
+import { requestStreakCelebrationPreview } from '@/lib/streak-celebration';
 
 export default function SettingsScreen() {
   const COLORS = useThemeColors();
@@ -107,6 +108,11 @@ export default function SettingsScreen() {
 
   const handleSignOutPress = () => {
     setShowSignOutConfirm(true);
+  };
+
+  const handlePreviewStreakCelebration = async () => {
+    await requestStreakCelebrationPreview();
+    router.back();
   };
 
   const handleConfirmSignOut = async () => {
@@ -274,6 +280,22 @@ export default function SettingsScreen() {
               thumbColor={COLORS.surface}
             />
           </View>
+
+          {__DEV__ ? (
+            <>
+              <ThemedText style={styles.sectionTitle}>Développement</ThemedText>
+              <BouncyPressable style={styles.row} onPress={handlePreviewStreakCelebration}>
+                <View style={styles.rowIcon}>
+                  <IconSymbol name="sparkles" size={18} color={COLORS.mutedText} />
+                </View>
+                <View style={styles.rowText}>
+                  <ThemedText style={styles.rowLabel}>Onboarding</ThemedText>
+                  <ThemedText style={styles.rowValue}>Prévisualiser Neo (célébration de série)</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
+              </BouncyPressable>
+            </>
+          ) : null}
 
           <BouncyPressable style={styles.signOutButton} onPress={handleSignOutPress} disabled={isLoggingOut}>
             {isLoggingOut ? (

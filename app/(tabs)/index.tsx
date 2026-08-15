@@ -1,8 +1,9 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -26,7 +27,7 @@ import { useStreak } from '@/hooks/queries/use-streak';
 import { useWidgetData } from '@/hooks/queries/use-widget-data';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { getDisplayName } from '@/lib/profile';
-import { hasSeenStreakCelebration } from '@/lib/streak-celebration';
+import { consumeStreakCelebrationPreview, hasSeenStreakCelebration } from '@/lib/streak-celebration';
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -66,6 +67,19 @@ export default function HomeScreen() {
       setCelebrationVisible(true);
     }
   }, [celebrationEligible, widgetQuery.data?.state]);
+
+  // Dev-only preview escape hatch (see app/settings.tsx) — Home is a tab and
+  // stays mounted when navigating to/from Settings, so this has to react to
+  // focus rather than mount to catch a preview requested while already here.
+  useFocusEffect(
+    useCallback(() => {
+      consumeStreakCelebrationPreview().then((shouldPreview) => {
+        if (shouldPreview) {
+          setCelebrationVisible(true);
+        }
+      });
+    }, []),
+  );
 
   const styles = StyleSheet.create({
     safeArea: {
