@@ -1,43 +1,36 @@
 import * as Haptics from 'expo-haptics';
 import { ReactNode } from 'react';
-import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 
 type BouncyPressableProps = PressableProps & {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
-export function BouncyPressable({ children, style, onPressIn, onPressOut, ...rest }: BouncyPressableProps) {
-  const scale = useSharedValue(1);
-  const depth = useSharedValue(0);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateY: depth.value }],
-  }));
-
+// Despite the name (kept as-is rather than renaming ~30 call sites across
+// the app), this no longer scales/sinks on press — that spring-based
+// animation read as an unwanted "liquid" jiggle on every single tap in the
+// app, not a deliberate tactile detail. Down to a flat opacity dim (closer
+// to the platform's own default Pressable feedback) plus the haptic tick it
+// already had.
+export function BouncyPressable({ children, style, onPressIn, ...rest }: BouncyPressableProps) {
   return (
-    <AnimatedPressable
-      style={[style, animatedStyle]}
+    <Pressable
+      style={({ pressed }) => [style, pressed && styles.pressed]}
       onPressIn={(event) => {
-        // A slight scale-down plus a 1px sink reads as a physical button
-        // being pressed rather than a flat image shrinking.
-        scale.value = withSpring(0.96, { damping: 15, stiffness: 420 });
-        depth.value = withSpring(1, { damping: 15, stiffness: 420 });
         if (process.env.EXPO_OS === 'ios') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         onPressIn?.(event);
       }}
-      onPressOut={(event) => {
-        scale.value = withSpring(1, { damping: 11, stiffness: 320 });
-        depth.value = withSpring(0, { damping: 11, stiffness: 320 });
-        onPressOut?.(event);
-      }}
       {...rest}>
       {children}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.7,
+  },
+});
