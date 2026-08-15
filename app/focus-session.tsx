@@ -283,6 +283,49 @@ const nightStyles = StyleSheet.create({
   },
 });
 
+// A gentle, static-feeling "it's okay" visual for the failed phase — the
+// rocket on its side, softly rocking, rather than just bare text on an
+// otherwise empty screen. Deliberately calmer than LaunchPreview/NightSky
+// (no stars, no destination): this moment is a reassurance, not a
+// spectacle.
+function FallenRocketIllustration() {
+  const rock = useSharedValue(0);
+
+  useEffect(() => {
+    rock.value = withTiming(1, { duration: 900 });
+  }, [rock]);
+
+  const wobbleStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${100 + rock.value * 6}deg` }, { translateY: rock.value * -4 }],
+  }));
+
+  return (
+    <View style={fallenStyles.wrapper}>
+      <View style={fallenStyles.shadow} />
+      <Animated.View style={wobbleStyle}>
+        <RocketIcon size={48} />
+      </Animated.View>
+    </View>
+  );
+}
+
+const fallenStyles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: 100,
+    marginBottom: SPACING.element,
+  },
+  shadow: {
+    position: 'absolute',
+    bottom: 6,
+    width: 64,
+    height: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+});
+
 export default function FocusSessionScreen() {
   const COLORS = useThemeColors();
   const { phase, durationMinutes, remainingSeconds, destinationReached, destinationJustUnlocked, start, reset } =
@@ -466,6 +509,7 @@ export default function FocusSessionScreen() {
       borderRadius: PILL_RADIUS,
       borderWidth: 1.5,
       borderColor: 'rgba(255,255,255,0.4)',
+      marginVertical: SPACING.tight,
     },
     nightSecondaryButtonText: {
       color: '#FFFFFF',
@@ -526,14 +570,14 @@ export default function FocusSessionScreen() {
         {phase === 'running' ? (
           <View style={styles.nightContentArea}>
             <ThemedText style={styles.nightTimer}>{formatTime(remainingSeconds)}</ThemedText>
+            <BouncyPressable style={styles.nightSecondaryButton} onPress={handleBrowseElsewhere}>
+              <ThemedText style={styles.nightSecondaryButtonText}>Continuer sur Noesis</ThemedText>
+            </BouncyPressable>
             <ThemedText style={styles.nightMilestone}>{milestoneLabel(progress)}</ThemedText>
             <ThemedText style={styles.nightSubtitle}>
               Tu peux consulter d&apos;autres écrans de Noesis, la fusée continue son vol. Elle retombe seulement si
               tu quittes l&apos;app.
             </ThemedText>
-            <BouncyPressable style={styles.nightSecondaryButton} onPress={handleBrowseElsewhere}>
-              <ThemedText style={styles.nightSecondaryButtonText}>Continuer sur Noesis</ThemedText>
-            </BouncyPressable>
           </View>
         ) : null}
 
@@ -561,10 +605,9 @@ export default function FocusSessionScreen() {
 
         {phase === 'failed' ? (
           <View style={styles.centered}>
+            <FallenRocketIllustration />
             <ThemedText style={styles.title}>La fusée est retombée</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Tu as quitté Noesis avant la fin. Retente quand tu es prêt à rester concentré.
-            </ThemedText>
+            <ThemedText style={styles.subtitle}>Pas de panique, on retente quand tu veux !</ThemedText>
             <BouncyPressable style={styles.primaryButton} onPress={handleRestart}>
               <ThemedText style={styles.primaryButtonText}>Réessayer</ThemedText>
             </BouncyPressable>
