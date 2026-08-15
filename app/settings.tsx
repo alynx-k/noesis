@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
@@ -8,6 +8,7 @@ import { GradePicker } from '@/components/grade-picker';
 import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
@@ -31,6 +32,8 @@ export default function SettingsScreen() {
   const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
   const [gradeChangeError, setGradeChangeError] = useState<string | null>(null);
   const [notificationsOn, setNotificationsOn] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     isNotificationsEnabled().then(setNotificationsOn);
@@ -97,9 +100,16 @@ export default function SettingsScreen() {
     finalizeGradeChange(grade, null);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOutPress = () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const handleConfirmSignOut = async () => {
+    setIsLoggingOut(true);
     await signOut();
     router.replace('/login');
+    // No need to reset isLoggingOut/showSignOutConfirm afterward — this
+    // screen is about to unmount as the gate redirects to /login.
   };
 
   const styles = StyleSheet.create({
@@ -125,6 +135,13 @@ export default function SettingsScreen() {
     },
     backIcon: {
       transform: [{ scaleX: -1 }],
+    },
+    // Same footprint as backButton for header symmetry, but no visible
+    // circle — previously reused styles.backButton here, which drew an
+    // empty white/bordered circle with nothing in it.
+    headerSpacer: {
+      width: 36,
+      height: 36,
     },
     headerTitle: {
       ...TYPOGRAPHY.title,
@@ -208,7 +225,7 @@ export default function SettingsScreen() {
             <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
           </BouncyPressable>
           <ThemedText style={styles.headerTitle}>Réglages</ThemedText>
-          <View style={styles.backButton} />
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -275,11 +292,27 @@ export default function SettingsScreen() {
             />
           </View>
 
-          <BouncyPressable style={styles.signOutButton} onPress={handleSignOut}>
-            <ThemedText style={styles.signOutButtonText}>Se déconnecter</ThemedText>
+          <BouncyPressable style={styles.signOutButton} onPress={handleSignOutPress} disabled={isLoggingOut}>
+            {isLoggingOut ? (
+              <ActivityIndicator color={COLORS.danger} />
+            ) : (
+              <ThemedText style={styles.signOutButtonText}>Se déconnecter</ThemedText>
+            )}
           </BouncyPressable>
         </ScrollView>
       </SafeAreaView>
+
+      <ConfirmDialog
+        visible={showSignOutConfirm}
+        title="Se déconnecter"
+        message="Veux-tu vraiment te déconnecter ?"
+        confirmLabel="Se déconnecter"
+        cancelLabel="Annuler"
+        destructive
+        loading={isLoggingOut}
+        onConfirm={handleConfirmSignOut}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
     </ScreenBackground>
   );
 }

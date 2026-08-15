@@ -17,6 +17,10 @@ export function useLoginForm() {
   const [prenom, setPrenom] = useState('');
   const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  // Which OAuth provider (if any) is mid-flow — separate from `submitting`
+  // (the email/password form) since the two are independent actions that
+  // can't both be true at once, but shouldn't share one flag either.
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
 
   // Switching tabs clears whatever error was showing on the other one —
   // stale errors from a different mode/field set would just be confusing.
@@ -69,7 +73,9 @@ export function useLoginForm() {
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
     setErrors({});
+    setOauthLoading(provider);
     const { error } = await (provider === 'google' ? signInWithGoogle() : signInWithApple());
+    setOauthLoading(null);
     if (error) {
       applyResult(error);
     }
@@ -87,6 +93,7 @@ export function useLoginForm() {
     setPrenom,
     errors,
     submitting,
+    oauthLoading,
     handleSignIn,
     handleSignUp,
     handleOAuth,

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
-import { Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -36,10 +36,14 @@ export default function LoginScreen() {
     setPrenom,
     errors,
     submitting,
+    oauthLoading,
     handleSignIn,
     handleSignUp,
     handleOAuth,
   } = useLoginForm();
+  // True while any auth request is in flight — email/password or OAuth —
+  // so the two mechanisms can't be triggered on top of each other.
+  const anyLoading = submitting || oauthLoading !== null;
 
   // A slow, continuous spin — the brand mark itself is orbital rings, so this
   // is an ambient motif that means something, not a generic mount effect.
@@ -203,37 +207,37 @@ export default function LoginScreen() {
           {mode === 'signup' ? (
             <TextField
               label="Prénom"
-              placeholder="Ton prénom"
               autoCapitalize="words"
               value={prenom}
               onChangeText={setPrenom}
               error={errors.prenom}
+              editable={!anyLoading}
             />
           ) : null}
           <TextField
             label="E-mail"
-            placeholder="toi@exemple.com"
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
             error={errors.email}
+            editable={!anyLoading}
           />
           <TextField
             label="Mot de passe"
-            placeholder="••••••••"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             error={errors.password}
+            editable={!anyLoading}
           />
 
           {errors.general ? <ThemedText style={styles.generalError}>{errors.general}</ThemedText> : null}
 
           {mode === 'signin' ? (
-            <Button label="Se connecter" onPress={handleSignIn} loading={submitting} />
+            <Button label="Se connecter" onPress={handleSignIn} loading={submitting} disabled={oauthLoading !== null} />
           ) : (
-            <Button label="Créer mon compte" onPress={handleSignUp} loading={submitting} />
+            <Button label="Créer mon compte" onPress={handleSignUp} loading={submitting} disabled={oauthLoading !== null} />
           )}
 
           <View style={styles.dividerRow}>
@@ -242,15 +246,27 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('google')} disabled={submitting}>
-            <Ionicons name="logo-google" size={20} color={COLORS.text} />
-            <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
+          <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('google')} disabled={anyLoading}>
+            {oauthLoading === 'google' ? (
+              <ActivityIndicator color={COLORS.text} />
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={20} color={COLORS.text} />
+                <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
+              </>
+            )}
           </BouncyPressable>
 
           {Platform.OS === 'ios' ? (
-            <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('apple')} disabled={submitting}>
-              <Ionicons name="logo-apple" size={20} color={COLORS.text} />
-              <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
+            <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('apple')} disabled={anyLoading}>
+              {oauthLoading === 'apple' ? (
+                <ActivityIndicator color={COLORS.text} />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={20} color={COLORS.text} />
+                  <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
+                </>
+              )}
             </BouncyPressable>
           ) : null}
         </Animated.View>
