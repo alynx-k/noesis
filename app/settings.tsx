@@ -21,6 +21,11 @@ import { cancelAllReminders, isNotificationsEnabled, requestNotificationPermissi
 import { cancelTodayNotifications, runDailyNotificationCycle, setPushNotificationsEnabled } from '@/lib/notification-scheduler';
 import { getDisplayName } from '@/lib/profile';
 
+// Deliberate floor under the sign-out loading state — see
+// handleConfirmSignOut for why 5s and not just "however long the network
+// call takes".
+const SIGN_OUT_MIN_DURATION_MS = 5000;
+
 export default function SettingsScreen() {
   const COLORS = useThemeColors();
   const { user, signOut } = useAuth();
@@ -111,7 +116,26 @@ export default function SettingsScreen() {
 
   const handleConfirmSignOut = async () => {
     setIsLoggingOut(true);
-    await signOut();
+    const startedAt = Date.now();
+    // signOut() calls Supabase's /auth/v1/logout to invalidate the session
+    // server-side — a real network round trip, so on its own its duration
+    // already tracks the user's connection (Noesis has no offline mode;
+    // every screen depends on reaching Supabase). We only add a floor on
+    // top of that real duration, never cap it: someone on a slow
+    // connection waits longer, exactly as they would for anything else in
+    // the app — this dialog just makes that wait legible instead of
+    // silent. If the call fails outright (no connection at all), we still
+    // clear the local session view and leave rather than strand the user
+    // on a spinner forever.
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign-out request failed, continuing with local sign-out:', error);
+    }
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < SIGN_OUT_MIN_DURATION_MS) {
+      await new Promise((resolve) => setTimeout(resolve, SIGN_OUT_MIN_DURATION_MS - elapsed));
+    }
     router.replace('/login');
     // No need to reset isLoggingOut/showSignOutConfirm afterward — this
     // screen is about to unmount as the gate redirects to /login.
@@ -293,6 +317,9 @@ export default function SettingsScreen() {
         cancelLabel="Annuler"
         destructive
         loading={isLoggingOut}
+        loadingIcon="rectangle.portrait.and.arrow.right"
+        loadingTitle="Déconnexion en cours…"
+        loadingMessage="On efface ta session locale, un instant."
         onConfirm={handleConfirmSignOut}
         onCancel={() => setShowSignOutConfirm(false)}
       />
