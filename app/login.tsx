@@ -15,10 +15,9 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Halo } from '@/components/ui/halo';
-import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/input';
-import { toast } from '@/components/ui/toast';
-import { ELEVATION, GRADIENTS, HALO_COLORS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { Screen } from '@/components/ui/screen';
+import { ELEVATION, GRADIENTS, HALO_COLORS, PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useLoginForm } from '@/hooks/use-login-form';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
@@ -27,13 +26,15 @@ const LOGO_ASSET = require('../assets/images/splash-logo.png');
 export default function LoginScreen() {
   const COLORS = useThemeColors();
   const {
+    mode,
+    setMode,
     email,
     setEmail,
     password,
     setPassword,
     prenom,
     setPrenom,
-    error,
+    errors,
     submitting,
     handleSignIn,
     handleSignUp,
@@ -100,12 +101,34 @@ export default function LoginScreen() {
       textAlign: 'center',
       marginBottom: SPACING.section,
     },
-    error: {
+    tabRow: {
+      flexDirection: 'row',
+      backgroundColor: COLORS.lockedBackground,
+      borderRadius: PILL_RADIUS,
+      padding: 4,
+      marginBottom: SPACING.section,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: PILL_RADIUS,
+      alignItems: 'center',
+    },
+    tabActive: {
+      backgroundColor: COLORS.surface,
+      ...ELEVATION.sm,
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.mutedText,
+    },
+    tabTextActive: {
+      color: COLORS.text,
+    },
+    generalError: {
       color: COLORS.danger,
       marginBottom: SPACING.element,
-    },
-    secondaryButton: {
-      marginTop: SPACING.element,
     },
     dividerRow: {
       flexDirection: 'row',
@@ -141,13 +164,6 @@ export default function LoginScreen() {
     },
   });
 
-  const onOAuthPress = async (provider: 'google' | 'apple') => {
-    const result = await handleOAuth(provider);
-    if (result?.error) {
-      toast.show(result.error, { variant: 'error' });
-    }
-  };
-
   return (
     <Screen scroll edges={['top', 'bottom']} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
       <View style={styles.haloWrap} pointerEvents="none">
@@ -173,13 +189,27 @@ export default function LoginScreen() {
             Connecte-toi ou crée un compte pour suivre ta progression.
           </ThemedText>
 
-          <TextField
-            label="Prénom (pour créer un compte)"
-            placeholder="Ton prénom"
-            autoCapitalize="words"
-            value={prenom}
-            onChangeText={setPrenom}
-          />
+          <View style={styles.tabRow}>
+            <BouncyPressable style={[styles.tab, mode === 'signin' && styles.tabActive]} onPress={() => setMode('signin')}>
+              <ThemedText style={[styles.tabText, mode === 'signin' && styles.tabTextActive]}>Connexion</ThemedText>
+            </BouncyPressable>
+            <BouncyPressable style={[styles.tab, mode === 'signup' && styles.tabActive]} onPress={() => setMode('signup')}>
+              <ThemedText style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>
+                Créer un compte
+              </ThemedText>
+            </BouncyPressable>
+          </View>
+
+          {mode === 'signup' ? (
+            <TextField
+              label="Prénom"
+              placeholder="Ton prénom"
+              autoCapitalize="words"
+              value={prenom}
+              onChangeText={setPrenom}
+              error={errors.prenom}
+            />
+          ) : null}
           <TextField
             label="E-mail"
             placeholder="toi@exemple.com"
@@ -187,6 +217,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            error={errors.email}
           />
           <TextField
             label="Mot de passe"
@@ -194,18 +225,16 @@ export default function LoginScreen() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            error={errors.password}
           />
 
-          {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+          {errors.general ? <ThemedText style={styles.generalError}>{errors.general}</ThemedText> : null}
 
-          <Button label="Se connecter" onPress={handleSignIn} loading={submitting} />
-          <Button
-            label="Créer un compte"
-            onPress={handleSignUp}
-            variant="secondary"
-            loading={submitting}
-            style={styles.secondaryButton}
-          />
+          {mode === 'signin' ? (
+            <Button label="Se connecter" onPress={handleSignIn} loading={submitting} />
+          ) : (
+            <Button label="Créer mon compte" onPress={handleSignUp} loading={submitting} />
+          )}
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
@@ -213,13 +242,13 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <BouncyPressable style={styles.oauthButton} onPress={() => onOAuthPress('google')} disabled={submitting}>
+          <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('google')} disabled={submitting}>
             <Ionicons name="logo-google" size={20} color={COLORS.text} />
             <ThemedText style={styles.oauthButtonText}>Continuer avec Google</ThemedText>
           </BouncyPressable>
 
           {Platform.OS === 'ios' ? (
-            <BouncyPressable style={styles.oauthButton} onPress={() => onOAuthPress('apple')} disabled={submitting}>
+            <BouncyPressable style={styles.oauthButton} onPress={() => handleOAuth('apple')} disabled={submitting}>
               <Ionicons name="logo-apple" size={20} color={COLORS.text} />
               <ThemedText style={styles.oauthButtonText}>Continuer avec Apple</ThemedText>
             </BouncyPressable>
