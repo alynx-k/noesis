@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeIn,
   FadeOut,
@@ -50,6 +51,16 @@ function LoadingBadge({ icon, color }: { icon: IconSymbolName; color: string }) 
   useEffect(() => {
     rotation.value = withRepeat(withTiming(360, { duration: 1100, easing: Easing.linear }), -1);
     pulse.value = withRepeat(withSequence(withTiming(1, { duration: 480 }), withTiming(0, { duration: 480 })), -1, true);
+    // Cancel both infinite loops on unmount — see
+    // components/ui/skeleton.tsx for why (a stray post-unmount style write
+    // on web throws a CSSStyleDeclaration error). Directly relevant here:
+    // this badge is only ever shown mid-navigation-triggering action
+    // (sign-out), exactly the moment a component is likely to unmount
+    // while its animation is still running.
+    return () => {
+      cancelAnimation(rotation);
+      cancelAnimation(pulse);
+    };
   }, [rotation, pulse]);
 
   const ringStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotation.value}deg` }] }));

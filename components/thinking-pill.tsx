@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   interpolateColor,
   useAnimatedStyle,
@@ -36,6 +37,13 @@ export function ThinkingPill({ label = 'Réflexion...' }: ThinkingPillProps) {
   useEffect(() => {
     glow.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }), -1, true);
     spin.value = withRepeat(withTiming(1, { duration: 2800, easing: Easing.linear }), -1);
+    // Cancel both infinite loops on unmount — see
+    // components/ui/skeleton.tsx for why (a stray post-unmount style write
+    // on web throws a CSSStyleDeclaration error).
+    return () => {
+      cancelAnimation(glow);
+      cancelAnimation(spin);
+    };
   }, [glow, spin]);
 
   const glowStyle = useAnimatedStyle(() => ({

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -20,6 +21,14 @@ function usePulseStyle() {
       -1,
       true,
     );
+    // Without this, an in-flight infinite loop can still be mid-tick when
+    // the component unmounts (e.g. navigating away while a skeleton is
+    // showing), and Reanimated's next scheduled style write on web can
+    // land on a DOM node React has already started tearing down —
+    // surfaces as "Failed to set an indexed property [0] on
+    // CSSStyleDeclaration". Cancelling on cleanup avoids that write ever
+    // being scheduled.
+    return () => cancelAnimation(opacity);
   }, [opacity]);
 
   return useAnimatedStyle(() => ({ opacity: opacity.value }));

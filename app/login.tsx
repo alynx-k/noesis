@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeInDown,
   useAnimatedStyle,
@@ -55,6 +56,11 @@ export default function LoginScreen() {
   const ringRotation = useSharedValue(0);
   useEffect(() => {
     ringRotation.value = withRepeat(withTiming(360, { duration: 22000, easing: Easing.linear }), -1);
+    // Cancel the infinite loop on unmount — see components/ui/skeleton.tsx
+    // for why (a stray post-unmount style write on web throws a
+    // CSSStyleDeclaration error). This screen unmounts the instant sign-in
+    // succeeds, right while this ring is still spinning.
+    return () => cancelAnimation(ringRotation);
   }, [ringRotation]);
   const ringStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${ringRotation.value}deg` }] }));
 

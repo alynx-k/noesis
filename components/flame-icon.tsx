@@ -1,6 +1,14 @@
 import { useEffect } from 'react';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 type FlameIconProps = {
   size?: number;
@@ -25,6 +33,10 @@ export function FlameIcon({ size = 32, animated = true }: FlameIconProps) {
       -1,
       true,
     );
+    // Cancel the infinite loop on unmount — see components/ui/skeleton.tsx
+    // for why (a stray post-unmount style write on web throws a
+    // CSSStyleDeclaration error).
+    return () => cancelAnimation(flicker);
   }, [animated, flicker]);
 
   const wobbleStyle = useAnimatedStyle(() => ({

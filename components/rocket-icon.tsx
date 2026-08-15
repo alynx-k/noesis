@@ -1,6 +1,14 @@
 import { useEffect } from 'react';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 type RocketIconProps = {
   size?: number;
@@ -49,6 +57,10 @@ export function RocketIcon({ size = 44, floating = false }: RocketIconProps) {
       -1,
       true,
     );
+    // Cancel the infinite loop on unmount — see components/ui/skeleton.tsx
+    // for why (a stray post-unmount style write on web throws a
+    // CSSStyleDeclaration error).
+    return () => cancelAnimation(bob);
   }, [floating, bob]);
 
   const hoverStyle = useAnimatedStyle(() => ({

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -78,6 +79,12 @@ export function MascotPanther({ state }: { state: WidgetState }) {
       default:
         motion.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }), -1, true);
     }
+    // Cancel the infinite loop on unmount — see components/ui/skeleton.tsx
+    // for why (a stray post-unmount style write on web throws a
+    // CSSStyleDeclaration error). This mascot lives on Home, which
+    // unmounts on every tab/screen navigation away from it — exactly the
+    // condition that triggers this.
+    return () => cancelAnimation(motion);
   }, [state, motion]);
 
   const bodyStyle = useAnimatedStyle(() => {
