@@ -6,6 +6,7 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { GradePicker } from '@/components/grade-picker';
 import { SeriePicker } from '@/components/serie-picker';
 import { ThemedText } from '@/components/themed-text';
+import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { GradeId, isLyceeGrade, SeriesId } from '@/constants/grades';
@@ -14,7 +15,9 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 
 export default function SelectGradeScreen() {
   const COLORS = useThemeColors();
+  const [selectedGrade, setSelectedGrade] = useState<GradeId | null>(null);
   const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
+  const [selectedSerie, setSelectedSerie] = useState<SeriesId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const setInitialGrade = useSetInitialGrade();
 
@@ -31,12 +34,34 @@ export default function SelectGradeScreen() {
     // root gate re-resolve, and Stack.Protected redirects automatically.
   };
 
+  // Selecting a card only updates local state and its visual selected
+  // style — advancing to the série sub-step (or submitting directly for a
+  // non-lycée grade) only happens from "Continuer" (handleContinueFromGrade).
   const handleSelectGrade = (grade: GradeId) => {
-    if (isLyceeGrade(grade)) {
-      setPendingGrade(grade);
+    setSelectedGrade(grade);
+  };
+
+  const handleContinueFromGrade = () => {
+    if (!selectedGrade) {
       return;
     }
-    finalize(grade, null);
+    if (isLyceeGrade(selectedGrade)) {
+      setPendingGrade(selectedGrade);
+      return;
+    }
+    finalize(selectedGrade, null);
+  };
+
+  const handleContinueFromSerie = () => {
+    if (!pendingGrade || !selectedSerie) {
+      return;
+    }
+    finalize(pendingGrade, selectedSerie);
+  };
+
+  const handleBackToGrade = () => {
+    setPendingGrade(null);
+    setSelectedSerie(null);
   };
 
   const styles = StyleSheet.create({
@@ -62,13 +87,16 @@ export default function SelectGradeScreen() {
       color: COLORS.accent,
       fontWeight: '600',
     },
+    continueButton: {
+      marginTop: SPACING.element,
+    },
   });
 
   if (pendingGrade) {
     return (
       <Screen>
         <Animated.View entering={FadeInDown.duration(400).springify().damping(16)}>
-          <BouncyPressable style={styles.backLink} onPress={() => setPendingGrade(null)}>
+          <BouncyPressable style={styles.backLink} onPress={handleBackToGrade}>
             <ThemedText style={styles.backLinkText}>‹ Changer de classe</ThemedText>
           </BouncyPressable>
           <ThemedText style={styles.title}>Quelle est ta série ?</ThemedText>
@@ -76,7 +104,14 @@ export default function SelectGradeScreen() {
 
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-          <SeriePicker grade={pendingGrade} onSelect={(serie) => finalize(pendingGrade, serie)} />
+          <SeriePicker grade={pendingGrade} selectedSerie={selectedSerie} onSelect={setSelectedSerie} />
+          <Button
+            label="Continuer"
+            onPress={handleContinueFromSerie}
+            disabled={!selectedSerie}
+            loading={setInitialGrade.isPending}
+            style={styles.continueButton}
+          />
         </Animated.View>
       </Screen>
     );
@@ -90,7 +125,14 @@ export default function SelectGradeScreen() {
 
         {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-        <GradePicker onSelect={handleSelectGrade} />
+        <GradePicker selectedGrade={selectedGrade} onSelect={handleSelectGrade} />
+        <Button
+          label="Continuer"
+          onPress={handleContinueFromGrade}
+          disabled={!selectedGrade}
+          loading={setInitialGrade.isPending}
+          style={styles.continueButton}
+        />
       </Animated.View>
     </Screen>
   );
