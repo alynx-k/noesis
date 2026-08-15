@@ -5,11 +5,12 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
-import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { SelectableCard } from '@/components/ui/selectable-card';
+import { SPACING, TYPOGRAPHY } from '@/constants/design';
 import { Subject, SUBJECT_LABELS } from '@/constants/courses';
 import { GradeId, SeriesId } from '@/constants/grades';
 import { useRecordPlacementHandled } from '@/hooks/queries/use-placement';
-import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary, getCoursesForGrade } from '@/lib/courses';
 import { getGradeProfile } from '@/lib/grade';
 import { applyPlacement } from '@/lib/placement';
@@ -101,25 +102,6 @@ export default function PlacementScreen() {
     list: {
       gap: 10,
     },
-    row: {
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      ...cardBorder(COLORS),
-    },
-    rowSelected: {
-      borderColor: COLORS.accent,
-      backgroundColor: COLORS.accent,
-    },
-    rowText: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.text,
-      fontWeight: '600',
-    },
-    rowTextSelected: {
-      color: COLORS.accentText,
-    },
     validateButton: {
       marginTop: SPACING.tight,
     },
@@ -149,19 +131,14 @@ export default function PlacementScreen() {
           <View key={subject} style={styles.section}>
             <ThemedText style={styles.sectionTitle}>{SUBJECT_LABELS[subject]}</ThemedText>
             <View style={styles.list}>
-              {coursesForSubject.map((course) => {
-                const isSelected = selections[subject] === course.id;
-                return (
-                  <BouncyPressable
-                    key={course.id}
-                    style={[styles.row, isSelected && styles.rowSelected]}
-                    onPress={() => handleToggle(subject, course.id)}>
-                    <ThemedText style={[styles.rowText, isSelected && styles.rowTextSelected]}>
-                      {course.title}
-                    </ThemedText>
-                  </BouncyPressable>
-                );
-              })}
+              {coursesForSubject.map((course) => (
+                <SelectableCard
+                  key={course.id}
+                  label={course.title}
+                  selected={selections[subject] === course.id}
+                  onPress={() => handleToggle(subject, course.id)}
+                />
+              ))}
             </View>
           </View>
         );
