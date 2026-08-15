@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Modal, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import Animated, {
   Easing,
   FadeIn,
@@ -16,7 +15,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { FlameIcon } from '@/components/flame-icon';
 import { NeoMascot } from '@/components/neo-mascot';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -53,30 +51,11 @@ function SparkDot({ angle, burst, color }: { angle: number; burst: SharedValue<n
   return <Animated.View style={[styles.sparkDot, { backgroundColor: color }, style]} />;
 }
 
-// Cold/unlit flame silhouette — same teardrop silhouette as FlameIcon's
-// outer path, flattened to a single grey fill (no gradient/glow) so it
-// reads as "not lit yet" for the ignition beat's before-state.
-function ColdFlame({ size, color }: { size: number; color: string }) {
-  const height = size * 1.2;
-  return (
-    <View style={{ width: size, height, opacity: 0.5 }}>
-      <FlameIconSilhouette size={size} height={height} color={color} />
-    </View>
-  );
-}
-
-// Flattens FlameIcon's outer teardrop path to a single flat fill (no
-// gradient/glow) — same silhouette, "not lit yet" read.
-function FlameIconSilhouette({ size, height, color }: { size: number; height: number; color: string }) {
-  return (
-    <Svg width={size} height={height} viewBox="0 0 32 38">
-      <Path
-        d="M16 2C16 2 26 14.5 26 23C26 29.0751 21.5228 34 16 34C10.4772 34 6 29.0751 6 23C6 14.5 16 2 16 2Z"
-        fill={color}
-      />
-    </Svg>
-  );
-}
+// Same flame the streak badge next to Neo's card on Home uses (StreakBadge,
+// via IconSymbol's flame.fill) — the 3D glossy FlameIcon this used to ignite
+// into was a different, one-off icon that didn't match "série" anywhere
+// else in the app.
+const STREAK_FLAME_COLOR = '#FF7A30';
 
 function IgniteFlame({ size }: { size: number }) {
   const COLORS = useThemeColors();
@@ -101,10 +80,10 @@ function IgniteFlame({ size }: { size: number }) {
         <SparkDot key={index} angle={angle} burst={burst} color="#F2A65A" />
       ))}
       <Animated.View style={[StyleSheet.absoluteFillObject, styles.igniteLayer, coldStyle]}>
-        <ColdFlame size={size} color={COLORS.locked} />
+        <IconSymbol name="flame.fill" size={size} color={COLORS.locked} />
       </Animated.View>
       <Animated.View style={[styles.igniteLayer, litStyle]}>
-        <FlameIcon size={size} animated />
+        <IconSymbol name="flame.fill" size={size} color={STREAK_FLAME_COLOR} />
       </Animated.View>
     </View>
   );
@@ -226,7 +205,7 @@ export function StreakCelebration({ visible, streak, weekDays, onDone }: StreakC
                         style={[
                           styles.weekDayCircle,
                           { backgroundColor: COLORS.lockedBackground },
-                          done && { backgroundColor: '#F2A65A' },
+                          done && { backgroundColor: STREAK_FLAME_COLOR },
                           isToday && { borderWidth: 2, borderColor: COLORS.text },
                         ]}>
                         {done ? <IconSymbol name="checkmark" size={14} color="#FFFFFF" /> : null}
@@ -249,7 +228,7 @@ export function StreakCelebration({ visible, streak, weekDays, onDone }: StreakC
                   <ThemedText style={[styles.goalBadgeNumber, { color: COLORS.accent }]}>{selectedGoal}</ThemedText>
                   <ThemedText style={[styles.goalBadgeLabel, { color: COLORS.accent }]}>jours</ThemedText>
                   <View style={styles.goalBadgeFlame}>
-                    <FlameIcon size={22} animated={false} />
+                    <IconSymbol name="flame.fill" size={22} color={STREAK_FLAME_COLOR} />
                   </View>
                 </View>
               </View>
