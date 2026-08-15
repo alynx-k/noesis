@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -376,6 +376,19 @@ export default function FocusSessionScreen() {
       justifyContent: 'center',
       padding: SPACING.screen,
     },
+    // Same shape as `centered`, but as a ScrollView contentContainerStyle
+    // (flexGrow instead of flex) for the idle phase — that's the one phase
+    // with a TextInput above the "Lancer" button, so it's the one that needs
+    // to be scrollable: when the keyboard opens, KeyboardAvoidingView alone
+    // isn't enough on Android (edge-to-edge is on in app.json, which makes
+    // the usual automatic window resize unreliable), so the content also
+    // needs to be scrollable for the button to always be reachable.
+    idleScrollContent: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: SPACING.screen,
+    },
     nightContentArea: {
       flex: 1,
       justifyContent: 'flex-end',
@@ -525,46 +538,48 @@ export default function FocusSessionScreen() {
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         {phase === 'idle' ? (
-          <View style={styles.centered}>
-            <LaunchPreview />
-            <ThemedText style={styles.title}>Session de concentration</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Choisis une durée. La fusée décolle et s&apos;éloigne pendant la session — elle retombe si tu quittes
-              Noesis (autre app, verrouillage) avant la fin.
-            </ThemedText>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView contentContainerStyle={styles.idleScrollContent} keyboardShouldPersistTaps="handled">
+              <LaunchPreview />
+              <ThemedText style={styles.title}>Session de concentration</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Choisis une durée. La fusée décolle et s&apos;éloigne pendant la session — elle retombe si tu quittes
+                Noesis (autre app, verrouillage) avant la fin.
+              </ThemedText>
 
-            <View style={styles.durationInputRow}>
-              <TextInput
-                style={styles.durationInput}
-                keyboardType="number-pad"
-                value={durationInput}
-                onChangeText={setDurationInput}
-                maxLength={3}
-              />
-              <ThemedText style={styles.durationInputLabel}>minutes</ThemedText>
-            </View>
+              <View style={styles.durationInputRow}>
+                <TextInput
+                  style={styles.durationInput}
+                  keyboardType="number-pad"
+                  value={durationInput}
+                  onChangeText={setDurationInput}
+                  maxLength={3}
+                />
+                <ThemedText style={styles.durationInputLabel}>minutes</ThemedText>
+              </View>
 
-            <View style={styles.durationRow}>
-              {QUICK_DURATIONS.map((minutes) => (
-                <BouncyPressable
-                  key={minutes}
-                  style={[styles.durationChip, durationInput === String(minutes) && styles.durationChipSelected]}
-                  onPress={() => setDurationInput(String(minutes))}>
-                  <ThemedText
-                    style={[
-                      styles.durationChipText,
-                      durationInput === String(minutes) && styles.durationChipTextSelected,
-                    ]}>
-                    {minutes} min
-                  </ThemedText>
-                </BouncyPressable>
-              ))}
-            </View>
+              <View style={styles.durationRow}>
+                {QUICK_DURATIONS.map((minutes) => (
+                  <BouncyPressable
+                    key={minutes}
+                    style={[styles.durationChip, durationInput === String(minutes) && styles.durationChipSelected]}
+                    onPress={() => setDurationInput(String(minutes))}>
+                    <ThemedText
+                      style={[
+                        styles.durationChipText,
+                        durationInput === String(minutes) && styles.durationChipTextSelected,
+                      ]}>
+                      {minutes} min
+                    </ThemedText>
+                  </BouncyPressable>
+                ))}
+              </View>
 
-            <BouncyPressable style={styles.primaryButton} onPress={handleStart} disabled={!canStart}>
-              <ThemedText style={styles.primaryButtonText}>Lancer la fusée</ThemedText>
-            </BouncyPressable>
-          </View>
+              <BouncyPressable style={styles.primaryButton} onPress={handleStart} disabled={!canStart}>
+                <ThemedText style={styles.primaryButtonText}>Lancer la fusée</ThemedText>
+              </BouncyPressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
         ) : null}
 
         {phase === 'running' ? (
