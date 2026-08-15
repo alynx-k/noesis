@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
-import { HomeWidgetPreview } from '@/components/home-widget-preview';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -195,8 +194,6 @@ export default function HomeScreen() {
               Hey 👋 On révise{'\n'}
               <ThemedText style={styles.greetingName}>{firstName}</ThemedText> ?
             </ThemedText>
-
-            <HomeWidgetPreview />
 
             {nextUp ? (
               <Link href={{ pathname: '/course/[id]', params: { id: nextUp.courseId } }} asChild>
