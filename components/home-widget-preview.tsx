@@ -311,12 +311,6 @@ export function HomeWidgetPreview() {
           <ThemedText style={styles.ctaText}>Relancer ma série</ThemedText>
         </BouncyPressable>
       ) : null}
-
-      {data.state === 'NEW' ? (
-        <BouncyPressable style={styles.ctaButton} onPress={() => router.push('/focus-session')}>
-          <ThemedText style={styles.ctaText}>Lancer ma première session</ThemedText>
-        </BouncyPressable>
-      ) : null}
     </View>
   );
 }
