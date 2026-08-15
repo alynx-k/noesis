@@ -9,7 +9,6 @@ import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -109,9 +108,6 @@ export default function FlashcardsScreen() {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    addIcon: {
-      transform: [{ rotate: '45deg' }],
-    },
     scanCard: {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
@@ -175,6 +171,53 @@ export default function FlashcardsScreen() {
       color: COLORS.mutedText,
       marginTop: 4,
     },
+    onboardingCard: {
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS + 6,
+      padding: SPACING.section,
+      alignItems: 'center',
+      ...cardBorder(COLORS),
+    },
+    onboardingStepsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      marginBottom: SPACING.element,
+    },
+    onboardingStepBadge: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    onboardingStepEmoji: {
+      fontSize: 28,
+    },
+    onboardingTitle: {
+      ...TYPOGRAPHY.title,
+      color: COLORS.text,
+      textAlign: 'center',
+      marginBottom: 6,
+    },
+    onboardingDescription: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+      marginBottom: SPACING.element,
+    },
+    onboardingButton: {
+      backgroundColor: COLORS.accent,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+    },
+    onboardingButtonText: {
+      color: COLORS.accentText,
+      fontSize: 15,
+      fontWeight: '700',
+    },
   });
 
   return (
@@ -187,7 +230,7 @@ export default function FlashcardsScreen() {
               style={styles.addButton}
               onPress={() => setShowScanOptions((previous) => !previous)}
               hitSlop={8}>
-              <IconSymbol name="checkmark" size={20} color={COLORS.accentText} style={styles.addIcon} />
+              <IconSymbol name="plus" size={20} color={COLORS.accentText} />
             </BouncyPressable>
           </View>
 
@@ -222,11 +265,24 @@ export default function FlashcardsScreen() {
           ) : null}
 
           {decksQuery.isSuccess && decks.length === 0 && !showScanOptions && !generateMutation.isPending ? (
-            <EmptyState
-              icon="albums-outline"
-              title="Aucune fiche pour l'instant"
-              description="Scanne tes notes de cours ou un document pour créer tes premières fiches de révision."
-            />
+            <ThemedView style={styles.onboardingCard}>
+              <View style={styles.onboardingStepsRow}>
+                <View style={styles.onboardingStepBadge}>
+                  <ThemedText style={styles.onboardingStepEmoji}>📸</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={COLORS.mutedText} />
+                <View style={styles.onboardingStepBadge}>
+                  <ThemedText style={styles.onboardingStepEmoji}>📝</ThemedText>
+                </View>
+              </View>
+              <ThemedText style={styles.onboardingTitle}>Aucune fiche pour l&apos;instant</ThemedText>
+              <ThemedText style={styles.onboardingDescription}>
+                Prends en photo tes notes manuscrites, Noesis en fait une fiche de révision.
+              </ThemedText>
+              <BouncyPressable style={styles.onboardingButton} onPress={() => setShowScanOptions(true)}>
+                <ThemedText style={styles.onboardingButtonText}>Scanner mes notes</ThemedText>
+              </BouncyPressable>
+            </ThemedView>
           ) : null}
 
           {decks.map((deck) => (
