@@ -2,18 +2,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { getActiveDays, getStreakInfo } from '@/lib/streak';
 
-export type WidgetState = 'COMPLETED' | 'MORNING' | 'AFTERNOON' | 'NIGHT_DANGER' | 'BROKEN';
+export type WidgetState = 'COMPLETED' | 'MORNING' | 'AFTERNOON' | 'NIGHT_DANGER' | 'BROKEN' | 'NEW';
 
 export type WidgetData = {
   state: WidgetState;
   streak: number;
   matiere: string;
+  prenom: string;
   updatedAt: string; // ISO
 };
 
 type WidgetStateInput = {
   streak: number;
   hasCompletedToday: boolean;
+  // Whether the account has ever had a single active day — distinguishes
+  // "brand new, nothing to lose yet" (NEW) from "had a streak, let it die"
+  // (BROKEN). Both have streak === 0, but showing "Série perdue" to
+  // someone who never had one is exactly the unwelcoming first impression
+  // this state exists to avoid.
+  hasEverBeenActive: boolean;
   hour: number; // 0-23
 };
 
@@ -24,13 +31,15 @@ type WidgetStateInput = {
 // ("motivée/prête") since nobody's realistically anxious about revision at
 // 3am. hasCompletedToday always wins (celebrate first), streak === 0 is
 // the same "lost streak" detection used by the notification scheduler
-// (lib/notification-scheduler.ts's checkAndHandleStreakLoss).
-export function computeWidgetState({ streak, hasCompletedToday, hour }: WidgetStateInput): WidgetState {
+// (lib/notification-scheduler.ts's checkAndHandleStreakLoss) — unless the
+// account has never been active at all, in which case it's NEW rather
+// than BROKEN.
+export function computeWidgetState({ streak, hasCompletedToday, hasEverBeenActive, hour }: WidgetStateInput): WidgetState {
   if (hasCompletedToday) {
     return 'COMPLETED';
   }
   if (streak === 0) {
-    return 'BROKEN';
+    return hasEverBeenActive ? 'BROKEN' : 'NEW';
   }
   if (hour >= 21) {
     return 'NIGHT_DANGER';
@@ -80,23 +89,25 @@ export async function getStoredWidgetData(): Promise<WidgetData | null> {
 // for why this isn't wired to those call sites automatically yet).
 // ---------------------------------------------------------------------
 
-export async function computeWidgetData(matiere: string): Promise<WidgetData> {
+export async function computeWidgetData(matiere: string, prenom: string): Promise<WidgetData> {
   const [{ streak }, activeDays] = await Promise.all([getStreakInfo(), getActiveDays()]);
   const hasCompletedToday = activeDays.has(new Date().toDateString());
-  const state = computeWidgetState({ streak, hasCompletedToday, hour: new Date().getHours() });
+  const hasEverBeenActive = activeDays.size > 0;
+  const state = computeWidgetState({ streak, hasCompletedToday, hasEverBeenActive, hour: new Date().getHours() });
 
   return {
     state,
     streak,
     matiere,
+    prenom,
     updatedAt: new Date().toISOString(),
   };
 }
 
 // Computes fresh widget data and writes it through the storage bridge in
 // one call.
-export async function refreshWidgetData(matiere: string): Promise<WidgetData> {
-  const data = await computeWidgetData(matiere);
+export async function refreshWidgetData(matiere: string, prenom: string): Promise<WidgetData> {
+  const data = await computeWidgetData(matiere, prenom);
   await updateWidgetData(data);
   return data;
 }

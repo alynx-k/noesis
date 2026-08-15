@@ -20,7 +20,9 @@ import { useWidgetData } from '@/hooks/queries/use-widget-data';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { getMillisecondsUntilMidnight, WidgetState } from '@/lib/home-widget';
 
-const STATE_COPY: Record<WidgetState, { title: string; subtitle: string }> = {
+// NEW's title is personalized with the prénom, so it's built at render
+// time (see HomeWidgetPreview) rather than living in this static map.
+const STATE_COPY: Partial<Record<WidgetState, { title: string; subtitle: string }>> = {
   COMPLETED: { title: 'Bien joué !', subtitle: 'Série sauvée pour aujourd’hui.' },
   MORNING: { title: 'On commence ?', subtitle: 'Quelques minutes suffisent.' },
   AFTERNOON: { title: 'Toujours là ?', subtitle: 'Ta session du jour attend.' },
@@ -34,6 +36,7 @@ const EYE_COLOR: Record<WidgetState, string> = {
   AFTERNOON: HALO_COLORS.violet,
   NIGHT_DANGER: '#FF5A4E',
   BROKEN: 'rgba(255,255,255,0.32)',
+  NEW: HALO_COLORS.gold,
 };
 
 const PANTHER_SIZE = 92;
@@ -52,6 +55,7 @@ function MascotPanther({ state }: { state: WidgetState }) {
   useEffect(() => {
     switch (state) {
       case 'COMPLETED':
+      case 'NEW':
         motion.value = withRepeat(
           withSequence(
             withTiming(1, { duration: 260, easing: Easing.out(Easing.quad) }),
@@ -77,7 +81,7 @@ function MascotPanther({ state }: { state: WidgetState }) {
   }, [state, motion]);
 
   const bodyStyle = useAnimatedStyle(() => {
-    if (state === 'COMPLETED') {
+    if (state === 'COMPLETED' || state === 'NEW') {
       return { transform: [{ translateY: -motion.value * 6 }, { scale: 1 + motion.value * 0.04 }] };
     }
     if (state === 'NIGHT_DANGER') {
@@ -108,6 +112,11 @@ function MascotPanther({ state }: { state: WidgetState }) {
         {state === 'COMPLETED' ? (
           <View style={mascotStyles.badge}>
             <IconSymbol name="sparkles" size={14} color={HALO_COLORS.gold} />
+          </View>
+        ) : null}
+        {state === 'NEW' ? (
+          <View style={mascotStyles.badge}>
+            <IconSymbol name="heart.fill" size={14} color={HALO_COLORS.gold} />
           </View>
         ) : null}
       </Animated.View>
@@ -274,7 +283,10 @@ export function HomeWidgetPreview() {
   }
 
   const data = widgetQuery.data;
-  const copy = STATE_COPY[data.state];
+  const copy =
+    data.state === 'NEW'
+      ? { title: `Bienvenue ${data.prenom} !`, subtitle: 'Prêt pour ta première session ? 🚀' }
+      : STATE_COPY[data.state]!;
 
   return (
     <View style={styles.card}>
@@ -297,6 +309,12 @@ export function HomeWidgetPreview() {
       {data.state === 'BROKEN' ? (
         <BouncyPressable style={styles.ctaButton} onPress={() => router.push('/cours')}>
           <ThemedText style={styles.ctaText}>Relancer ma série</ThemedText>
+        </BouncyPressable>
+      ) : null}
+
+      {data.state === 'NEW' ? (
+        <BouncyPressable style={styles.ctaButton} onPress={() => router.push('/focus-session')}>
+          <ThemedText style={styles.ctaText}>Lancer ma première session</ThemedText>
         </BouncyPressable>
       ) : null}
     </View>
