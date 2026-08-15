@@ -53,6 +53,7 @@ const MAPPING = {
   'ellipsis': 'more-horiz',
   'xmark': 'close',
   'lightbulb.fill': 'lightbulb',
+  'crown.fill': 'workspace-premium',
 } as IconMapping;
 
 /**

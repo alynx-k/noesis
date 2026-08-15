@@ -13,6 +13,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
+import { useAccessStatus } from '@/hooks/queries/use-access-status';
 import { useSuccessfulSessionCount } from '@/hooks/queries/use-atlas';
 import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
@@ -25,8 +26,10 @@ export default function ProfileScreen() {
   const { completedCourseIds } = useProgress();
   const coursesQuery = useCoursesForGrade();
   const sessionCountQuery = useSuccessfulSessionCount();
+  const accessStatusQuery = useAccessStatus();
   const totalCourses = coursesQuery.data?.length ?? 0;
   const treesPlanted = sessionCountQuery.data ?? 0;
+  const isPremium = accessStatusQuery.data === 'premium';
 
   const displayName = getDisplayName(user);
   const initial = displayName.charAt(0).toUpperCase();
@@ -104,6 +107,40 @@ export default function ProfileScreen() {
       color: COLORS.mutedText,
       marginTop: 2,
     },
+    premiumCardWrapper: {
+      borderRadius: RADIUS,
+      overflow: 'hidden',
+      marginBottom: SPACING.section,
+    },
+    premiumCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      padding: SPACING.element,
+      // Fallback so the card is never invisible if the gradient fails to paint.
+      backgroundColor: '#C9971F',
+    },
+    premiumIconBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.28)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    premiumText: {
+      flex: 1,
+    },
+    premiumTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: '#3A2A00',
+    },
+    premiumSubtitle: {
+      ...TYPOGRAPHY.caption,
+      color: '#5C4300',
+      marginTop: 2,
+    },
   });
 
   return (
@@ -123,6 +160,27 @@ export default function ProfileScreen() {
             </View>
 
             <ThemedText style={styles.title}>{displayName}</ThemedText>
+
+            {!isPremium ? (
+              <Link href="/subscription" asChild>
+                <BouncyPressable style={styles.premiumCardWrapper}>
+                  <LinearGradient
+                    colors={GRADIENTS.gold}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.premiumCard}>
+                    <View style={styles.premiumIconBadge}>
+                      <IconSymbol name="crown.fill" size={20} color="#3A2A00" />
+                    </View>
+                    <View style={styles.premiumText}>
+                      <ThemedText style={styles.premiumTitle}>Passe Premium</ThemedText>
+                      <ThemedText style={styles.premiumSubtitle}>IA illimitée, sans limite quotidienne</ThemedText>
+                    </View>
+                    <IconSymbol name="chevron.right" size={16} color="#3A2A00" />
+                  </LinearGradient>
+                </BouncyPressable>
+              </Link>
+            ) : null}
 
             <ThemedText style={styles.sectionTitle}>Apprentissage</ThemedText>
             <Link href="/garden" asChild>

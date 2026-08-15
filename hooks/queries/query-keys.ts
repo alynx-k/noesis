@@ -26,6 +26,9 @@ export const queryKeys = {
   profile: {
     forUser: (userId: string | undefined) => ['profile', userId] as const,
   },
+  accessStatus: {
+    forUser: (userId: string | undefined) => ['access-status', userId] as const,
+  },
   flashcards: {
     decks: (userId: string | undefined) => ['flashcard-decks', userId] as const,
     deck: (deckId: string) => ['flashcard-deck', deckId] as const,

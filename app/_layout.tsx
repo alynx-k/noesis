@@ -109,6 +109,7 @@ function AppNavigator() {
             <Stack.Screen name="course-history" options={{ headerShown: false }} />
             <Stack.Screen name="flashcard-deck" options={{ headerShown: false }} />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
+            <Stack.Screen name="subscription" options={{ headerShown: false }} />
             <Stack.Screen name="ai-chat" options={{ headerShown: false }} />
             <Stack.Screen name="homework" options={{ headerShown: false }} />
             <Stack.Screen name="correct-homework" options={{ headerShown: false }} />
