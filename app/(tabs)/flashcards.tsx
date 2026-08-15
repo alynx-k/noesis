@@ -2,7 +2,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
@@ -15,6 +15,8 @@ import { SkeletonList } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFlashcardDecks, useGenerateFlashcards } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+
+const MAX_CAPTURED_PHOTOS = 5;
 
 function toDataUrl(asset: ImagePicker.ImagePickerAsset): string | null {
   if (!asset.base64) {
@@ -30,25 +32,25 @@ export default function FlashcardsScreen() {
   const decksQuery = useFlashcardDecks();
   const decks = decksQuery.data ?? [];
   const [showScanOptions, setShowScanOptions] = useState(false);
+  // Photos accumulate here across as many camera shots / library picks as
+  // needed (up to MAX_CAPTURED_PHOTOS) — generation only fires once the user
+  // confirms they're done, via handleFinishCapture. Previously the camera
+  // button generated immediately after a single shot, so multi-page notes
+  // could never become one fiche.
+  const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const generateMutation = useGenerateFlashcards();
 
-  const handleGenerate = async (images: string[]) => {
-    if (images.length === 0) {
-      return;
-    }
-    setShowScanOptions(false);
+  const handleToggleScanOptions = () => {
+    setShowScanOptions((previous) => !previous);
+    setCapturedPhotos([]);
     setError(null);
-    const result = await generateMutation.mutateAsync(images);
-
-    if ('error' in result) {
-      setError(result.error);
-      return;
-    }
-    router.push({ pathname: '/flashcard-deck', params: { id: result.deckId } });
   };
 
   const handleTakePhoto = async () => {
+    if (capturedPhotos.length >= MAX_CAPTURED_PHOTOS) {
+      return;
+    }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       setError("Autorise l'accès à l'appareil photo pour scanner un document.");
@@ -60,7 +62,8 @@ export default function FlashcardsScreen() {
     }
     const dataUrl = toDataUrl(result.assets[0]);
     if (dataUrl) {
-      handleGenerate([dataUrl]);
+      setError(null);
+      setCapturedPhotos((previous) => [...previous, dataUrl].slice(0, MAX_CAPTURED_PHOTOS));
     }
   };
 
@@ -74,13 +77,34 @@ export default function FlashcardsScreen() {
       base64: true,
       quality: 0.7,
       allowsMultipleSelection: true,
-      selectionLimit: 5,
+      selectionLimit: MAX_CAPTURED_PHOTOS - capturedPhotos.length,
     });
     if (result.canceled) {
       return;
     }
     const dataUrls = result.assets.map(toDataUrl).filter((value): value is string => value !== null);
-    handleGenerate(dataUrls);
+    setError(null);
+    setCapturedPhotos((previous) => [...previous, ...dataUrls].slice(0, MAX_CAPTURED_PHOTOS));
+  };
+
+  const handleRemoveCapturedPhoto = (index: number) => {
+    setCapturedPhotos((previous) => previous.filter((_, photoIndex) => photoIndex !== index));
+  };
+
+  const handleFinishCapture = async () => {
+    if (capturedPhotos.length === 0) {
+      return;
+    }
+    setShowScanOptions(false);
+    setError(null);
+    const result = await generateMutation.mutateAsync(capturedPhotos);
+    setCapturedPhotos([]);
+
+    if ('error' in result) {
+      setError(result.error);
+      return;
+    }
+    router.push({ pathname: '/flashcard-deck', params: { id: result.deckId } });
   };
 
   const styles = StyleSheet.create({
@@ -149,6 +173,35 @@ export default function FlashcardsScreen() {
       color: COLORS.accent,
       fontSize: 15,
       fontWeight: '700',
+    },
+    scanButtonDisabled: {
+      opacity: 0.5,
+    },
+    capturedRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.tight,
+      marginBottom: SPACING.element,
+    },
+    capturedThumbWrap: {
+      position: 'relative',
+    },
+    capturedThumb: {
+      width: 64,
+      height: 64,
+      borderRadius: 12,
+      backgroundColor: COLORS.lockedBackground,
+    },
+    capturedRemoveButton: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: COLORS.danger,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     error: {
       color: COLORS.danger,
@@ -226,10 +279,7 @@ export default function FlashcardsScreen() {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <View style={styles.header}>
             <ThemedText style={styles.title}>Mes fiches</ThemedText>
-            <BouncyPressable
-              style={styles.addButton}
-              onPress={() => setShowScanOptions((previous) => !previous)}
-              hitSlop={8}>
+            <BouncyPressable style={styles.addButton} onPress={handleToggleScanOptions} hitSlop={8}>
               <IconSymbol name="plus" size={20} color={COLORS.accentText} />
             </BouncyPressable>
           </View>
@@ -238,14 +288,52 @@ export default function FlashcardsScreen() {
             <ThemedView style={styles.scanCard}>
               <ThemedText style={styles.scanTitle}>Scanner un document</ThemedText>
               <ThemedText style={styles.scanSubtitle}>
-                Prends en photo tes notes ou choisis-en depuis ta galerie — Noesis génère les fiches pour toi.
+                {capturedPhotos.length === 0
+                  ? 'Prends en photo tes notes ou choisis-en depuis ta galerie — plusieurs pages possibles pour une même fiche.'
+                  : `${capturedPhotos.length} photo${capturedPhotos.length > 1 ? 's' : ''} prête${capturedPhotos.length > 1 ? 's' : ''}. Ajoute une page ou génère la fiche.`}
               </ThemedText>
-              <BouncyPressable style={styles.scanButton} onPress={handleTakePhoto}>
-                <ThemedText style={styles.scanButtonText}>Prendre une photo</ThemedText>
+
+              {capturedPhotos.length > 0 ? (
+                <View style={styles.capturedRow}>
+                  {capturedPhotos.map((photo, index) => (
+                    <View key={index} style={styles.capturedThumbWrap}>
+                      <Image source={{ uri: photo }} style={styles.capturedThumb} />
+                      <BouncyPressable
+                        style={styles.capturedRemoveButton}
+                        onPress={() => handleRemoveCapturedPhoto(index)}
+                        hitSlop={8}>
+                        <IconSymbol name="xmark" size={12} color="#FFFFFF" />
+                      </BouncyPressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              <BouncyPressable
+                style={[styles.scanButton, capturedPhotos.length >= MAX_CAPTURED_PHOTOS && styles.scanButtonDisabled]}
+                onPress={handleTakePhoto}
+                disabled={capturedPhotos.length >= MAX_CAPTURED_PHOTOS}>
+                <ThemedText style={styles.scanButtonText}>
+                  {capturedPhotos.length === 0 ? 'Prendre une photo' : 'Ajouter une autre page'}
+                </ThemedText>
               </BouncyPressable>
-              <BouncyPressable style={styles.scanButtonSecondary} onPress={handlePickFromLibrary}>
+              <BouncyPressable
+                style={[
+                  styles.scanButtonSecondary,
+                  capturedPhotos.length >= MAX_CAPTURED_PHOTOS && styles.scanButtonDisabled,
+                ]}
+                onPress={handlePickFromLibrary}
+                disabled={capturedPhotos.length >= MAX_CAPTURED_PHOTOS}>
                 <ThemedText style={styles.scanButtonSecondaryText}>Choisir depuis la galerie</ThemedText>
               </BouncyPressable>
+
+              {capturedPhotos.length > 0 ? (
+                <BouncyPressable style={styles.scanButton} onPress={handleFinishCapture}>
+                  <ThemedText style={styles.scanButtonText}>
+                    Générer la fiche ({capturedPhotos.length})
+                  </ThemedText>
+                </BouncyPressable>
+              ) : null}
             </ThemedView>
           ) : null}
 
