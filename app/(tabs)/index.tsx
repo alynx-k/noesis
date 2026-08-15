@@ -1,9 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -11,7 +9,6 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { HomeWidgetPreview } from '@/components/home-widget-preview';
 import { RocketIcon } from '@/components/rocket-icon';
-import { StreakCelebration } from '@/components/streak-celebration';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { ErrorState } from '@/components/ui/error-state';
@@ -23,11 +20,8 @@ import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
 import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { useStreak } from '@/hooks/queries/use-streak';
-import { useWidgetData } from '@/hooks/queries/use-widget-data';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { getDisplayName } from '@/lib/profile';
-import { consumeStreakCelebrationPreview, hasSeenStreakCelebration } from '@/lib/streak-celebration';
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -47,39 +41,6 @@ export default function HomeScreen() {
   // streak or next-up fetch doesn't blank the rest of the screen.
   const profileQuery = useProfile();
   const nextUpQuery = useNextUpCourse();
-  const widgetQuery = useWidgetData();
-  const streakQuery = useStreak();
-
-  // One-time "ta série est née" moment (see StreakCelebration) — fires the
-  // first time the widget reports today's activity as done, gated by a
-  // lifetime AsyncStorage flag so it never shows again after that (checked
-  // async on mount rather than assumed false, so a returning user who
-  // already saw it doesn't get a one-frame flash of the modal).
-  const [celebrationVisible, setCelebrationVisible] = useState(false);
-  const [celebrationEligible, setCelebrationEligible] = useState(false);
-
-  useEffect(() => {
-    hasSeenStreakCelebration().then((seen) => setCelebrationEligible(!seen));
-  }, []);
-
-  useEffect(() => {
-    if (celebrationEligible && widgetQuery.data?.state === 'COMPLETED') {
-      setCelebrationVisible(true);
-    }
-  }, [celebrationEligible, widgetQuery.data?.state]);
-
-  // Dev-only preview escape hatch (see app/settings.tsx) — Home is a tab and
-  // stays mounted when navigating to/from Settings, so this has to react to
-  // focus rather than mount to catch a preview requested while already here.
-  useFocusEffect(
-    useCallback(() => {
-      consumeStreakCelebrationPreview().then((shouldPreview) => {
-        if (shouldPreview) {
-          setCelebrationVisible(true);
-        }
-      });
-    }, []),
-  );
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -300,13 +261,6 @@ export default function HomeScreen() {
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
-
-      <StreakCelebration
-        visible={celebrationVisible}
-        streak={Math.max(1, streakQuery.data?.streak ?? 1)}
-        weekDays={streakQuery.data?.weekDays ?? [false, false, false, false, false, false, false]}
-        onDone={() => setCelebrationVisible(false)}
-      />
     </ScreenBackground>
   );
 }
