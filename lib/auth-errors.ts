@@ -19,7 +19,7 @@ const TRANSLATIONS: { match: RegExp; field: AuthErrorField; message: string }[] 
   { match: /invalid login credentials/i, field: 'password', message: 'E-mail ou mot de passe incorrect.' },
   { match: /missing password|password is required/i, field: 'password', message: 'Veuillez saisir un mot de passe.' },
   { match: /password should be at least|password.*too short/i, field: 'password', message: 'Le mot de passe doit contenir au moins 6 caractères.' },
-  { match: /rate limit|too many requests/i, field: 'general', message: 'Trop de tentatives. Réessaie dans quelques minutes.' },
+  { match: /rate limit|too many requests|can only request this after/i, field: 'general', message: 'Trop de tentatives. Réessaie dans quelques minutes.' },
   { match: /network/i, field: 'general', message: 'Problème de connexion. Vérifie ton réseau et réessaie.' },
 ];
 

@@ -40,6 +40,11 @@ export default function LoginScreen() {
     handleSignIn,
     handleSignUp,
     handleOAuth,
+    pendingConfirmationEmail,
+    resending,
+    resendMessage,
+    handleResendConfirmation,
+    dismissConfirmationPending,
   } = useLoginForm();
   // True while any auth request is in flight — email/password or OAuth —
   // so the two mechanisms can't be triggered on top of each other.
@@ -166,6 +171,38 @@ export default function LoginScreen() {
       fontSize: 16,
       fontWeight: '700',
     },
+    confirmIconBadge: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      marginBottom: SPACING.element,
+    },
+    confirmEmail: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      textAlign: 'center',
+      marginBottom: SPACING.section,
+    },
+    resendMessage: {
+      color: COLORS.accent,
+      textAlign: 'center',
+      marginTop: SPACING.tight,
+      marginBottom: SPACING.tight,
+    },
+    backLink: {
+      alignSelf: 'center',
+      marginTop: SPACING.element,
+    },
+    backLinkText: {
+      color: COLORS.mutedText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
   });
 
   return (
@@ -189,6 +226,25 @@ export default function LoginScreen() {
             </LinearGradient>
           </View>
           <ThemedText style={styles.title}>Noesis</ThemedText>
+
+          {pendingConfirmationEmail ? (
+            <>
+              <View style={styles.confirmIconBadge}>
+                <Ionicons name="mail-outline" size={32} color={COLORS.accent} />
+              </View>
+              <ThemedText style={styles.subtitle}>Vérifie ta boîte mail pour activer ton compte.</ThemedText>
+              <ThemedText style={styles.confirmEmail}>{pendingConfirmationEmail}</ThemedText>
+
+              <Button label="Renvoyer l'e-mail" onPress={handleResendConfirmation} loading={resending} variant="secondary" />
+              {resendMessage ? <ThemedText style={styles.resendMessage}>{resendMessage}</ThemedText> : null}
+              {errors.general ? <ThemedText style={styles.generalError}>{errors.general}</ThemedText> : null}
+
+              <BouncyPressable style={styles.backLink} onPress={dismissConfirmationPending}>
+                <ThemedText style={styles.backLinkText}>‹ Retour à la connexion</ThemedText>
+              </BouncyPressable>
+            </>
+          ) : (
+            <>
           <ThemedText style={styles.subtitle}>
             Connecte-toi ou crée un compte pour suivre ta progression.
           </ThemedText>
@@ -269,6 +325,8 @@ export default function LoginScreen() {
               )}
             </BouncyPressable>
           ) : null}
+            </>
+          )}
         </Animated.View>
       </KeyboardAvoidingView>
     </Screen>

@@ -12,7 +12,11 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, prenom: string) => Promise<{ error: string | null }>;
+  // needsConfirmation: true when the sign-up succeeded but GoTrue didn't
+  // return a session — meaning "Confirm email" is on for this project and
+  // the account can't sign in until the link in that email is clicked.
+  signUp: (email: string, password: string, prenom: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  resendConfirmationEmail: (email: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signInWithApple: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -45,7 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, prenom: string) => {
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { prenom } } });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { prenom } } });
+    if (error) {
+      return { error: error.message, needsConfirmation: false };
+    }
+    return { error: null, needsConfirmation: !data.session };
+  };
+
+  const resendConfirmationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
     return { error: error?.message ?? null };
   };
 
@@ -83,7 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, signIn, signUp, signInWithGoogle, signInWithApple, signOut }}
+      value={{
+        session,
+        user: session?.user ?? null,
+        loading,
+        signIn,
+        signUp,
+        resendConfirmationEmail,
+        signInWithGoogle,
+        signInWithApple,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>

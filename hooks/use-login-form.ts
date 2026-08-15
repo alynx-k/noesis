@@ -10,7 +10,7 @@ export type AuthFieldErrors = Partial<Record<AuthErrorField, string>>;
 // Login is a Supabase auth call, not server data to cache — a plain hook
 // with local state is the right tool here, not a query/mutation.
 export function useLoginForm() {
-  const { signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
+  const { signIn, signUp, resendConfirmationEmail, signInWithGoogle, signInWithApple } = useAuth();
   const [mode, setModeState] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,13 @@ export function useLoginForm() {
   // (the email/password form) since the two are independent actions that
   // can't both be true at once, but shouldn't share one flag either.
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
+  // Set right after a sign-up that needs email confirmation — the login
+  // screen swaps to a "check your inbox" view keyed off this instead of
+  // silently leaving the user on the (now pointless) form with no session
+  // and no error to explain why nothing happened.
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   // Switching tabs clears whatever error was showing on the other one —
   // stale errors from a different mode/field set would just be confusing.
@@ -66,9 +73,32 @@ export function useLoginForm() {
 
     setErrors({});
     setSubmitting(true);
-    const { error } = await signUp(email, password, prenom.trim());
+    const { error, needsConfirmation } = await signUp(email, password, prenom.trim());
     setSubmitting(false);
     applyResult(error);
+    if (!error && needsConfirmation) {
+      setPendingConfirmationEmail(email);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!pendingConfirmationEmail || resending) {
+      return;
+    }
+    setResending(true);
+    setResendMessage(null);
+    const { error } = await resendConfirmationEmail(pendingConfirmationEmail);
+    setResending(false);
+    if (error) {
+      applyResult(error);
+    } else {
+      setResendMessage('E-mail renvoyé.');
+    }
+  };
+
+  const dismissConfirmationPending = () => {
+    setPendingConfirmationEmail(null);
+    setResendMessage(null);
   };
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
@@ -97,5 +127,10 @@ export function useLoginForm() {
     handleSignIn,
     handleSignUp,
     handleOAuth,
+    pendingConfirmationEmail,
+    resending,
+    resendMessage,
+    handleResendConfirmation,
+    dismissConfirmationPending,
   };
 }
