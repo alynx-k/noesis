@@ -23,16 +23,9 @@ import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { getDisplayName } from '@/lib/profile';
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-function firstNameFromEmail(email: string | undefined | null): string {
-  if (!email) {
-    return '';
-  }
-  const local = email.split('@')[0];
-  return local.charAt(0).toUpperCase() + local.slice(1);
-}
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -225,7 +218,7 @@ export default function HomeScreen() {
 
   const streakInfo = streakQuery.data ?? { streak: 0, weekDays: [false, false, false, false, false, false, false] };
   const nextUp = nextUpQuery.data;
-  const firstName = firstNameFromEmail(user?.email);
+  const firstName = getDisplayName(user);
 
   return (
     <ScreenBackground>

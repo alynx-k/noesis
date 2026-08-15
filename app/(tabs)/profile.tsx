@@ -20,6 +20,7 @@ import { useSuccessfulSessionCount } from '@/hooks/queries/use-atlas';
 import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { useLeaderboard } from '@/hooks/queries/use-leaderboard';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { getDisplayName } from '@/lib/profile';
 
 const LEADERBOARD_PREVIEW_SIZE = 5;
 
@@ -35,8 +36,7 @@ export default function ProfileScreen() {
   const treesPlanted = sessionCountQuery.data ?? 0;
   const leaderboardEntries = (leaderboardQuery.data ?? []).slice(0, LEADERBOARD_PREVIEW_SIZE);
 
-  const emailLocal = user?.email?.split('@')[0] ?? '';
-  const displayName = emailLocal ? emailLocal.charAt(0).toUpperCase() + emailLocal.slice(1) : '';
+  const displayName = getDisplayName(user);
   const initial = displayName.charAt(0).toUpperCase();
 
   const styles = StyleSheet.create({

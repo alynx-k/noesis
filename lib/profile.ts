@@ -1,6 +1,27 @@
+import type { User } from '@supabase/supabase-js';
+
 import type { GradeId, SeriesId } from '@/constants/grades';
 import type { Lv2Id } from '@/constants/lv2';
 import { supabase } from '@/lib/supabase';
+
+// Prefers the prénom captured at signup (stored in Supabase Auth's
+// user_metadata, not the profiles table — it needs to exist before any
+// profile row does, since the profile row is only created later during
+// grade onboarding). Falls back to a capitalized version of the email's
+// local part for accounts created before this existed, or signed in via
+// Google/Apple (no prénom prompt on that path).
+export function getDisplayName(user: User | null | undefined): string {
+  const prenom = typeof user?.user_metadata?.prenom === 'string' ? user.user_metadata.prenom.trim() : '';
+  if (prenom) {
+    return prenom;
+  }
+  const email = user?.email;
+  if (!email) {
+    return '';
+  }
+  const local = email.split('@')[0];
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
 
 export type GateProfile = {
   grade: GradeId | null;

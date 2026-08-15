@@ -8,6 +8,7 @@ export function useLoginForm() {
   const { signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [prenom, setPrenom] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,15 +24,27 @@ export function useLoginForm() {
     return { error: null };
   };
 
+  const handleSignUp = () => {
+    const trimmedPrenom = prenom.trim();
+    if (!trimmedPrenom) {
+      const message = 'Indique ton prénom pour créer ton compte.';
+      setError(message);
+      return Promise.resolve({ error: message });
+    }
+    return run(() => signUp(email, password, trimmedPrenom));
+  };
+
   return {
     email,
     setEmail,
     password,
     setPassword,
+    prenom,
+    setPrenom,
     error,
     submitting,
     handleSignIn: () => run(() => signIn(email, password)),
-    handleSignUp: () => run(() => signUp(email, password)),
+    handleSignUp,
     handleOAuth: (provider: 'google' | 'apple') =>
       run(() => (provider === 'google' ? signInWithGoogle() : signInWithApple())),
   };

@@ -31,6 +31,8 @@ export default function LoginScreen() {
     setEmail,
     password,
     setPassword,
+    prenom,
+    setPrenom,
     error,
     submitting,
     handleSignIn,
@@ -171,6 +173,13 @@ export default function LoginScreen() {
             Connecte-toi ou crée un compte pour suivre ta progression.
           </ThemedText>
 
+          <TextField
+            label="Prénom (pour créer un compte)"
+            placeholder="Ton prénom"
+            autoCapitalize="words"
+            value={prenom}
+            onChangeText={setPrenom}
+          />
           <TextField
             label="E-mail"
             placeholder="toi@exemple.com"
