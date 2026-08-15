@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
@@ -74,7 +74,12 @@ export default function SettingsScreen() {
       return;
     }
     setPendingGrade(null);
-    setShowGradePicker((previous) => !previous);
+    setShowGradePicker(true);
+  };
+
+  const closeGradePicker = () => {
+    setShowGradePicker(false);
+    setPendingGrade(null);
   };
 
   const finalizeGradeChange = async (grade: GradeId, serie: SeriesId | null) => {
@@ -194,10 +199,6 @@ export default function SettingsScreen() {
       fontSize: 14,
       fontWeight: '700',
     },
-    pickerWrapper: {
-      marginTop: SPACING.tight,
-      marginBottom: SPACING.tight,
-    },
     error: {
       color: COLORS.danger,
       marginTop: 8,
@@ -255,24 +256,6 @@ export default function SettingsScreen() {
             </View>
             <ThemedText style={styles.changeLink}>Changer</ThemedText>
           </BouncyPressable>
-
-          {showGradePicker && !pendingGrade ? (
-            <View style={styles.pickerWrapper}>
-              <GradePicker selectedGrade={gradeProfile?.grade} onSelect={handleSelectGrade} />
-            </View>
-          ) : null}
-          {showGradePicker && pendingGrade ? (
-            <View style={styles.pickerWrapper}>
-              <BouncyPressable onPress={() => setPendingGrade(null)}>
-                <ThemedText style={styles.changeLink}>‹ Changer de classe</ThemedText>
-              </BouncyPressable>
-              <SeriePicker
-                grade={pendingGrade}
-                selectedSerie={gradeProfile?.serie}
-                onSelect={(serie) => finalizeGradeChange(pendingGrade, serie)}
-              />
-            </View>
-          ) : null}
           {gradeChangeError ? <ThemedText style={styles.error}>{gradeChangeError}</ThemedText> : null}
 
           <ThemedText style={styles.sectionTitle}>Notifications</ThemedText>
@@ -313,6 +296,41 @@ export default function SettingsScreen() {
         onConfirm={handleConfirmSignOut}
         onCancel={() => setShowSignOutConfirm(false)}
       />
+
+      <Modal
+        visible={showGradePicker}
+        animationType="slide"
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
+        onRequestClose={closeGradePicker}>
+        <ScreenBackground>
+          <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+            <View style={styles.header}>
+              {pendingGrade ? (
+                <BouncyPressable style={styles.backButton} onPress={() => setPendingGrade(null)} hitSlop={8}>
+                  <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
+                </BouncyPressable>
+              ) : (
+                <View style={styles.headerSpacer} />
+              )}
+              <ThemedText style={styles.headerTitle}>Changer de classe</ThemedText>
+              <BouncyPressable style={styles.backButton} onPress={closeGradePicker} hitSlop={8}>
+                <IconSymbol name="xmark" size={18} color={COLORS.text} />
+              </BouncyPressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              {pendingGrade ? (
+                <SeriePicker
+                  grade={pendingGrade}
+                  selectedSerie={gradeProfile?.serie}
+                  onSelect={(serie) => finalizeGradeChange(pendingGrade, serie)}
+                />
+              ) : (
+                <GradePicker selectedGrade={gradeProfile?.grade} onSelect={handleSelectGrade} />
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </ScreenBackground>
+      </Modal>
     </ScreenBackground>
   );
 }

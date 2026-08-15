@@ -14,6 +14,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { DESTINATIONS } from '@/constants/destinations';
 import { useAuth } from '@/context/auth';
 import { useProgress } from '@/context/progress';
 import { useSuccessfulSessionCount } from '@/hooks/queries/use-atlas';
@@ -35,6 +36,25 @@ export default function ProfileScreen() {
   const totalCourses = coursesQuery.data?.length ?? 0;
   const treesPlanted = sessionCountQuery.data ?? 0;
   const leaderboardEntries = (leaderboardQuery.data ?? []).slice(0, LEADERBOARD_PREVIEW_SIZE);
+
+  // Turns a bare "0" into something to fill up rather than a dead end —
+  // the courses gauge fills toward the grade's full syllabus, the rockets
+  // gauge fills toward the next atlas destination (see constants/destinations.ts,
+  // also used by garden.tsx/focus-session.tsx's unlock logic).
+  const courseProgress = totalCourses > 0 ? Math.min(1, completedCourseIds.length / totalCourses) : 0;
+  const nextDestination = DESTINATIONS.find((destination) => destination.threshold > treesPlanted) ?? null;
+  const rocketProgress = nextDestination ? Math.min(1, treesPlanted / nextDestination.threshold) : 1;
+  const rocketGaugeLabel = nextDestination
+    ? `Encore ${nextDestination.threshold - treesPlanted} pour ${nextDestination.name}`
+    : 'Toutes les destinations débloquées !';
+  const courseGaugeLabel =
+    totalCourses === 0
+      ? ''
+      : completedCourseIds.length === 0
+        ? 'Termine ton premier cours !'
+        : completedCourseIds.length >= totalCourses
+          ? 'Tous les cours terminés !'
+          : `Encore ${totalCourses - completedCourseIds.length} pour finir`;
 
   const displayName = getDisplayName(user);
   const initial = displayName.charAt(0).toUpperCase();
@@ -155,6 +175,33 @@ export default function ProfileScreen() {
       color: COLORS.mutedText,
       marginLeft: 2,
     },
+    gaugeTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.lockedBackground,
+      overflow: 'hidden',
+      marginTop: SPACING.tight,
+    },
+    gaugeTrackOnDark: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    gaugeFill: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.accent,
+    },
+    gaugeFillOnDark: {
+      backgroundColor: '#F2C879',
+    },
+    gaugeLabel: {
+      ...TYPOGRAPHY.caption,
+      fontSize: 11,
+      color: COLORS.mutedText,
+      marginTop: 6,
+    },
+    gaugeLabelOnDark: {
+      color: 'rgba(255,255,255,0.85)',
+    },
     historyRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -250,12 +297,22 @@ export default function ProfileScreen() {
                 {coursesQuery.isPending ? (
                   <Skeleton width={70} height={28} />
                 ) : (
-                  <View style={styles.statNumberRow}>
-                    <Animated.Text key={completedCourseIds.length} entering={FadeIn.duration(350)} style={styles.statNumber}>
-                      {completedCourseIds.length}
-                    </Animated.Text>
-                    <ThemedText style={styles.statNumberTotal}>/{totalCourses}</ThemedText>
-                  </View>
+                  <>
+                    <View style={styles.statNumberRow}>
+                      <Animated.Text key={completedCourseIds.length} entering={FadeIn.duration(350)} style={styles.statNumber}>
+                        {completedCourseIds.length}
+                      </Animated.Text>
+                      <ThemedText style={styles.statNumberTotal}>/{totalCourses}</ThemedText>
+                    </View>
+                    <View style={styles.gaugeTrack}>
+                      <View style={[styles.gaugeFill, { width: `${courseProgress * 100}%` }]} />
+                    </View>
+                    {courseGaugeLabel ? (
+                      <ThemedText style={styles.gaugeLabel} numberOfLines={2}>
+                        {courseGaugeLabel}
+                      </ThemedText>
+                    ) : null}
+                  </>
                 )}
               </ThemedView>
               <Link href="/garden" asChild>
@@ -272,9 +329,17 @@ export default function ProfileScreen() {
                     {sessionCountQuery.isPending ? (
                       <Skeleton width={40} height={28} style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
                     ) : (
-                      <Animated.Text key={treesPlanted} entering={FadeIn.duration(350)} style={styles.rocketCardNumber}>
-                        {treesPlanted}
-                      </Animated.Text>
+                      <>
+                        <Animated.Text key={treesPlanted} entering={FadeIn.duration(350)} style={styles.rocketCardNumber}>
+                          {treesPlanted}
+                        </Animated.Text>
+                        <View style={[styles.gaugeTrack, styles.gaugeTrackOnDark]}>
+                          <View style={[styles.gaugeFill, styles.gaugeFillOnDark, { width: `${rocketProgress * 100}%` }]} />
+                        </View>
+                        <ThemedText style={[styles.gaugeLabel, styles.gaugeLabelOnDark]} numberOfLines={2}>
+                          {rocketGaugeLabel}
+                        </ThemedText>
+                      </>
                     )}
                   </LinearGradient>
                 </BouncyPressable>
