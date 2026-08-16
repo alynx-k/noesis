@@ -36,6 +36,10 @@ async function ensureAndroidChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Rappels',
     importance: Notifications.AndroidImportance.DEFAULT,
+    // Same teal as the app icon/notification icon tint (app.json's
+    // expo-notifications color) — devices with a notification LED use this
+    // instead of the system default (usually blue).
+    lightColor: '#0F6E56',
   });
 }
 

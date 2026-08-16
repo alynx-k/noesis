@@ -47,7 +47,14 @@
         }
       ],
       "expo-audio",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#0F6E56",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-font",
       "expo-secure-store"
     ],
