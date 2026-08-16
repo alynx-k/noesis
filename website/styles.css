@@ -1,6 +1,15 @@
 :root {
   --accent: #0F6E56;
   --accent-soft: #E3F1EC;
+  /* Secondary accents — the hero blobs and subject/feature cards already
+     use violet and gold, but nothing outside those spots did, so every
+     button/tag/badge on the page repeated the same teal. Promoting these
+     to real variables lets a few high-repetition elements (section tags,
+     step numbers, trust checkmarks) rotate through the palette instead. */
+  --accent-2: #5A4FBF;
+  --accent-2-soft: #EDEBFC;
+  --accent-2-text: #FFFFFF;
+  --accent-gold: #F2C879;
   --accent-text: #FFFFFF;
   --bg: #F3F1EA;
   --surface: #FFFFFF;
@@ -20,6 +29,10 @@
 :root[data-theme="dark"] {
   --accent: #2FCB9C;
   --accent-soft: #113329;
+  --accent-2: #9C90F5;
+  --accent-2-soft: #221C42;
+  --accent-2-text: #180F30;
+  --accent-gold: #F2C879;
   --accent-text: #06120E;
   --bg: #0C0F0D;
   --surface: #141A17;
@@ -35,6 +48,10 @@
   :root:not([data-theme="light"]) {
     --accent: #2FCB9C;
     --accent-soft: #113329;
+    --accent-2: #9C90F5;
+    --accent-2-soft: #221C42;
+    --accent-2-text: #180F30;
+    --accent-gold: #F2C879;
     --accent-text: #06120E;
     --bg: #0C0F0D;
     --surface: #141A17;
@@ -233,7 +250,7 @@ header {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent), var(--accent-2) 35%) 100%);
   color: var(--accent-text);
   box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 65%, transparent);
   overflow: hidden;
@@ -305,7 +322,17 @@ header {
   font-weight: 600;
   margin: 0 0 22px;
 }
-.hero-title .accent-text { color: var(--accent); font-style: italic; }
+.hero-title .accent-text {
+  color: var(--accent);
+  font-style: italic;
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@supports not (background-clip: text) {
+  .hero-title .accent-text { -webkit-text-fill-color: unset; }
+}
 
 .lede { font-size: 18px; line-height: 1.6; color: var(--muted); margin: 0 0 32px; max-width: 520px; }
 
@@ -414,6 +441,10 @@ section { padding: 84px 0; }
 
 .section-head { max-width: 620px; margin: 0 auto 52px; text-align: center; }
 .section-tag { color: var(--accent); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: block; }
+/* The same tag color repeated on every single section (five in a row
+   scrolling down) was a big part of the page reading as monotone — this
+   alternates it with the violet secondary accent section by section. */
+#comment-ca-marche .section-tag, #faq .section-tag { color: var(--accent-2); }
 h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.6px; margin: 0 0 12px; font-weight: 600; }
 .section-head p { color: var(--muted); font-size: 16px; line-height: 1.6; margin: 0; }
 
@@ -482,7 +513,13 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
 .steps-line-fill { height: 100%; width: 0%; background: var(--accent); transition: width 1.2s var(--ease); }
 
 .step { position: relative; z-index: 1; padding: 8px 24px 0; }
-.step-num { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--accent); background: var(--bg); width: 44px; height: 44px; border: 2px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.step-num { font-family: var(--font-display); font-size: 15px; font-weight: 600; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+/* Filled and rotated through the three-hue palette instead of three
+   identical outlined teal circles — a small "journey" rhythm across the
+   three steps rather than one repeated color. */
+.step-1 .step-num { background: var(--accent); color: var(--accent-text); }
+.step-2 .step-num { background: var(--accent-2); color: var(--accent-2-text); }
+.step-3 .step-num { background: var(--accent-gold); color: #4A3413; }
 .step h3 { margin: 0 0 8px; font-size: 17px; }
 .step p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
 
@@ -516,6 +553,8 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
 .trust-list li { display: flex; gap: 12px; font-size: 14.5px; color: var(--text); line-height: 1.5; }
 .trust-list b { display: block; margin-bottom: 2px; }
 .check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-size: 12px; margin-top: 1px; }
+.trust-list li:nth-child(2) .check { background: var(--accent-2); color: var(--accent-2-text); }
+.trust-list li:nth-child(3) .check { background: var(--accent-gold); color: #4A3413; }
 
 /* ---------- Accordion ---------- */
 .accordion { max-width: 720px; margin: 0 auto; border-top: 1px solid var(--border); }
@@ -544,7 +583,7 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
 /* ---------- Waitlist / final CTA ---------- */
 .cta-band {
   position: relative;
-  background: linear-gradient(135deg, #163A31 0%, #0F6E56 60%, #14805F 100%);
+  background: linear-gradient(135deg, #2A2360 0%, #5A4FBF 35%, #0F6E56 100%);
   border-radius: var(--radius-lg);
   padding: 60px 48px;
   color: #fff;
