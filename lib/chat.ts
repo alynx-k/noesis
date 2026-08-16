@@ -72,6 +72,12 @@ export async function saveChatMessage(sessionId: string, message: ChatMessage): 
 
   if (error) {
     console.error('Failed to save chat message:', error);
+    // Throwing (rather than swallowing and resolving normally) is what
+    // lets useSaveChatMessage's mutation actually detect the failure —
+    // this used to always resolve, so the student had no way of finding
+    // out a message never made it to the database short of reopening the
+    // conversation later and noticing it missing.
+    throw new Error(error.message);
   }
 }
 

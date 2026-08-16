@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { toast } from '@/components/ui/toast';
 import { useAuth } from '@/context/auth';
 import {
   ChatMessage,
@@ -54,6 +55,16 @@ export function useSaveChatMessage() {
       // cached session (title/order in the sidebar) fresh.
       queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.sessionId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['chat-sessions', user?.id] });
+    },
+    // Called from ai-chat.tsx as a fire-and-forget saveMessage.mutate(...)
+    // — this is the only place a persistence failure can actually reach
+    // the student, since saveChatMessage now throws instead of swallowing
+    // the error. Without it, a message could silently fail to save with
+    // the student none the wiser until they reopened the conversation
+    // later and found it missing.
+    onError: (error) => {
+      console.error('Failed to save chat message:', error);
+      toast.show('Message non enregistré, vérifie ta connexion.', { variant: 'error' });
     },
   });
 }
