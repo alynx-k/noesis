@@ -507,6 +507,85 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
 
 .tilt { will-change: transform; transition: transform 0.25s var(--ease), border-color 0.35s var(--ease), box-shadow 0.35s var(--ease); }
 
+/* ---------- App preview mockup ---------- */
+/* Hand-built in the app's own design language (same mascot silhouette,
+   streak flame, card/pill shapes as the real product) rather than a real
+   screenshot — gives visitors something concrete to look at without
+   depending on a live build. Uses the page's own --bg/--surface/--text/
+   --accent variables, so toggling the site's theme flips the phone's
+   screen too. */
+.preview-stage { display: flex; flex-direction: column; align-items: center; }
+.phone-frame {
+  width: 300px;
+  padding: 14px;
+  background: #0B0B0B;
+  border-radius: 44px;
+  box-shadow: var(--shadow), 0 30px 60px -20px rgba(0,0,0,0.4);
+  position: relative;
+}
+.phone-notch {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  width: 90px; height: 22px;
+  background: #0B0B0B;
+  border-radius: 0 0 14px 14px;
+  z-index: 2;
+}
+.phone-screen {
+  background: var(--bg);
+  border-radius: 32px;
+  overflow: hidden;
+  padding: 34px 16px 16px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: background 0.4s var(--ease);
+}
+.app-statusbar { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text); padding: 0 4px; letter-spacing: 1px; }
+.app-greeting-row { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.app-greeting-hi { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--text); }
+.app-streak-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-weight: 800; font-size: 13px; color: var(--text); }
+.app-streak-pill svg { width: 15px; height: 15px; }
+
+.app-widget-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  box-shadow: var(--shadow);
+}
+.app-widget-mascot { width: 62px; height: 62px; background: #0B0C10; border-radius: 50%; position: relative; margin-bottom: 12px; }
+.app-mascot-ear { position: absolute; top: -6px; width: 14px; height: 14px; background: #0B0C10; border-radius: 4px; transform: rotate(45deg); }
+.app-mascot-ear-l { left: 8px; }
+.app-mascot-ear-r { right: 8px; }
+.app-mascot-eye { position: absolute; top: 26px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-gold); }
+.app-mascot-eye-l { left: 17px; }
+.app-mascot-eye-r { right: 17px; }
+.app-widget-title { font-family: var(--font-display); font-size: 17px; color: var(--text); }
+.app-widget-sub { font-size: 12.5px; color: var(--muted); }
+
+.app-course-card { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
+.app-course-icon { width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.app-course-icon svg { width: 18px; height: 18px; }
+.app-course-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.app-course-info b, .app-course-info span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-course-info b { font-size: 13px; color: var(--text); }
+.app-course-info span { font-size: 11.5px; color: var(--muted); }
+.app-course-cta { flex-shrink: 0; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 700; padding: 7px 10px; border-radius: 999px; }
+
+.app-tabbar { margin-top: auto; display: flex; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--border); }
+.app-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--muted); flex: 1; }
+.app-tab svg { width: 19px; height: 19px; }
+.app-tab.active { color: var(--accent); }
+
+.preview-caption { margin-top: 22px; font-size: 12.5px; color: var(--muted); text-align: center; }
+
 /* ---------- Steps ---------- */
 .steps { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 .steps-line { position: absolute; top: 22px; left: 8%; right: 8%; height: 2px; background: var(--border-strong); z-index: 0; }
