@@ -87,7 +87,12 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       const startedAt = startedAtRef.current ?? Date.now();
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(totalSeconds - elapsed, 0);
+      // Clamped on both ends — only the floor was covered before. If the
+      // device clock gets moved backward mid-session, `elapsed` goes
+      // negative and remaining would otherwise exceed totalSeconds,
+      // displaying more time than the student actually chose (e.g. "46:00"
+      // for a 25-minute session).
+      const remaining = Math.min(Math.max(totalSeconds - elapsed, 0), totalSeconds);
       setRemainingSeconds(remaining);
       if (remaining <= 0) {
         succeed();

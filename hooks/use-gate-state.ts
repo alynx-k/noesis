@@ -54,6 +54,12 @@ function useHomePrefetch(userId: string | undefined, grade: string | null, serie
       setDone(false);
       return;
     }
+    // Reset here too, not just in the branch above — otherwise a grade/serie
+    // change mid-session (userId and grade both still truthy, just a new
+    // value) left `done` stale at `true` from the previous run until the new
+    // prefetch resolved, so the gate would spuriously report "ready" for a
+    // moment with the old grade's data still the only thing actually warm.
+    setDone(false);
     let cancelled = false;
     Promise.all([
       queryClient.prefetchQuery({ queryKey: queryKeys.streak.forUser(userId), queryFn: getStreakInfo }),
