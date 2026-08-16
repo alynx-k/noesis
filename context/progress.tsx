@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+import { toast } from '@/components/ui/toast';
 import { useAuth } from '@/context/auth';
 import { cancelTodayNotifications } from '@/lib/notification-scheduler';
 import { recordActivity } from '@/lib/streak';
@@ -45,6 +46,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const wasAlreadyCompleted = completedCourseIds.includes(id);
     setCompletedCourseIds((previous) => (previous.includes(id) ? previous : [...previous, id]));
 
     const { error } = await supabase
@@ -53,9 +55,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Failed to save course progress to Supabase:', error);
+      // Roll back the optimistic update — otherwise the completion
+      // badge/celebration stays visible until the next full reload
+      // silently makes it disappear, reading as "you lost your progress"
+      // with no explanation for why.
+      if (!wasAlreadyCompleted) {
+        setCompletedCourseIds((previous) => previous.filter((completedId) => completedId !== id));
+      }
+      toast.show('Impossible d’enregistrer ta progression, réessaie.', { variant: 'error' });
     } else {
       recordActivity();
-      cancelTodayNotifications();
+      cancelTodayNotifications(user.id);
     }
   };
 
