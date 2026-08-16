@@ -26,17 +26,25 @@ function ensureAudioMode() {
 
 function playOnce(source: number, volume: number) {
   ensureAudioMode();
-  const player = createAudioPlayer(source);
-  player.volume = volume;
+  try {
+    const player = createAudioPlayer(source);
+    player.volume = volume;
 
-  const subscription = player.addListener('playbackStatusUpdate', (status) => {
-    if (status.didJustFinish) {
-      subscription.remove();
-      player.remove();
-    }
-  });
+    const subscription = player.addListener('playbackStatusUpdate', (status) => {
+      if (status.didJustFinish) {
+        subscription.remove();
+        player.remove();
+      }
+    });
 
-  player.play();
+    player.play();
+  } catch (error) {
+    // createAudioPlayer/play() can fail silently otherwise — a bad asset
+    // reference (e.g. a bundler cache that hasn't picked up a newly added
+    // sound file yet) would previously just produce no sound with nothing
+    // in the console to explain why.
+    console.error('Failed to play sound:', error);
+  }
 }
 
 // A correct exercise answer — light, doesn't need to grab attention.
