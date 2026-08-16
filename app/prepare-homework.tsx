@@ -77,6 +77,7 @@ export default function PrepareHomeworkScreen() {
     setSelectedCourseIds(new Set());
     setLoadingCourses(true);
     setError(null);
+    setLimitReached(false);
     setStage('courses');
 
     const profile = await getGradeProfile();
@@ -114,6 +115,11 @@ export default function PrepareHomeworkScreen() {
     const result = await buildPracticeTest(Array.from(selectedCourseIds));
     setPreparing(false);
 
+    if ('limitReached' in result) {
+      setLimitReached(true);
+      setError(result.message);
+      return;
+    }
     if ('error' in result) {
       setError(result.error);
       return;
@@ -375,7 +381,8 @@ export default function PrepareHomeworkScreen() {
               Sélectionne un ou plusieurs cours — le test portera sur leur contenu.
             </ThemedText>
 
-            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+            {limitReached && error ? <PremiumUpsellCard message={error} /> : null}
+            {!limitReached && error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
             {loadingCourses ? (
               <SkeletonList count={4} cardHeight={52} />

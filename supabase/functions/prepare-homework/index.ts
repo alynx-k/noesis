@@ -53,6 +53,48 @@ async function callClaude(promptText: string, maxTokens: number): Promise<string
   return extractText(await response.json());
 }
 
+// Shared by both modes at the call site below — the free-tier quota is "3
+// tests/day", and a test is generated once (mode: 'build') then graded once
+// (mode: 'grade') in the normal client flow, so this must be checked and
+// consumed exactly once per test, not once per mode. It's charged at build
+// time: that's the step that was previously completely unmetered (a free
+// account could tap "Générer le test" unlimited times without ever
+// finishing one and never be counted or blocked), and it's also the more
+// expensive step (it can additionally invoke generate-course per course).
+async function checkAndConsumeQuota(
+  supabaseClient: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ allowed: true } | { allowed: false; message: string }> {
+  const { data: profile } = await supabaseClient
+    .from('profiles')
+    .select('access_status')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if ((profile?.access_status ?? 'gratuit_limite') === 'premium') {
+    return { allowed: true };
+  }
+
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+
+  const { count: usedToday, error: countError } = await supabaseClient
+    .from('ai_usage_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('feature', 'prepare_homework')
+    .gte('created_at', startOfToday.toISOString());
+
+  if (!countError && (usedToday ?? 0) >= 3) {
+    return {
+      allowed: false,
+      message: 'Tu as atteint tes 3 tests gratuits du jour. Reviens demain, ou passe premium pour un accès illimité.',
+    };
+  }
+
+  return { allowed: true };
+}
+
 async function buildQuestionSet(
   supabaseClient: ReturnType<typeof createClient>,
   courseIds: string[],
@@ -213,12 +255,26 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      const quota = await checkAndConsumeQuota(supabaseClient, user.id);
+      if (!quota.allowed) {
+        return new Response(JSON.stringify({ limitReached: true, message: quota.message }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       const result = await buildQuestionSet(supabaseClient, courseIds);
       if ('error' in result) {
         return new Response(JSON.stringify({ error: result.error }), {
           status: 502,
           headers: { 'Content-Type': 'application/json' },
         });
+      }
+
+      const { error: usageError } = await supabaseClient
+        .from('ai_usage_log')
+        .insert({ user_id: user.id, feature: 'prepare_homework' });
+      if (usageError) {
+        console.error('Failed to log ai usage:', usageError);
       }
 
       return new Response(JSON.stringify({ questions: result.questions }), {
@@ -237,47 +293,17 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('access_status')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if ((profile?.access_status ?? 'gratuit_limite') !== 'premium') {
-        const startOfToday = new Date();
-        startOfToday.setUTCHours(0, 0, 0, 0);
-
-        const { count: usedToday, error: countError } = await supabaseClient
-          .from('ai_usage_log')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('feature', 'prepare_homework')
-          .gte('created_at', startOfToday.toISOString());
-
-        if (!countError && (usedToday ?? 0) >= 3) {
-          return new Response(
-            JSON.stringify({
-              limitReached: true,
-              message: 'Tu as atteint tes 3 tests gratuits du jour. Reviens demain, ou passe premium pour un accès illimité.',
-            }),
-            { headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-      }
-
+      // No quota check here — the test this is grading was already charged
+      // one unit of the 3/day quota when it was built (mode: 'build', see
+      // checkAndConsumeQuota). Checking again here would silently halve the
+      // advertised "3 tests/day" to 1.5 (one unit for the build, a second
+      // for the grade of that same test).
       const result = await gradeQuestionSet(supabaseClient, questions, answers);
       if ('error' in result) {
         return new Response(JSON.stringify({ error: result.error }), {
           status: 502,
           headers: { 'Content-Type': 'application/json' },
         });
-      }
-
-      const { error: usageError } = await supabaseClient
-        .from('ai_usage_log')
-        .insert({ user_id: user.id, feature: 'prepare_homework' });
-      if (usageError) {
-        console.error('Failed to log ai usage:', usageError);
       }
 
       const correctCount = result.verdicts.filter((v) => v.toLowerCase().startsWith('correct')).length;

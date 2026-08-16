@@ -11,12 +11,21 @@ export type PracticeQuestion = {
 export type PracticeResultItem = { question: string; verdict: string; feedback: string };
 export type StudyPlanEntry = { courseId: string; courseTitle: string };
 
-export async function buildPracticeTest(courseIds: string[]): Promise<{ questions: PracticeQuestion[] } | { error: string }> {
+export async function buildPracticeTest(
+  courseIds: string[],
+): Promise<{ questions: PracticeQuestion[] } | { error: string } | { limitReached: true; message: string }> {
   const { data, error } = await supabase.functions.invoke('prepare-homework', {
     body: { mode: 'build', courseIds },
   });
 
-  if (error || !Array.isArray(data?.questions) || data.questions.length === 0) {
+  if (error) {
+    console.error('Failed to build practice test:', error, data);
+    return { error: 'Impossible de préparer le test, réessaie.' };
+  }
+  if (data?.limitReached) {
+    return { limitReached: true, message: data.message ?? 'Limite atteinte.' };
+  }
+  if (!Array.isArray(data?.questions) || data.questions.length === 0) {
     console.error('Failed to build practice test:', error, data);
     return { error: data?.error ?? 'Impossible de préparer le test, réessaie.' };
   }
