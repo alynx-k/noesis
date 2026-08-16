@@ -20,6 +20,24 @@ export async function getAccessStatus(): Promise<AccessStatus> {
   return (data?.access_status as AccessStatus | undefined) ?? 'gratuit_limite';
 }
 
+export type SubscriptionPlan = 'monthly' | 'yearly';
+
+// Returns Wave's hosted checkout URL for the given plan, or an error
+// message meant to be shown as-is (the edge function already writes it in
+// French). Never trust a client-computed price — create-checkout-session
+// looks the amount up itself from the plan id.
+export async function startCheckoutSession(
+  plan: SubscriptionPlan,
+): Promise<{ waveLaunchUrl: string } | { error: string }> {
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', { body: { plan } });
+
+  if (error || !data?.waveLaunchUrl) {
+    console.error('Failed to start checkout session:', error, data);
+    return { error: data?.error ?? 'Impossible de démarrer le paiement, réessaie.' };
+  }
+  return { waveLaunchUrl: data.waveLaunchUrl };
+}
+
 // ---------------------------------------------------------------------
 // Periodic upgrade nudge (Home banner) — separate from the limit-reached
 // upsell (PremiumUpsellCard), which only ever shows at the moment a free

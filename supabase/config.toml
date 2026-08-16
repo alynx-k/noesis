@@ -371,6 +371,16 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# wave-webhook is called by Wave's servers and checkout-result by the user's
+# mobile browser mid-checkout — neither carries a Supabase session, so both
+# must skip the platform's default JWT gate (wave-webhook authenticates
+# itself instead, via the Wave-Signature header).
+[functions.wave-webhook]
+verify_jwt = false
+
+[functions.checkout-result]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

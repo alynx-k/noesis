@@ -1,6 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
+import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -13,8 +16,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { useAuth } from '@/context/auth';
 import { useAccessStatus } from '@/hooks/queries/use-access-status';
+import { queryKeys } from '@/hooks/queries/query-keys';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { startCheckoutSession } from '@/lib/subscription';
 
 type PlanId = 'monthly' | 'yearly';
 
@@ -46,21 +52,64 @@ const FEATURES = [
   },
 ];
 
-// No payment processor is wired up yet — access_status can only be flipped
-// to 'premium' by a service-role process (see lib/subscription.ts), which
-// today means nothing, since there's no webhook to run it. This screen is
-// deliberately honest about that (footer note + a "bientôt disponible"
-// toast instead of pretending to charge anyone) while still being a
-// complete, real screen — plans/pricing/features are the actual shape the
-// eventual paid flow will have, not a wireframe.
+// Payment goes through Wave's hosted Checkout (see
+// supabase/functions/create-checkout-session and wave-webhook) — Mobile
+// Money is the dominant payment method in Côte d'Ivoire, unlike cards.
+// access_status can only be flipped to 'premium' by a service-role process
+// (the wave-webhook function, once it verifies a real payment), never by
+// the client directly — see lib/subscription.ts and the access_status
+// migrations for that boundary.
 export default function SubscriptionScreen() {
   const COLORS = useThemeColors();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const accessStatusQuery = useAccessStatus();
   const isPremium = accessStatusQuery.data === 'premium';
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('yearly');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  // Synchronous guard against a double-tap opening two checkout sessions —
+  // `isCheckingOut` alone can't prevent that, since the state update isn't
+  // synchronous with the tap that triggers it.
+  const isCheckingOutRef = useRef(false);
 
-  const handleSubscribe = () => {
-    toast.show('Le paiement arrive bientôt — reviens vite !', { variant: 'default' });
+  const refreshAccessStatus = () => {
+    const key = queryKeys.accessStatus.forUser(user?.id);
+    queryClient.invalidateQueries({ queryKey: key });
+    // The webhook that actually grants Premium fires from Wave's servers,
+    // independently of this redirect back into the app — it usually lands
+    // within a second or two, but isn't guaranteed to have landed yet the
+    // instant the browser closes. One extra refetch shortly after covers
+    // that gap without needing to poll indefinitely.
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: key }), 3000);
+  };
+
+  const handleSubscribe = async () => {
+    if (isCheckingOutRef.current) {
+      return;
+    }
+    isCheckingOutRef.current = true;
+    setIsCheckingOut(true);
+    try {
+      const result = await startCheckoutSession(selectedPlan);
+      if ('error' in result) {
+        toast.show(result.error, { variant: 'error' });
+        return;
+      }
+
+      const redirectTo = Linking.createURL('/subscription');
+      const browserResult = await WebBrowser.openAuthSessionAsync(result.waveLaunchUrl, redirectTo);
+
+      if (browserResult.type === 'success') {
+        toast.show('Paiement reçu — confirmation en cours…', { variant: 'default' });
+        refreshAccessStatus();
+      }
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      toast.show('Impossible de démarrer le paiement, réessaie.', { variant: 'error' });
+    } finally {
+      isCheckingOutRef.current = false;
+      setIsCheckingOut(false);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -320,9 +369,9 @@ export default function SubscriptionScreen() {
                   })}
                 </View>
 
-                <Button label="S'abonner" onPress={handleSubscribe} />
+                <Button label="S'abonner avec Wave" loading={isCheckingOut} onPress={handleSubscribe} />
                 <ThemedText style={styles.footerNote}>
-                  Le paiement dans l’app arrive bientôt. Résiliable à tout moment une fois disponible.
+                  Paiement sécurisé via Wave. Ton accès Premium démarre dès la confirmation du paiement.
                 </ThemedText>
               </>
             )}
