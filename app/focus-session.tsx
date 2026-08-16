@@ -13,6 +13,7 @@ import { ScreenBackground } from '@/components/screen-background';
 import { GRADIENTS, PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFocusSession } from '@/context/focus-session';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { playLaunchSound } from '@/lib/sound';
 
 const QUICK_DURATIONS = [10, 25, 45];
 
@@ -343,6 +344,7 @@ export default function FocusSessionScreen() {
     if (!canStart) {
       return;
     }
+    playLaunchSound();
     start(parsedMinutes);
   };
 

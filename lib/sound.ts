@@ -7,6 +7,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 const CORRECT_SOUND = require('../assets/sounds/correct.wav');
 const LESSON_COMPLETE_SOUND = require('../assets/sounds/lesson-complete.wav');
 const ACHIEVEMENT_SOUND = require('../assets/sounds/achievement.wav');
+const LAUNCH_SOUND = require('../assets/sounds/launch.wav');
 
 // Without this, iOS mutes app audio whenever the hardware silent switch is
 // on — these are short feedback chimes, not music, so they should still
@@ -52,4 +53,10 @@ export function playLessonCompleteSound(): void {
 // the three, paired with a longer on-screen celebration than the other two.
 export function playAchievementSound(): void {
   playOnce(ACHIEVEMENT_SOUND, 0.7);
+}
+
+// The rocket taking off, when a focus session starts (focus-session.tsx) —
+// a whoosh, not a chime, so it's kept distinct from the other three.
+export function playLaunchSound(): void {
+  playOnce(LAUNCH_SOUND, 0.6);
 }
