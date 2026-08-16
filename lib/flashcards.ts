@@ -36,14 +36,23 @@ export type Fiche = {
   chapters: FicheChapter[];
 };
 
+// These three used to swallow their Supabase error and resolve with a
+// fallback (null/[]) instead of throwing — meaning the isError branches
+// already built in flashcards.tsx/flashcard-deck.tsx (SkeletonList's
+// sibling ErrorState, with a retry) could never actually fire from a real
+// network/DB failure. A genuine fetch error was indistinguishable from "no
+// decks yet" or "this deck has no fiche", so the student got a misleading
+// empty/onboarding state with no way to retry instead of the error UI that
+// was built for exactly this.
 export async function getDeckFiche(deckId: string): Promise<Fiche | null> {
   const { data, error } = await supabase.from('flashcard_decks').select('fiche').eq('id', deckId).single();
 
-  if (error || !data?.fiche) {
-    return null;
+  if (error) {
+    console.error('Failed to load deck fiche:', error);
+    throw new Error(error.message);
   }
 
-  return data.fiche as Fiche;
+  return (data?.fiche as Fiche | null) ?? null;
 }
 
 export async function getDecks(): Promise<FlashcardDeck[]> {
@@ -52,12 +61,12 @@ export async function getDecks(): Promise<FlashcardDeck[]> {
     .select('id, title, created_at, flashcards(count)')
     .order('created_at', { ascending: false });
 
-  if (error || !data) {
+  if (error) {
     console.error('Failed to load flashcard decks:', error);
-    return [];
+    throw new Error(error.message);
   }
 
-  return data.map((row) => ({
+  return (data ?? []).map((row) => ({
     id: row.id as string,
     title: row.title as string,
     createdAt: new Date(row.created_at as string),
@@ -72,12 +81,12 @@ export async function getDeckCards(deckId: string): Promise<Flashcard[]> {
     .eq('deck_id', deckId)
     .order('created_at', { ascending: true });
 
-  if (error || !data) {
+  if (error) {
     console.error('Failed to load flashcards:', error);
-    return [];
+    throw new Error(error.message);
   }
 
-  return data as Flashcard[];
+  return (data ?? []) as Flashcard[];
 }
 
 export type GenerateFlashcardsResult =
