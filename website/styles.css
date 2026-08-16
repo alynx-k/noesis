@@ -202,8 +202,14 @@ header {
 :root[data-theme="dark"] .icon-moon { opacity: 1; transform: rotate(0) scale(1); }
 .icon-sun { opacity: 1; transform: rotate(0) scale(1); }
 
-.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 6px; }
-.nav-toggle span { display: block; width: 22px; height: 2px; background: var(--text); margin: 4px 0; border-radius: 2px; }
+/* A real SVG stroke icon rather than three background-filled <span> bars:
+   under forced-colors mode (Windows High Contrast etc.), background-color
+   on plain decorative elements gets flattened to the page's own Canvas
+   color — invisible against itself — while stroke="currentColor" tracks
+   the forced foreground color correctly, exactly like the theme-toggle
+   icons above already do. */
+.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 6px; color: var(--text); }
+.nav-toggle svg { display: block; width: 22px; height: 22px; }
 
 /* ---------- Buttons ---------- */
 .btn {
