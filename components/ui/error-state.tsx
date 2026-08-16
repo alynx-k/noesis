@@ -12,11 +12,22 @@ type ErrorStateProps = {
   title?: string;
   description?: string;
   onRetry?: () => void;
+  // Most callers pass onRetry for an actual retry (refetch), where
+  // "Réessayer" is correct. A few use it for a terminal state with nothing
+  // to retry (e.g. a missing route param) where the action is really "go
+  // back" — this lets those override the label instead of misleadingly
+  // reading "Réessayer" on a button that navigates away.
+  retryLabel?: string;
 };
 
 // Full-screen replacement for a failed initial load — pairs with RetryBanner
 // below for the "stale data still visible, background refetch failed" case.
-export function ErrorState({ title = 'Une erreur est survenue', description, onRetry }: ErrorStateProps) {
+export function ErrorState({
+  title = 'Une erreur est survenue',
+  description,
+  onRetry,
+  retryLabel = 'Réessayer',
+}: ErrorStateProps) {
   const COLORS = useThemeColors();
 
   const styles = StyleSheet.create({
@@ -58,7 +69,7 @@ export function ErrorState({ title = 'Une erreur est survenue', description, onR
       </View>
       <ThemedText style={styles.title}>{title}</ThemedText>
       {description ? <ThemedText style={styles.description}>{description}</ThemedText> : null}
-      {onRetry ? <Button label="Réessayer" onPress={onRetry} variant="secondary" style={styles.action} /> : null}
+      {onRetry ? <Button label={retryLabel} onPress={onRetry} variant="secondary" style={styles.action} /> : null}
     </Animated.View>
   );
 }

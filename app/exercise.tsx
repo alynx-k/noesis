@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -72,7 +72,14 @@ async function getConsecutiveWrongCount(courseId: string, questionNumber: number
 export default function ExerciseScreen() {
   const COLORS = useThemeColors();
   const { courseId: courseIdParam } = useLocalSearchParams<{ courseId?: string }>();
-  const courseId = courseIdParam ?? 'mondialisation';
+  // Empty, not a real course id, when the param is missing — see the
+  // `!courseIdParam` guard below (after `styles`, alongside the other
+  // early-return states) for what actually happens in that case. This used
+  // to silently fall back to a hardcoded real course id ('mondialisation'),
+  // which meant any visit to the web build's /exercise with no ?courseId=
+  // (typed by hand, a stale link, a crawler) loaded and could complete a
+  // course the student never chose, writing real progress rows for it.
+  const courseId = courseIdParam ?? '';
 
   const { user } = useAuth();
   const { completeCourse } = useProgress();
@@ -135,49 +142,64 @@ export default function ExerciseScreen() {
     setCurrentIndex((previous) => previous + 1);
   };
 
+  // `grading` (state) isn't enough on its own to stop a double-submit — a
+  // fast double-tap/double-click can fire handleValidate a second time
+  // before React commits the setGrading(true) re-render that would disable
+  // the button. A ref is checked synchronously, before that re-render, so
+  // it actually blocks the second call instead of racing it.
+  const isGradingRef = useRef(false);
+
   const handleValidate = async () => {
-    setGradingError(null);
-    setLimitReached(false);
-    setVerdict(null);
-    setGrading(true);
-
-    const { data, error } = await supabase.functions.invoke('grade-answer', {
-      body: { questionNumber: currentIndex + 1, studentAnswer: answerText, courseId },
-    });
-
-    setGrading(false);
-
-    if (error) {
-      console.error('Failed to grade answer:', error);
-      setGradingError("Erreur pendant l'évaluation, réessaie.");
+    if (isGradingRef.current) {
       return;
     }
+    isGradingRef.current = true;
+    try {
+      setGradingError(null);
+      setLimitReached(false);
+      setVerdict(null);
+      setGrading(true);
 
-    if (data?.limitReached) {
-      setLimitReached(true);
-      setGradingError(data.message ?? 'Limite quotidienne atteinte. Reviens demain, ou passe premium pour un accès illimité.');
-      return;
+      const { data, error } = await supabase.functions.invoke('grade-answer', {
+        body: { questionNumber: currentIndex + 1, studentAnswer: answerText, courseId },
+      });
+
+      setGrading(false);
+
+      if (error) {
+        console.error('Failed to grade answer:', error);
+        setGradingError("Erreur pendant l'évaluation, réessaie.");
+        return;
+      }
+
+      if (data?.limitReached) {
+        setLimitReached(true);
+        setGradingError(data.message ?? 'Limite quotidienne atteinte. Reviens demain, ou passe premium pour un accès illimité.');
+        return;
+      }
+
+      if (!data?.verdict) {
+        console.error('Failed to grade answer: no verdict in response', data);
+        setGradingError("Erreur pendant l'évaluation, réessaie.");
+        return;
+      }
+
+      const currentVerdict = data.verdict as Verdict;
+      setVerdict(currentVerdict);
+
+      if (currentVerdict === 'correct') {
+        playCorrectSound();
+        const updatedFinalVerdicts = [...finalVerdicts, currentVerdict];
+        setTimeout(() => proceedToNext(updatedFinalVerdicts), 1800);
+        return;
+      }
+
+      setHintRevealed(false);
+      const count = await getConsecutiveWrongCount(courseId, currentIndex + 1);
+      setConsecutiveWrong(count);
+    } finally {
+      isGradingRef.current = false;
     }
-
-    if (!data?.verdict) {
-      console.error('Failed to grade answer: no verdict in response', data);
-      setGradingError("Erreur pendant l'évaluation, réessaie.");
-      return;
-    }
-
-    const currentVerdict = data.verdict as Verdict;
-    setVerdict(currentVerdict);
-
-    if (currentVerdict === 'correct') {
-      playCorrectSound();
-      const updatedFinalVerdicts = [...finalVerdicts, currentVerdict];
-      setTimeout(() => proceedToNext(updatedFinalVerdicts), 1800);
-      return;
-    }
-
-    setHintRevealed(false);
-    const count = await getConsecutiveWrongCount(courseId, currentIndex + 1);
-    setConsecutiveWrong(count);
   };
 
   const handleSkip = () => {
@@ -352,6 +374,25 @@ export default function ExerciseScreen() {
       fontWeight: '700',
     },
   });
+
+  if (!courseId) {
+    // useExercise's `enabled: !!courseId` keeps the query permanently
+    // isPending (never disabled-but-resolved) when there's no id to fetch —
+    // this has to be checked first, or a missing param would otherwise fall
+    // into the isPending branch below and spin forever with no explanation.
+    return (
+      <ScreenBackground>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ErrorState
+            title="Aucun cours sélectionné"
+            description="Reviens depuis un cours pour commencer un exercice."
+            onRetry={() => router.replace('/')}
+            retryLabel="Retour à l'accueil"
+          />
+        </SafeAreaView>
+      </ScreenBackground>
+    );
+  }
 
   if (exerciseQuery.isPending) {
     return (
