@@ -170,6 +170,10 @@ header {
 .brand span { font-family: var(--font-display); font-weight: 600; font-size: 19px; letter-spacing: -0.2px; }
 
 .nav-links { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; }
+/* Only shown inside the mobile dropdown version of .nav-links (see the
+   960px breakpoint below) — "Se connecter" already exists as its own
+   header button on desktop, this would just duplicate it there. */
+.nav-mobile-only { display: none; }
 .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; position: relative; }
 .nav-links a::after {
   content: "";
@@ -601,6 +605,15 @@ footer { border-top: 1px solid var(--border); padding: 40px 0; }
   .nav-links.open { display: flex; }
   .nav-links li { border-top: 1px solid var(--border); }
   .nav-links a { display: block; padding: 14px 0; }
+  .nav-mobile-only { display: block; }
+}
+
+/* Below ~600px, the header can no longer fit logo + theme toggle + the
+   full-text primary button + hamburger on one line without them
+   overlapping (the primary button was the widest, least essential piece —
+   it's still the very first thing in the hero, one scroll away). */
+@media (max-width: 600px) {
+  .nav-cta .btn-primary { display: none; }
 }
 
 @media (max-width: 900px) {
