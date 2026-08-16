@@ -1,7 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,16 +15,9 @@ import { SkeletonList } from '@/components/ui/skeleton';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFlashcardDecks, useGenerateFlashcards } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { assetToDataUrl } from '@/lib/image-capture';
 
 const MAX_CAPTURED_PHOTOS = 5;
-
-function toDataUrl(asset: ImagePicker.ImagePickerAsset): string | null {
-  if (!asset.base64) {
-    return null;
-  }
-  const mimeType = asset.mimeType ?? 'image/jpeg';
-  return `data:${mimeType};base64,${asset.base64}`;
-}
 
 export default function FlashcardsScreen() {
   const COLORS = useThemeColors();
@@ -56,11 +49,11 @@ export default function FlashcardsScreen() {
       setError("Autorise l'accès à l'appareil photo pour scanner un document.");
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (result.canceled) {
       return;
     }
-    const dataUrl = toDataUrl(result.assets[0]);
+    const dataUrl = await assetToDataUrl(result.assets[0]);
     if (dataUrl) {
       setError(null);
       setCapturedPhotos((previous) => [...previous, dataUrl].slice(0, MAX_CAPTURED_PHOTOS));
@@ -74,7 +67,6 @@ export default function FlashcardsScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
       quality: 0.7,
       allowsMultipleSelection: true,
       selectionLimit: MAX_CAPTURED_PHOTOS - capturedPhotos.length,
@@ -82,7 +74,9 @@ export default function FlashcardsScreen() {
     if (result.canceled) {
       return;
     }
-    const dataUrls = result.assets.map(toDataUrl).filter((value): value is string => value !== null);
+    const dataUrls = (await Promise.all(result.assets.map(assetToDataUrl))).filter(
+      (value): value is string => value !== null,
+    );
     setError(null);
     setCapturedPhotos((previous) => [...previous, ...dataUrls].slice(0, MAX_CAPTURED_PHOTOS));
   };
@@ -91,20 +85,38 @@ export default function FlashcardsScreen() {
     setCapturedPhotos((previous) => previous.filter((_, photoIndex) => photoIndex !== index));
   };
 
-  const handleFinishCapture = async () => {
-    if (capturedPhotos.length === 0) {
-      return;
-    }
-    setShowScanOptions(false);
-    setError(null);
-    const result = await generateMutation.mutateAsync(capturedPhotos);
-    setCapturedPhotos([]);
+  // generateMutation.isPending isn't enough on its own to block a second
+  // tap — it doesn't flip true until React commits the next render, so a
+  // fast double-tap before that could fire mutateAsync twice concurrently
+  // for the same photos, producing two identical decks and double-billing
+  // the AI generation cost for one submission. This ref is checked
+  // synchronously, before that render, so it actually blocks it.
+  const isGeneratingRef = useRef(false);
 
-    if ('error' in result) {
-      setError(result.error);
+  const handleFinishCapture = async () => {
+    if (capturedPhotos.length === 0 || isGeneratingRef.current) {
       return;
     }
-    router.push({ pathname: '/flashcard-deck', params: { id: result.deckId } });
+    isGeneratingRef.current = true;
+    setError(null);
+    try {
+      const result = await generateMutation.mutateAsync(capturedPhotos);
+
+      if ('error' in result) {
+        setError(result.error);
+        return;
+      }
+      // Only clear/close on success — doing this unconditionally meant a
+      // failed generation (network blip, daily limit) both threw away
+      // every captured page AND hid the review UI needed to retry with
+      // them, forcing a full re-scan for something that had nothing to do
+      // with the photos.
+      setCapturedPhotos([]);
+      setShowScanOptions(false);
+      router.push({ pathname: '/flashcard-deck', params: { id: result.deckId } });
+    } finally {
+      isGeneratingRef.current = false;
+    }
   };
 
   const styles = StyleSheet.create({

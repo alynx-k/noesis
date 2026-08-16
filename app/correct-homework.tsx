@@ -11,15 +11,8 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { assetToDataUrl } from '@/lib/image-capture';
 import { correctHomework, HomeworkCorrectionResult } from '@/lib/homework';
-
-function toDataUrl(asset: ImagePicker.ImagePickerAsset): string | null {
-  if (!asset.base64) {
-    return null;
-  }
-  const mimeType = asset.mimeType ?? 'image/jpeg';
-  return `data:${mimeType};base64,${asset.base64}`;
-}
 
 function verdictColor(verdict: string): string {
   const normalized = verdict.toLowerCase();
@@ -55,11 +48,11 @@ export default function CorrectHomeworkScreen() {
       setError("Autorise l'accès à l'appareil photo pour scanner ton devoir.");
       return;
     }
-    const photo = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 });
+    const photo = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (photo.canceled) {
       return;
     }
-    const dataUrl = toDataUrl(photo.assets[0]);
+    const dataUrl = await assetToDataUrl(photo.assets[0]);
     if (dataUrl) {
       setError(null);
       setCapturedPhotos((previous) => [...previous, dataUrl].slice(0, MAX_CAPTURED_PHOTOS));
@@ -73,7 +66,6 @@ export default function CorrectHomeworkScreen() {
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
       quality: 0.7,
       allowsMultipleSelection: true,
       selectionLimit: MAX_CAPTURED_PHOTOS - capturedPhotos.length,
@@ -81,7 +73,9 @@ export default function CorrectHomeworkScreen() {
     if (picked.canceled) {
       return;
     }
-    const dataUrls = picked.assets.map(toDataUrl).filter((value): value is string => value !== null);
+    const dataUrls = (await Promise.all(picked.assets.map(assetToDataUrl))).filter(
+      (value): value is string => value !== null,
+    );
     setError(null);
     setCapturedPhotos((previous) => [...previous, ...dataUrls].slice(0, MAX_CAPTURED_PHOTOS));
   };
@@ -98,9 +92,16 @@ export default function CorrectHomeworkScreen() {
     setResult(null);
     setCorrecting(true);
     const outcome = await correctHomework(capturedPhotos);
-    setCapturedPhotos([]);
     setCorrecting(false);
     setResult(outcome);
+    // Only clear on an actual successful correction — clearing unconditionally
+    // meant any failure (network blip, unmatched course, daily limit hit)
+    // threw away every captured page, forcing a full re-photograph of a
+    // multi-page homework to retry something that had nothing to do with
+    // the photos themselves.
+    if (outcome.status === 'matched') {
+      setCapturedPhotos([]);
+    }
   };
 
   const styles = StyleSheet.create({
