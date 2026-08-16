@@ -50,4 +50,7 @@ export const queryKeys = {
   achievements: {
     forUser: (userId: string | undefined) => ['achievements', userId] as const,
   },
+  referral: {
+    code: (userId: string | undefined) => ['referral-code', userId] as const,
+  },
 };

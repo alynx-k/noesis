@@ -18,10 +18,12 @@ import { useAuth } from '@/context/auth';
 import { useTour } from '@/context/tour';
 import { useGradeProfile, useUpdateGrade } from '@/hooks/queries/use-grade-profile';
 import { useNextUpCourse } from '@/hooks/queries/use-next-up';
+import { useReferralCode } from '@/hooks/queries/use-referral';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { cancelAllReminders, isNotificationsEnabled, requestNotificationPermissions } from '@/lib/notifications';
 import { cancelTodayNotifications, runDailyNotificationCycle, setPushNotificationsEnabled } from '@/lib/notification-scheduler';
 import { getDisplayName } from '@/lib/profile';
+import { shareReferralCodeViaWhatsApp } from '@/lib/referral';
 
 // Deliberate floor under the sign-out loading state — see
 // handleConfirmSignOut for why 5s and not just "however long the network
@@ -36,6 +38,7 @@ export default function SettingsScreen() {
   const gradeProfile = gradeProfileQuery.data ?? null;
   const updateGradeMutation = useUpdateGrade();
   const nextUpQuery = useNextUpCourse();
+  const referralCodeQuery = useReferralCode();
   const [showGradePicker, setShowGradePicker] = useState(false);
   const [pendingGrade, setPendingGrade] = useState<GradeId | null>(null);
   const [gradeChangeError, setGradeChangeError] = useState<string | null>(null);
@@ -118,6 +121,16 @@ export default function SettingsScreen() {
 
   const handleReplayTour = () => {
     tour.start();
+  };
+
+  const handleShareReferral = () => {
+    if (!referralCodeQuery.data) {
+      return;
+    }
+    shareReferralCodeViaWhatsApp(referralCodeQuery.data).catch((error) => {
+      console.error('Failed to open WhatsApp share:', error);
+      toast.show('Impossible d’ouvrir WhatsApp.', { variant: 'error' });
+    });
   };
 
   const handleSignOutPress = () => {
@@ -294,6 +307,22 @@ export default function SettingsScreen() {
             <ThemedText style={styles.changeLink}>Changer</ThemedText>
           </BouncyPressable>
           {gradeChangeError ? <ThemedText style={styles.error}>{gradeChangeError}</ThemedText> : null}
+
+          <ThemedText style={styles.sectionTitle}>Parrainage</ThemedText>
+          <BouncyPressable style={styles.row} onPress={handleShareReferral} disabled={!referralCodeQuery.data}>
+            <View style={styles.rowIcon}>
+              <IconSymbol name="person.2.fill" size={18} color={COLORS.mutedText} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText style={styles.rowLabel}>Invite un ami, gagnez 7 jours Premium chacun</ThemedText>
+              {referralCodeQuery.isPending ? (
+                <Skeleton width={80} height={18} style={{ marginTop: 4 }} />
+              ) : (
+                <ThemedText style={styles.rowValue}>Code : {referralCodeQuery.data ?? '—'}</ThemedText>
+              )}
+            </View>
+            <ThemedText style={styles.changeLink}>Partager</ThemedText>
+          </BouncyPressable>
 
           <ThemedText style={styles.sectionTitle}>Notifications</ThemedText>
           <View style={styles.row}>
