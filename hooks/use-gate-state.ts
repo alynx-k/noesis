@@ -105,7 +105,14 @@ export function useGateState(): {
   if (profileQuery.isPending) {
     return { state: 'loading', error: null, retry, loadingMessage: 'Chargement de ton profil…' };
   }
-  if (profileQuery.isError) {
+  // Only a hard failure when there's no cached profile to fall back on — a
+  // background refetch failing (Home's own useProfile() call refetches
+  // every 30s per DEFAULT_STALE_TIME) used to eject the whole app to the
+  // "Connexion impossible" screen on a transient blip (elevator, subway)
+  // even though the already-known grade/lv2 were still perfectly valid.
+  // Matches the RetryBanner philosophy used elsewhere: keep showing stale
+  // data through a background failure instead of blanking the screen.
+  if (profileQuery.isError && !profile) {
     return { state: 'loading', error: profileQuery.error as Error, retry, loadingMessage: '' };
   }
   if (!profile || !profile.grade) {
