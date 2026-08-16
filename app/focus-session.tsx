@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -340,6 +340,15 @@ export default function FocusSessionScreen() {
   // than racing ahead of them.
   const [launching, setLaunching] = useState(false);
 
+  // LiftoffSequence's onComplete is captured once, at mount, and never
+  // re-subscribed (its effect deliberately doesn't depend on onComplete —
+  // see that file). A plain closure over `phase` in handleLiftoffComplete
+  // would therefore always see phase as it was at that mount ('idle'),
+  // never a later update — a ref sidesteps that staleness since reading
+  // .current always gets the live value.
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
   // Loads the launch sound's asset well before it can possibly be needed
   // (the user still has to pick a duration and press "Lancer") — playing it
   // fresh at press time meant waiting on a network fetch of the asset in
@@ -348,6 +357,17 @@ export default function FocusSessionScreen() {
   useEffect(() => {
     preloadLaunchSound();
   }, []);
+
+  // AppState backgrounding fails the session immediately (see
+  // context/focus-session.tsx's fail()), regardless of whether the liftoff
+  // cinematic is still playing — if that happens mid-animation, cut the
+  // cinematic short right away instead of leaving the "failed" screen
+  // waiting behind a still-running backdrop for however long is left.
+  useEffect(() => {
+    if (launching && phase === 'failed') {
+      setLaunching(false);
+    }
+  }, [launching, phase]);
 
   const totalSeconds = durationMinutes * 60;
   const progress =
@@ -366,6 +386,15 @@ export default function FocusSessionScreen() {
 
   const handleLiftoffComplete = () => {
     setLaunching(false);
+    // If backgrounding failed the session while the cinematic was still
+    // playing (phaseRef.current would now be 'failed', not the 'idle' it
+    // was when this callback was captured at mount), don't let this stale
+    // callback force a fresh start() on top of that — the student already
+    // saw (or will see) the "failed" screen and may have already reacted
+    // to it.
+    if (phaseRef.current !== 'idle') {
+      return;
+    }
     start(parsedMinutes);
   };
 
