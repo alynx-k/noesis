@@ -30,15 +30,16 @@ export function useNotificationScheduling(enabled: boolean): void {
 
     (async () => {
       const today = new Date().toDateString();
-      const lastRun = await AsyncStorage.getItem(LAST_RUN_DATE_KEY);
+      const key = `${LAST_RUN_DATE_KEY}:${user.id}`;
+      const lastRun = await AsyncStorage.getItem(key);
       if (lastRun === today) {
         return;
       }
-      await runDailyNotificationCycle({
+      await runDailyNotificationCycle(user.id, {
         prenom: getDisplayName(user),
         matiere: nextUpQuery.data?.courseTitle ?? 'tes cours',
       });
-      await AsyncStorage.setItem(LAST_RUN_DATE_KEY, today);
+      await AsyncStorage.setItem(key, today);
     })();
   }, [enabled, user, nextUpQuery.data?.courseTitle]);
 }

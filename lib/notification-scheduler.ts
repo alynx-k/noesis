@@ -61,19 +61,30 @@ export const setPushNotificationsEnabled = setNotificationsEnabled;
 // toggle above) — set automatically after an abandon notification (4.).
 // ---------------------------------------------------------------------
 
+// All the per-day/per-streak bookkeeping below is scoped by userId (see
+// scopedKey) — these used to be flat, device-wide keys, which meant two
+// accounts sharing a device (a family phone, say) could contaminate each
+// other's notification state: account B signing in could read account A's
+// leftover streak/suppression/dedup data and, on a bad day, misfire an
+// "abandon" notification addressed to B for a streak B never had, and
+// suppress push for both accounts for 48h as a result.
+function scopedKey(base: string, userId: string): string {
+  return `${base}:${userId}`;
+}
+
 const SUPPRESSED_UNTIL_KEY = 'noesis:push-suppressed-until';
 
-async function isPushSuppressed(): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(SUPPRESSED_UNTIL_KEY);
+async function isPushSuppressed(userId: string): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(scopedKey(SUPPRESSED_UNTIL_KEY, userId));
   if (!raw) {
     return false;
   }
   return Date.now() < Number(raw);
 }
 
-async function suppressPushFor48Hours(): Promise<void> {
+async function suppressPushFor48Hours(userId: string): Promise<void> {
   const until = Date.now() + 48 * 60 * 60 * 1000;
-  await AsyncStorage.setItem(SUPPRESSED_UNTIL_KEY, String(until));
+  await AsyncStorage.setItem(scopedKey(SUPPRESSED_UNTIL_KEY, userId), String(until));
 }
 
 // ---------------------------------------------------------------------
@@ -82,21 +93,23 @@ async function suppressPushFor48Hours(): Promise<void> {
 
 const TODAY_NOTIFICATION_IDS_KEY = 'noesis:today-notification-ids';
 
-async function trackTodayNotificationId(identifier: string): Promise<void> {
-  const raw = await AsyncStorage.getItem(TODAY_NOTIFICATION_IDS_KEY);
+async function trackTodayNotificationId(userId: string, identifier: string): Promise<void> {
+  const key = scopedKey(TODAY_NOTIFICATION_IDS_KEY, userId);
+  const raw = await AsyncStorage.getItem(key);
   const ids: string[] = raw ? JSON.parse(raw) : [];
   ids.push(identifier);
-  await AsyncStorage.setItem(TODAY_NOTIFICATION_IDS_KEY, JSON.stringify(ids));
+  await AsyncStorage.setItem(key, JSON.stringify(ids));
 }
 
 // 3. ANNULATION AUTOMATIQUE — call this the moment a session/focus session
 // is validated. Cancels whatever's left scheduled for today (the smart
 // B/C/D nudge, the 21h night-danger one, or both).
-export async function cancelTodayNotifications(): Promise<void> {
-  const raw = await AsyncStorage.getItem(TODAY_NOTIFICATION_IDS_KEY);
+export async function cancelTodayNotifications(userId: string): Promise<void> {
+  const key = scopedKey(TODAY_NOTIFICATION_IDS_KEY, userId);
+  const raw = await AsyncStorage.getItem(key);
   const ids: string[] = raw ? JSON.parse(raw) : [];
   await Promise.all(ids.map((identifier) => Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {})));
-  await AsyncStorage.removeItem(TODAY_NOTIFICATION_IDS_KEY);
+  await AsyncStorage.removeItem(key);
 }
 
 // ---------------------------------------------------------------------
@@ -262,7 +275,12 @@ async function computeSlotMinutes(): Promise<{ morning: number; afternoon: numbe
 
 const NIGHT_DANGER_HOUR = 21;
 
-async function scheduleAt(minuteOfDay: number, category: NotificationCategory, context: NotificationContext & { streak: number }): Promise<void> {
+async function scheduleAt(
+  userId: string,
+  minuteOfDay: number,
+  category: NotificationCategory,
+  context: NotificationContext & { streak: number },
+): Promise<void> {
   const fireDate = todayAtMinuteOfDay(minuteOfDay);
   if (!fireDate) {
     return;
@@ -273,7 +291,7 @@ async function scheduleAt(minuteOfDay: number, category: NotificationCategory, c
     content: { title: 'Noesis', body },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
   });
-  await trackTodayNotificationId(identifier);
+  await trackTodayNotificationId(userId, identifier);
 }
 
 // Schedules today's remaining touchpoints — morning + afternoon/evening
@@ -282,8 +300,8 @@ async function scheduleAt(minuteOfDay: number, category: NotificationCategory, c
 // its time has passed today, so opening the app later in the day just
 // means fewer of the three still get scheduled. No-ops entirely if push is
 // off/suppressed — this needs to be re-run daily by the caller.
-export async function scheduleTodayNotifications(context: NotificationContext): Promise<void> {
-  if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed())) {
+export async function scheduleTodayNotifications(userId: string, context: NotificationContext): Promise<void> {
+  if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed(userId))) {
     return;
   }
 
@@ -291,9 +309,9 @@ export async function scheduleTodayNotifications(context: NotificationContext): 
   const { morning, afternoon } = await computeSlotMinutes();
   const fullContext = { ...context, streak };
 
-  await scheduleAt(morning, smartCategoryForHour(Math.floor(morning / 60)), fullContext);
-  await scheduleAt(afternoon, smartCategoryForHour(Math.floor(afternoon / 60)), fullContext);
-  await scheduleAt(NIGHT_DANGER_HOUR * 60, 'E', fullContext);
+  await scheduleAt(userId, morning, smartCategoryForHour(Math.floor(morning / 60)), fullContext);
+  await scheduleAt(userId, afternoon, smartCategoryForHour(Math.floor(afternoon / 60)), fullContext);
+  await scheduleAt(userId, NIGHT_DANGER_HOUR * 60, 'E', fullContext);
 }
 
 // ---------------------------------------------------------------------
@@ -307,23 +325,25 @@ const LAST_KNOWN_STREAK_KEY = 'noesis:last-known-streak';
 
 // Returns true if a loss was detected (and the abandon notification was
 // fired) this call, so the caller can skip scheduling anything else today.
-export async function checkAndHandleStreakLoss(context: NotificationContext): Promise<boolean> {
+export async function checkAndHandleStreakLoss(userId: string, context: NotificationContext): Promise<boolean> {
   if (!(await isPushNotificationsEnabled())) {
     return false;
   }
 
   const { streak: currentStreak } = await getStreakInfo();
-  const stored = await AsyncStorage.getItem(LAST_KNOWN_STREAK_KEY);
-  // No stored baseline yet (fresh install) — record it without treating it
-  // as a loss, otherwise day one would immediately fire an abandon message.
+  const key = scopedKey(LAST_KNOWN_STREAK_KEY, userId);
+  const stored = await AsyncStorage.getItem(key);
+  // No stored baseline yet (fresh install, or the first check ever for this
+  // account on this device) — record it without treating it as a loss,
+  // otherwise day one would immediately fire an abandon message.
   const previousStreak = stored === null ? currentStreak : Number(stored);
-  await AsyncStorage.setItem(LAST_KNOWN_STREAK_KEY, String(currentStreak));
+  await AsyncStorage.setItem(key, String(currentStreak));
 
   if (previousStreak > 0 && currentStreak === 0) {
     const joursInactif = await getDaysSinceLastActivity();
     await fireImmediately('F', { ...context, streak: previousStreak, jours_inactif: joursInactif });
-    await suppressPushFor48Hours();
-    await cancelTodayNotifications();
+    await suppressPushFor48Hours(userId);
+    await cancelTodayNotifications(userId);
     return true;
   }
 
@@ -337,13 +357,13 @@ export async function checkAndHandleStreakLoss(context: NotificationContext): Pr
 // today's smart nudge and night-danger fallback.
 // ---------------------------------------------------------------------
 
-export async function runDailyNotificationCycle(context: NotificationContext): Promise<void> {
-  const justLostStreak = await checkAndHandleStreakLoss(context);
+export async function runDailyNotificationCycle(userId: string, context: NotificationContext): Promise<void> {
+  const justLostStreak = await checkAndHandleStreakLoss(userId, context);
   if (justLostStreak) {
     return;
   }
 
-  if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed())) {
+  if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed(userId))) {
     return;
   }
 
@@ -351,5 +371,5 @@ export async function runDailyNotificationCycle(context: NotificationContext): P
     return;
   }
 
-  await scheduleTodayNotifications(context);
+  await scheduleTodayNotifications(userId, context);
 }

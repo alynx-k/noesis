@@ -48,6 +48,9 @@ export default function SettingsScreen() {
   }, []);
 
   const handleToggleNotifications = async (value: boolean) => {
+    if (!user) {
+      return;
+    }
     if (value) {
       const granted = await requestNotificationPermissions();
       if (!granted) {
@@ -58,13 +61,13 @@ export default function SettingsScreen() {
       setNotificationsOn(true);
       // Evaluate right away rather than waiting for tomorrow's app-open
       // cycle, so flipping the toggle on feels immediate.
-      await runDailyNotificationCycle({
+      await runDailyNotificationCycle(user.id, {
         prenom: getDisplayName(user),
         matiere: nextUpQuery.data?.courseTitle ?? 'tes cours',
       });
     } else {
       await cancelAllReminders();
-      await cancelTodayNotifications();
+      await cancelTodayNotifications(user.id);
       await setPushNotificationsEnabled(false);
       setNotificationsOn(false);
     }

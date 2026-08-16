@@ -63,12 +63,12 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
     setDestinationReached(destinationForSequence(sequence));
     setDestinationJustUnlocked(newlyUnlockedDestination(sequence) !== null);
     setPhase('success');
-    if (sessionIdRef.current) {
+    if (sessionIdRef.current && user) {
       finishFocusSession(sessionIdRef.current, true);
       recordActivity();
-      cancelTodayNotifications();
+      cancelTodayNotifications(user.id);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
