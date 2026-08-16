@@ -7,6 +7,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
+import { LiftoffSequence } from '@/components/liftoff-sequence';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -332,6 +333,12 @@ export default function FocusSessionScreen() {
   const { phase, durationMinutes, remainingSeconds, destinationReached, destinationJustUnlocked, start, reset } =
     useFocusSession();
   const [durationInput, setDurationInput] = useState('25');
+  // A short scripted beat (LiftoffSequence) between pressing "Lancer" and
+  // the actual session starting — start() only fires once it completes, so
+  // the running screen's own instant flip to phase 'running' lands exactly
+  // when the liftoff animation (and its synchronized sound) finish, rather
+  // than racing ahead of them.
+  const [launching, setLaunching] = useState(false);
 
   const totalSeconds = durationMinutes * 60;
   const progress =
@@ -345,6 +352,11 @@ export default function FocusSessionScreen() {
       return;
     }
     playLaunchSound();
+    setLaunching(true);
+  };
+
+  const handleLiftoffComplete = () => {
+    setLaunching(false);
     start(parsedMinutes);
   };
 
@@ -366,7 +378,7 @@ export default function FocusSessionScreen() {
     router.replace('/garden');
   };
 
-  const isNight = phase === 'running' || phase === 'success';
+  const isNight = phase === 'running' || phase === 'success' || launching;
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -537,9 +549,10 @@ export default function FocusSessionScreen() {
     <ScreenBackground color={isNight ? '#1C1650' : COLORS.background}>
       {phase === 'running' ? <NightSkyBackdrop progress={progress} landed={false} /> : null}
       {phase === 'success' ? <NightSkyBackdrop progress={1} landed celebrate /> : null}
+      {launching ? <LiftoffSequence onComplete={handleLiftoffComplete} /> : null}
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {phase === 'idle' ? (
+        {phase === 'idle' && !launching ? (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={styles.idleScrollContent} keyboardShouldPersistTaps="handled">
               <LaunchPreview />
