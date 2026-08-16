@@ -14,7 +14,7 @@ import { ScreenBackground } from '@/components/screen-background';
 import { GRADIENTS, PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFocusSession } from '@/context/focus-session';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { playLaunchSound } from '@/lib/sound';
+import { playLaunchSound, preloadLaunchSound } from '@/lib/sound';
 
 const QUICK_DURATIONS = [10, 25, 45];
 
@@ -339,6 +339,15 @@ export default function FocusSessionScreen() {
   // when the liftoff animation (and its synchronized sound) finish, rather
   // than racing ahead of them.
   const [launching, setLaunching] = useState(false);
+
+  // Loads the launch sound's asset well before it can possibly be needed
+  // (the user still has to pick a duration and press "Lancer") — playing it
+  // fresh at press time meant waiting on a network fetch of the asset in
+  // dev, which is what made it noticeably lag behind LiftoffSequence's
+  // animation instead of starting with it.
+  useEffect(() => {
+    preloadLaunchSound();
+  }, []);
 
   const totalSeconds = durationMinutes * 60;
   const progress =
