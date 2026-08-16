@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { useAuth } from '@/context/auth';
+import { useTour } from '@/context/tour';
 import { useAccessStatus } from '@/hooks/queries/use-access-status';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { playAchievementSound } from '@/lib/sound';
@@ -26,8 +27,16 @@ import { checkForPremiumTransition } from '@/lib/subscription';
 export function PremiumWelcomeOverlay() {
   const { user } = useAuth();
   const accessStatusQuery = useAccessStatus();
+  const tour = useTour();
   const COLORS = useThemeColors();
   const [celebrating, setCelebrating] = useState(false);
+  // Detecting the transition and showing the celebration for it are
+  // deliberately split — checkForPremiumTransition consumes (marks as
+  // seen) the transition the moment it's detected, so that part can't
+  // just be skipped while the tour is active without losing the
+  // celebration entirely. This flag holds the "yes, show it" verdict until
+  // it's actually safe to.
+  const [pendingCelebration, setPendingCelebration] = useState(false);
 
   useEffect(() => {
     if (!user || !accessStatusQuery.data) {
@@ -35,11 +44,24 @@ export function PremiumWelcomeOverlay() {
     }
     checkForPremiumTransition(user.id, accessStatusQuery.data).then((justBecamePremium) => {
       if (justBecamePremium) {
-        playAchievementSound();
-        setCelebrating(true);
+        setPendingCelebration(true);
       }
     });
   }, [user, accessStatusQuery.data]);
+
+  // TourOverlay and this overlay both render at Z_INDEX.modal + 10 with no
+  // mutual awareness — without this, an account that becomes Premium while
+  // its guided tour is active (or replays the tour from Réglages right
+  // after becoming Premium) could get both full-screen modals stacked at
+  // once. Holding the celebration until the tour finishes guarantees it's
+  // still shown, just not on top of/interrupting the tour.
+  useEffect(() => {
+    if (pendingCelebration && !tour.active) {
+      playAchievementSound();
+      setCelebrating(true);
+      setPendingCelebration(false);
+    }
+  }, [pendingCelebration, tour.active]);
 
   if (!celebrating) {
     return null;

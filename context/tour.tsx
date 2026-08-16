@@ -1,7 +1,8 @@
 import { router, usePathname } from 'expo-router';
-import { createContext, ReactNode, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { useAuth } from '@/context/auth';
 import { TOUR_STEPS, TourStep } from '@/lib/tour';
 
 type TargetRect = { x: number; y: number; width: number; height: number };
@@ -22,6 +23,7 @@ const TourContext = createContext<TourContextValue | undefined>(undefined);
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { session } = useAuth();
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [targets, setTargets] = useState<Record<string, TargetRect>>({});
@@ -29,6 +31,19 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const registerTarget = useCallback((id: string, rect: TargetRect) => {
     setTargets((previous) => ({ ...previous, [id]: rect }));
   }, []);
+
+  // A user-initiated sign-out can't hit this — the tour's own scrim blocks
+  // every tap outside the current spotlight, so Réglages is unreachable
+  // mid-tour. A *forced* logout (expired/revoked token, password changed
+  // elsewhere) fires independent of any tap though: useGateState reacts
+  // immediately and swaps the login screen in underneath, but without this
+  // the tour stayed mounted and active on top of it, blocking input with a
+  // tooltip pointing at a Home element that no longer exists.
+  useEffect(() => {
+    if (!session) {
+      setActive(false);
+    }
+  }, [session]);
 
   // All steps live on Home (spotlighted content, or just described while
   // Home's own tab bar is visible behind the overlay — see lib/tour.ts), so
