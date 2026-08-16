@@ -441,11 +441,12 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
   width: 46px; height: 46px;
   border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 21px;
   margin-bottom: 20px;
   background: var(--accent-soft, var(--accent));
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
 }
+.feature-icon svg { width: 22px; height: 22px; }
 .bento-card h3 { font-size: 18px; margin: 0 0 9px; letter-spacing: -0.2px; font-weight: 700; }
 .bento-card p { font-size: 14.5px; color: var(--muted); line-height: 1.6; margin: 0; }
 
@@ -572,29 +573,15 @@ footer { border-top: 1px solid var(--border); padding: 40px 0; }
 .footer-links a:hover { color: var(--text); }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 900px) {
-  .hero-grid { grid-template-columns: 1fr; }
-  .orbit-wrap { max-width: 340px; margin: 0 auto; }
-  .bento-grid { grid-template-columns: repeat(2, 1fr); }
-  .bento-lg { grid-column: span 2; }
-  .steps { grid-template-columns: 1fr; }
-  .steps-line { display: none; }
-  .subject-grid { grid-template-columns: repeat(3, 1fr); }
-  .trust { grid-template-columns: 1fr; padding: 36px; }
-  .team-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 640px) {
-  .nav-links, .nav-cta .btn-ghost { display: none; }
+/* The full desktop nav (logo + 4 links + theme toggle + two buttons) needs
+   roughly 940px to lay out on one line without wrapping or crowding — well
+   above where the old 640px cutoff switched to the hamburger menu, so every
+   tablet (iPad portrait, most Android tablets) and narrow laptop window hit
+   a visibly broken header. Switching at 960px keeps the hamburger menu for
+   that whole range instead. */
+@media (max-width: 960px) {
+  .nav-cta .btn-ghost { display: none; }
   .nav-toggle { display: block; }
-  .bento-grid { grid-template-columns: 1fr; }
-  .bento-lg { grid-column: span 1; }
-  .subject-grid { grid-template-columns: repeat(2, 1fr); }
-  .cta-band { padding: 44px 24px; }
-  .cursor-dot { display: none; }
-}
-
-@media (max-width: 640px) {
   .nav-links {
     display: none;
     position: absolute;
@@ -608,4 +595,23 @@ footer { border-top: 1px solid var(--border); padding: 40px 0; }
   .nav-links.open { display: flex; }
   .nav-links li { border-top: 1px solid var(--border); }
   .nav-links a { display: block; padding: 14px 0; }
+}
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .orbit-wrap { max-width: 340px; margin: 0 auto; }
+  .bento-grid { grid-template-columns: repeat(2, 1fr); }
+  .bento-lg { grid-column: span 2; }
+  .steps { grid-template-columns: 1fr; }
+  .steps-line { display: none; }
+  .subject-grid { grid-template-columns: repeat(2, 1fr); }
+  .trust { grid-template-columns: 1fr; padding: 36px; }
+  .team-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-lg { grid-column: span 1; }
+  .cta-band { padding: 44px 24px; }
+  .cursor-dot { display: none; }
 }

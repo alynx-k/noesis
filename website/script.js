@@ -84,12 +84,28 @@ if (stepsTrack) {
 }
 
 /* ---------- Accordion ---------- */
+// Measures the real panel height instead of a fixed max-height, which
+// silently clipped any answer longer than 200px (a translated string, or
+// the same text at a larger browser font size).
+function setAccordionPanelHeight(item) {
+  const panel = item.querySelector('.accordion-panel');
+  panel.style.maxHeight = `${panel.scrollHeight}px`;
+}
+
+document.querySelectorAll('.accordion-item.open').forEach(setAccordionPanelHeight);
+
 document.querySelectorAll('.accordion-trigger').forEach((btn) => {
   btn.addEventListener('click', () => {
     const item = btn.closest('.accordion-item');
     const wasOpen = item.classList.contains('open');
-    item.parentElement.querySelectorAll('.accordion-item').forEach((i) => i.classList.remove('open'));
-    if (!wasOpen) item.classList.add('open');
+    item.parentElement.querySelectorAll('.accordion-item').forEach((i) => {
+      i.classList.remove('open');
+      i.querySelector('.accordion-panel').style.maxHeight = '';
+    });
+    if (!wasOpen) {
+      item.classList.add('open');
+      setAccordionPanelHeight(item);
+    }
   });
 });
 
