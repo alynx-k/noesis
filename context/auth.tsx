@@ -38,10 +38,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [justAuthenticated, setJustAuthenticated] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        // Without this, a throw anywhere in session restoration (e.g. the
+        // storage adapter — see lib/secure-session-storage.ts) left
+        // `loading` stuck at `true` forever: the gate would show "Vérification
+        // de la session…" indefinitely with no way out short of reinstalling.
+        // Treating it as "no session" just sends the user to login instead.
+        console.error('Failed to restore session:', error);
+        setSession(null);
+        setLoading(false);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
