@@ -507,6 +507,26 @@ h2 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); lett
 
 .tilt { will-change: transform; transition: transform 0.25s var(--ease), border-color 0.35s var(--ease), box-shadow 0.35s var(--ease); }
 
+/* ---------- Manifesto ---------- */
+/* A pull-quote breather between the feature grid and the "how it works"
+   steps — pure typography and layout rather than another hand-drawn
+   visual, so it can't fail the way the app-preview mockup did on mobile
+   (nothing here to look crude blown up large on a small screen). */
+#manifeste { background: var(--accent-2-soft); }
+.manifesto {
+  margin: 0 auto;
+  max-width: 780px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(22px, 3.4vw, 34px);
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.manifesto p { margin: 0; }
+
 /* ---------- Steps ---------- */
 .steps { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 .steps-line { position: absolute; top: 22px; left: 8%; right: 8%; height: 2px; background: var(--border-strong); z-index: 0; }
