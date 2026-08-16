@@ -5,6 +5,7 @@ import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { PremiumUpsellCard } from '@/components/premium-upsell-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -345,7 +346,9 @@ export default function CorrectHomeworkScreen() {
           </View>
         ) : null}
 
-        {result?.status === 'limitReached' || result?.status === 'error' ? (
+        {result?.status === 'limitReached' ? <PremiumUpsellCard message={result.message} /> : null}
+
+        {result?.status === 'error' ? (
           <View style={styles.resultCard}>
             <ThemedText style={styles.summary}>{result.message}</ThemedText>
           </View>

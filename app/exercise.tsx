@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AiTutorChat } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
+import { PremiumUpsellCard } from '@/components/premium-upsell-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -85,6 +86,7 @@ export default function ExerciseScreen() {
   const [grading, setGrading] = useState(false);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [gradingError, setGradingError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [consecutiveWrong, setConsecutiveWrong] = useState(0);
   const [hintRevealed, setHintRevealed] = useState(false);
   const [tutorVisible, setTutorVisible] = useState(false);
@@ -135,6 +137,7 @@ export default function ExerciseScreen() {
 
   const handleValidate = async () => {
     setGradingError(null);
+    setLimitReached(false);
     setVerdict(null);
     setGrading(true);
 
@@ -151,6 +154,7 @@ export default function ExerciseScreen() {
     }
 
     if (data?.limitReached) {
+      setLimitReached(true);
       setGradingError(data.message ?? 'Limite quotidienne atteinte. Reviens demain, ou passe premium pour un accès illimité.');
       return;
     }
@@ -463,7 +467,8 @@ export default function ExerciseScreen() {
                 </ThemedView>
               ) : null}
 
-              {gradingError ? <ThemedText style={styles.error}>{gradingError}</ThemedText> : null}
+              {limitReached && gradingError ? <PremiumUpsellCard message={gradingError} /> : null}
+              {!limitReached && gradingError ? <ThemedText style={styles.error}>{gradingError}</ThemedText> : null}
 
               {consecutiveWrong >= HELP_THRESHOLD && !hintRevealed ? (
                 <BouncyPressable style={styles.helpButton} onPress={() => setHintRevealed(true)}>

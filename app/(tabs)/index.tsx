@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { PremiumNudgeBanner } from '@/components/premium-nudge-banner';
 import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
@@ -357,6 +358,8 @@ export default function HomeScreen() {
                 </BouncyPressable>
               </Link>
             </View>
+
+            <PremiumNudgeBanner />
 
             <View ref={subjectsTarget.ref} onLayout={subjectsTarget.onLayout}>
               <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>

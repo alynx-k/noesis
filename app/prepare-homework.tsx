@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { PremiumUpsellCard } from '@/components/premium-upsell-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -45,6 +46,7 @@ export default function PrepareHomeworkScreen() {
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -107,6 +109,7 @@ export default function PrepareHomeworkScreen() {
       return;
     }
     setError(null);
+    setLimitReached(false);
     setPreparing(true);
     const result = await buildPracticeTest(Array.from(selectedCourseIds));
     setPreparing(false);
@@ -131,11 +134,13 @@ export default function PrepareHomeworkScreen() {
 
   const handleSubmitTest = async () => {
     setError(null);
+    setLimitReached(false);
     setGrading(true);
     const outcome = await gradePracticeTest(questions, answers);
     setGrading(false);
 
     if (outcome.status !== 'graded') {
+      setLimitReached(outcome.status === 'limitReached');
       setError(outcome.message);
       return;
     }
@@ -427,7 +432,8 @@ export default function PrepareHomeworkScreen() {
                 onChangeText={updateAnswer}
               />
 
-              {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+              {limitReached && error ? <PremiumUpsellCard message={error} /> : null}
+              {!limitReached && error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
               <BouncyPressable style={styles.primaryButton} onPress={handleNext} disabled={grading}>
                 <ThemedText style={styles.primaryButtonText}>

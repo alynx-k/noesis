@@ -14,6 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { PremiumWelcomeOverlay } from '@/components/premium-welcome-overlay';
 import { TourOverlay } from '@/components/tour-overlay';
 import { ErrorState } from '@/components/ui/error-state';
 import { LoadingBadge } from '@/components/ui/loading-badge';
@@ -130,6 +131,7 @@ function AppNavigator() {
         {!showSplash && error ? <GateErrorOverlay onRetry={retry} /> : null}
         {showSplash ? <AnimatedSplash onFinish={() => setShowSplash(false)} /> : null}
         <TourOverlay />
+        <PremiumWelcomeOverlay />
       </ToastProvider>
     </ThemeProvider>
   );
