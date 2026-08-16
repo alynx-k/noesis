@@ -12,7 +12,12 @@ export function useCourseHistory() {
   const serie = profileQuery.data?.serie ?? null;
 
   return useQuery({
-    queryKey: queryKeys.courseHistory.forUser(user?.id),
+    // Extends the shared prefix with grade/serie — loadCourseHistory's
+    // result depends on both, so without this, changing grade in Réglages
+    // left this screen silently serving the previous grade's course list/
+    // stats until some unrelated query happened to invalidate the
+    // (grade/serie-less) key this used to be.
+    queryKey: [...queryKeys.courseHistory.forUser(user?.id), grade, serie],
     queryFn: () => loadCourseHistory(grade as string, serie),
     enabled: !!grade,
   });

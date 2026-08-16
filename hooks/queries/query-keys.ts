@@ -40,6 +40,11 @@ export const queryKeys = {
     all: () => ['leaderboard'] as const,
   },
   courseHistory: {
+    // Deliberately just the prefix (no grade/serie) — use-spaced-repetition.ts
+    // invalidates with this alone, which TanStack Query matches against any
+    // key starting with it, so it correctly invalidates every grade/serie
+    // variant at once. use-course-history.ts extends this with grade/serie
+    // for the actual fetch key (see there for why that part matters).
     forUser: (userId: string | undefined) => ['course-history', userId] as const,
   },
   achievements: {
