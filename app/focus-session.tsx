@@ -13,7 +13,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { GRADIENTS, PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFocusSession } from '@/context/focus-session';
+import { useReferralCode } from '@/hooks/queries/use-referral';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { shareDestinationUnlockViaWhatsApp } from '@/lib/referral';
 import { playLaunchSound, preloadLaunchSound } from '@/lib/sound';
 
 const QUICK_DURATIONS = [10, 25, 45];
@@ -332,6 +334,7 @@ export default function FocusSessionScreen() {
   const COLORS = useThemeColors();
   const { phase, durationMinutes, remainingSeconds, destinationReached, destinationJustUnlocked, start, reset } =
     useFocusSession();
+  const referralCodeQuery = useReferralCode();
   const [durationInput, setDurationInput] = useState('25');
   // A short scripted beat (LiftoffSequence) between pressing "Lancer" and
   // the actual session starting — start() only fires once it completes, so
@@ -414,6 +417,15 @@ export default function FocusSessionScreen() {
   const handleViewAtlas = () => {
     reset();
     router.replace('/garden');
+  };
+
+  const handleShareUnlock = () => {
+    if (!destinationReached) {
+      return;
+    }
+    shareDestinationUnlockViaWhatsApp(destinationReached.name, referralCodeQuery.data ?? null).catch((error) => {
+      console.error('Failed to open WhatsApp share:', error);
+    });
   };
 
   const isNight = phase === 'running' || phase === 'success' || launching;
@@ -665,6 +677,11 @@ export default function FocusSessionScreen() {
             <BouncyPressable style={styles.primaryButton} onPress={handleBackHome}>
               <ThemedText style={styles.primaryButtonText}>Retour à l&apos;accueil</ThemedText>
             </BouncyPressable>
+            {destinationJustUnlocked && destinationReached ? (
+              <BouncyPressable style={styles.nightSecondaryButton} onPress={handleShareUnlock}>
+                <ThemedText style={styles.nightSecondaryButtonText}>Partager sur WhatsApp</ThemedText>
+              </BouncyPressable>
+            ) : null}
             <BouncyPressable style={styles.nightSecondaryButton} onPress={handleViewAtlas}>
               <ThemedText style={styles.nightSecondaryButtonText}>Voir mon atlas spatial</ThemedText>
             </BouncyPressable>

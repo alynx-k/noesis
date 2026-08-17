@@ -11,10 +11,12 @@ import { ThemedView } from '@/components/themed-view';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonCard } from '@/components/ui/skeleton';
-import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useMonthOverview } from '@/hooks/queries/use-month-overview';
+import { useReferralCode } from '@/hooks/queries/use-referral';
 import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { shareStreakViaWhatsApp } from '@/lib/referral';
 
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -28,10 +30,17 @@ export default function StreakOverviewScreen() {
   const COLORS = useThemeColors();
   const streakQuery = useStreak();
   const overviewQuery = useMonthOverview();
+  const referralCodeQuery = useReferralCode();
   const streakInfo = streakQuery.data ?? { streak: 0, weekDays: [false, false, false, false, false, false, false] };
   const overview = overviewQuery.data ?? null;
 
   const leadingBlanks = overview ? mondayIndex(overview.days[0].date) : 0;
+
+  const handleShareStreak = () => {
+    shareStreakViaWhatsApp(streakInfo.streak, referralCodeQuery.data ?? null).catch((error) => {
+      console.error('Failed to open WhatsApp share:', error);
+    });
+  };
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -92,7 +101,23 @@ export default function StreakOverviewScreen() {
     explainer: {
       ...TYPOGRAPHY.caption,
       color: COLORS.mutedText,
+      marginBottom: SPACING.element,
+    },
+    shareButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: COLORS.surface,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 12,
       marginBottom: SPACING.section,
+      ...cardBorder(COLORS),
+    },
+    shareButtonText: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
     },
     card: {
       backgroundColor: COLORS.surface,
@@ -177,6 +202,13 @@ export default function StreakOverviewScreen() {
             Un jour compte dès que tu réponds à une question, termines un cours ou réussis une session de
             concentration.
           </ThemedText>
+
+          {streakInfo.streak > 0 ? (
+            <BouncyPressable style={styles.shareButton} onPress={handleShareStreak}>
+              <IconSymbol name="paperplane.fill" size={16} color={COLORS.text} />
+              <ThemedText style={styles.shareButtonText}>Partager ma série sur WhatsApp</ThemedText>
+            </BouncyPressable>
+          ) : null}
 
           {overviewQuery.isPending ? <SkeletonCard height={280} /> : null}
 
