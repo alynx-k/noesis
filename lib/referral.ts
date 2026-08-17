@@ -24,8 +24,8 @@ export async function redeemReferralCode(code: string): Promise<{ rewardDays: nu
 // No generic link — WhatsApp is the one channel students and parents
 // actually use to share things in Côte d'Ivoire, so this opens a chat
 // composer directly (wa.me) instead of the OS's generic share sheet.
-function openWhatsAppMessage(message: string): Promise<void> {
-  return Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+async function openWhatsAppMessage(message: string): Promise<void> {
+  await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
 }
 
 function genericShareMessage(code: string): string {
