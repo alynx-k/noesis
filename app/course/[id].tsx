@@ -15,17 +15,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { DISCIPLINES } from '@/constants/disciplines';
 import { useCourseDetail, useCoursesForGrade } from '@/hooks/queries/use-courses';
-import { useCourseHistory } from '@/hooks/queries/use-course-history';
-import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
-import { estimateReadingMinutes } from '@/lib/reading-time';
+import { useStreak } from '@/hooks/queries/use-streak';
 
 export default function CourseScreen() {
   const COLORS = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const courseQuery = useCourseDetail(id ?? '');
   const coursesQuery = useCoursesForGrade();
-  const historyQuery = useCourseHistory();
   const streakQuery = useStreak();
   const course = courseQuery.data;
 
@@ -43,33 +40,34 @@ export default function CourseScreen() {
     [coursesQuery.data, courseSummary?.subject],
   );
   const lessonRank = sameSubjectCourses.findIndex((c) => c.id === id) + 1;
-
-  const historyEntry = historyQuery.data
-    ?.flatMap((section) => section.courses)
-    .find((entry) => entry.courseId === id);
+  const previousCourse = lessonRank > 1 ? sameSubjectCourses[lessonRank - 2] : null;
 
   const hasContentV2 = course && 'sections' in course.content;
   const contentV2 = hasContentV2 ? (course!.content as Extract<typeof course.content, { sections: unknown }>) : null;
 
   const steps = useMemo(() => {
     if (!contentV2) {
-      return [] as { label: string; minutes: number }[];
+      return [] as string[];
     }
-    const list = [
-      { label: 'Introduction', minutes: estimateReadingMinutes(contentV2.situation.text) },
-      ...contentV2.sections.map((section) => ({ label: section.heading, minutes: estimateReadingMinutes(section.body) })),
-    ];
+    const list = ['Introduction', ...contentV2.sections.map((section) => section.heading)];
     if (contentV2.evaluation) {
-      list.push({
-        label: 'Bilan',
-        minutes: estimateReadingMinutes([contentV2.evaluation.scenario, ...contentV2.evaluation.questions].join(' ')),
-      });
+      list.push('Bilan');
     }
     return list;
   }, [contentV2]);
 
-  const totalMinutes = steps.reduce((sum, step) => sum + step.minutes, 0);
   const partsCount = steps.length;
+  // Real, and it actually moves: how far through the lesson's parts the
+  // student has scrolled — not tied to exercise scoring, which stays 0 for
+  // anyone who hasn't done the exercise yet regardless of reading progress.
+  const progressPercent = partsCount > 0 ? Math.round(((activeStep + 1) / partsCount) * 100) : 0;
+
+  // The last section's "property" callout is usually the lesson's own
+  // definition/key-takeaway — reused verbatim as "À retenir" rather than
+  // inventing new summary text.
+  const takeaway = contentV2
+    ? [...contentV2.sections].reverse().find((section) => section.property)?.property ?? null
+    : null;
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = event.nativeEvent.contentOffset.y;
@@ -87,14 +85,12 @@ export default function CourseScreen() {
     if (offset !== undefined) {
       scrollRef.current?.scrollTo({ y: Math.max(0, offset - 16), animated: true });
     }
+    setActiveStep(index);
   };
 
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: 100,
     },
     header: {
       flexDirection: 'row',
@@ -150,14 +146,15 @@ export default function CourseScreen() {
       fontWeight: '700',
       fontSize: 13,
     },
-    introSection: {
+    fixedTop: {
       paddingHorizontal: SPACING.screen,
-      marginBottom: SPACING.section,
+      paddingTop: SPACING.element,
     },
     introCard: {
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
       padding: SPACING.element,
+      marginBottom: SPACING.element,
       ...cardBorder(COLORS),
     },
     introTopRow: {
@@ -232,8 +229,6 @@ export default function CourseScreen() {
     tabsRow: {
       flexDirection: 'row',
       gap: SPACING.section,
-      paddingHorizontal: SPACING.screen,
-      marginBottom: SPACING.element,
       borderBottomWidth: 1,
       borderBottomColor: COLORS.border,
     },
@@ -257,23 +252,23 @@ export default function CourseScreen() {
       color: COLORS.accent,
     },
     bodyRow: {
+      flex: 1,
       flexDirection: 'row',
       paddingHorizontal: SPACING.screen,
-      gap: SPACING.element,
     },
     stepperCol: {
-      width: 64,
-      alignItems: 'center',
+      width: 48,
+      paddingTop: SPACING.element,
     },
     stepItem: {
       alignItems: 'center',
-      paddingBottom: SPACING.element,
+      paddingBottom: SPACING.section,
       position: 'relative',
     },
     stepCircle: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
@@ -290,7 +285,7 @@ export default function CourseScreen() {
       borderColor: COLORS.accent,
     },
     stepNumber: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: COLORS.mutedText,
     },
@@ -299,13 +294,13 @@ export default function CourseScreen() {
     },
     stepLine: {
       position: 'absolute',
-      top: 28,
-      bottom: -SPACING.element,
+      top: 24,
+      bottom: -SPACING.tight,
       width: 2,
       backgroundColor: COLORS.border,
     },
     stepLabel: {
-      fontSize: 10,
+      fontSize: 8.5,
       fontWeight: '600',
       color: COLORS.mutedText,
       textAlign: 'center',
@@ -313,33 +308,71 @@ export default function CourseScreen() {
     contentCol: {
       flex: 1,
     },
+    contentScroll: {
+      paddingLeft: SPACING.tight,
+      paddingBottom: 24,
+    },
     paragraph: {
       ...TYPOGRAPHY.body,
       color: COLORS.text,
       marginBottom: SPACING.element,
     },
-    exerciseBar: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
+    takeawayCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: SPACING.tight,
+      backgroundColor: COLORS.accentSoft,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+    },
+    takeawayTextCol: {
+      flex: 1,
+    },
+    takeawayTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.accent,
+      marginBottom: 4,
+    },
+    takeawayText: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: COLORS.text,
+    },
+    footer: {
+      flexDirection: 'row',
+      gap: SPACING.tight,
       padding: SPACING.element,
       backgroundColor: COLORS.surface,
       borderTopWidth: 1,
       borderTopColor: COLORS.border,
     },
-    exerciseButton: {
+    footerButton: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      backgroundColor: COLORS.accent,
+      gap: 6,
       borderRadius: PILL_RADIUS,
-      paddingVertical: 16,
+      paddingVertical: 14,
     },
-    exerciseButtonText: {
+    footerButtonPrevious: {
+      backgroundColor: COLORS.lockedBackground,
+    },
+    footerButtonPreviousDisabled: {
+      opacity: 0.4,
+    },
+    footerButtonNext: {
+      backgroundColor: COLORS.accent,
+    },
+    footerButtonTextPrevious: {
+      color: COLORS.text,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    footerButtonTextNext: {
       color: COLORS.accentText,
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
     },
     centered: {
@@ -390,8 +423,8 @@ export default function CourseScreen() {
   }
 
   const headerColors = discipline?.badgeGradient ?? (['#6D5BD0', '#4F3A9E'] as const);
-  const progressPercent = historyEntry && historyEntry.total > 0 ? historyEntry.goodPercentage : 0;
   const shortDescription = contentV2 ? contentV2.situation.text.slice(0, 110).trim() + '…' : '';
+  const isLastStep = activeStep >= partsCount - 1;
 
   return (
     <ScreenBackground color="#FAF8FC">
@@ -416,50 +449,44 @@ export default function CourseScreen() {
           </View>
         </LinearGradient>
 
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} onScroll={handleScroll} scrollEventThrottle={100}>
-          <View style={styles.introSection}>
-            <View style={styles.introCard}>
-              <View style={styles.introTopRow}>
-                <View style={styles.introTextCol}>
-                  {lessonRank > 0 ? (
-                    <View style={styles.lessonPill}>
-                      <ThemedText style={styles.lessonPillText}>
-                        Leçon {lessonRank} sur {sameSubjectCourses.length}
-                      </ThemedText>
-                    </View>
-                  ) : null}
-                  <ThemedText style={styles.lessonTitle}>{course.title}</ThemedText>
-                  {shortDescription ? <ThemedText style={styles.lessonDescription}>{shortDescription}</ThemedText> : null}
-                </View>
-                {discipline ? (
-                  <LessonCoverBanner
-                    courseId={course.id}
-                    icon={discipline.icon}
-                    cardGradient={discipline.cardGradient}
-                    badgeGradient={discipline.badgeGradient}
-                  />
+        <View style={styles.fixedTop}>
+          <View style={styles.introCard}>
+            <View style={styles.introTopRow}>
+              <View style={styles.introTextCol}>
+                {lessonRank > 0 ? (
+                  <View style={styles.lessonPill}>
+                    <ThemedText style={styles.lessonPillText}>
+                      Leçon {lessonRank} sur {sameSubjectCourses.length}
+                    </ThemedText>
+                  </View>
                 ) : null}
+                <ThemedText style={styles.lessonTitle}>{course.title}</ThemedText>
+                {shortDescription ? <ThemedText style={styles.lessonDescription}>{shortDescription}</ThemedText> : null}
               </View>
-
-              {contentV2 ? (
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color={COLORS.mutedText} />
-                    <ThemedText style={styles.metaText}>{totalMinutes} min</ThemedText>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="reader-outline" size={14} color={COLORS.mutedText} />
-                    <ThemedText style={styles.metaText}>{partsCount} parties</ThemedText>
-                  </View>
-                </View>
+              {discipline ? (
+                <LessonCoverBanner
+                  courseId={course.id}
+                  icon={discipline.icon}
+                  cardGradient={discipline.cardGradient}
+                  badgeGradient={discipline.badgeGradient}
+                />
               ) : null}
+            </View>
 
-              <View style={styles.progressRow}>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            {contentV2 ? (
+              <View style={styles.metaRow}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="reader-outline" size={14} color={COLORS.mutedText} />
+                  <ThemedText style={styles.metaText}>{partsCount} parties</ThemedText>
                 </View>
-                <ThemedText style={styles.progressPercent}>{progressPercent}%</ThemedText>
               </View>
+            ) : null}
+
+            <View style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+              </View>
+              <ThemedText style={styles.progressPercent}>{progressPercent}%</ThemedText>
             </View>
           </View>
 
@@ -475,39 +502,52 @@ export default function CourseScreen() {
               </BouncyPressable>
             </Link>
           </View>
+        </View>
 
-          <View style={styles.bodyRow}>
-            {contentV2 ? (
-              <View style={styles.stepperCol}>
-                {steps.map((step, index) => (
-                  <BouncyPressable key={index} style={styles.stepItem} onPress={() => scrollToStep(index)}>
-                    {index < steps.length - 1 ? <View style={styles.stepLine} /> : null}
-                    <View
-                      style={[
-                        styles.stepCircle,
-                        index === activeStep && styles.stepCircleActive,
-                        index < activeStep && styles.stepCircleDone,
-                      ]}>
-                      <ThemedText style={[styles.stepNumber, index === activeStep && styles.stepNumberActive]}>
-                        {index + 1}
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={styles.stepLabel} numberOfLines={2}>
-                      {step.label}
+        <View style={styles.bodyRow}>
+          {contentV2 ? (
+            <View style={styles.stepperCol}>
+              {steps.map((label, index) => (
+                <BouncyPressable key={index} style={styles.stepItem} onPress={() => scrollToStep(index)}>
+                  {index < steps.length - 1 ? <View style={styles.stepLine} /> : null}
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      index === activeStep && styles.stepCircleActive,
+                      index < activeStep && styles.stepCircleDone,
+                    ]}>
+                    <ThemedText style={[styles.stepNumber, index === activeStep && styles.stepNumberActive]}>
+                      {index + 1}
                     </ThemedText>
-                  </BouncyPressable>
-                ))}
-              </View>
-            ) : null}
+                  </View>
+                  <ThemedText style={styles.stepLabel} numberOfLines={2}>
+                    {label}
+                  </ThemedText>
+                </BouncyPressable>
+              ))}
+            </View>
+          ) : null}
 
-            <View style={styles.contentCol}>
+          <View style={styles.contentCol}>
+            <ScrollView ref={scrollRef} contentContainerStyle={styles.contentScroll} onScroll={handleScroll} scrollEventThrottle={100}>
               {contentV2 ? (
-                <CourseContent
-                  content={contentV2}
-                  onSectionLayout={(index, y) => {
-                    sectionOffsets.current[index] = y;
-                  }}
-                />
+                <>
+                  <CourseContent
+                    content={contentV2}
+                    onSectionLayout={(index, y) => {
+                      sectionOffsets.current[index] = y;
+                    }}
+                  />
+                  {takeaway ? (
+                    <View style={styles.takeawayCard}>
+                      <Ionicons name="bookmark" size={18} color={COLORS.accent} />
+                      <View style={styles.takeawayTextCol}>
+                        <ThemedText style={styles.takeawayTitle}>À retenir</ThemedText>
+                        <ThemedText style={styles.takeawayText}>{takeaway.text}</ThemedText>
+                      </View>
+                    </View>
+                  ) : null}
+                </>
               ) : 'paragraphs' in course.content ? (
                 course.content.paragraphs.map((paragraph, index) => (
                   <ThemedText key={index} style={styles.paragraph}>
@@ -515,16 +555,31 @@ export default function CourseScreen() {
                   </ThemedText>
                 ))
               ) : null}
-            </View>
+            </ScrollView>
           </View>
-        </ScrollView>
+        </View>
 
-        <View style={styles.exerciseBar}>
-          <Link href={{ pathname: '/exercise', params: { courseId: course.id } }} asChild>
-            <BouncyPressable style={styles.exerciseButton}>
-              <ThemedText style={styles.exerciseButtonText}>Commencer l&apos;exercice</ThemedText>
+        <View style={styles.footer}>
+          <BouncyPressable
+            style={[styles.footerButton, styles.footerButtonPrevious, !previousCourse && styles.footerButtonPreviousDisabled]}
+            disabled={!previousCourse}
+            onPress={() => previousCourse && router.replace({ pathname: '/course/[id]', params: { id: previousCourse.id } })}>
+            <Ionicons name="arrow-back" size={16} color={COLORS.text} />
+            <ThemedText style={styles.footerButtonTextPrevious}>Leçon précédente</ThemedText>
+          </BouncyPressable>
+
+          {isLastStep ? (
+            <Link href={{ pathname: '/exercise', params: { courseId: course.id } }} asChild>
+              <BouncyPressable style={[styles.footerButton, styles.footerButtonNext]}>
+                <ThemedText style={styles.footerButtonTextNext}>Commencer l&apos;exercice</ThemedText>
+              </BouncyPressable>
+            </Link>
+          ) : (
+            <BouncyPressable style={[styles.footerButton, styles.footerButtonNext]} onPress={() => scrollToStep(activeStep + 1)}>
+              <ThemedText style={styles.footerButtonTextNext}>Partie suivante</ThemedText>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.accentText} />
             </BouncyPressable>
-          </Link>
+          )}
         </View>
       </SafeAreaView>
     </ScreenBackground>

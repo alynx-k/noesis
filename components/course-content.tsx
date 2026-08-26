@@ -11,7 +11,6 @@ import { ThemedText } from '@/components/themed-text';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseContentV2, CourseFixation, CourseSection } from '@/lib/courses';
-import { estimateReadingMinutes } from '@/lib/reading-time';
 
 function FixationBlock({ fixation }: { fixation: CourseFixation }) {
   const COLORS = useThemeColors();
@@ -99,33 +98,12 @@ function SectionView({
       padding: SPACING.element,
       ...cardBorder(COLORS),
     },
-    headingRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: SPACING.tight,
-      marginBottom: SPACING.tight,
-    },
     heading: {
       ...TYPOGRAPHY.body,
       fontSize: 18,
       fontWeight: '700',
       color: COLORS.text,
-      flex: 1,
-    },
-    timePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: COLORS.lockedBackground,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 4,
-      paddingHorizontal: 10,
-    },
-    timePillText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: COLORS.mutedText,
+      marginBottom: SPACING.tight,
     },
     body: {
       ...TYPOGRAPHY.body,
@@ -214,15 +192,9 @@ function SectionView({
 
   return (
     <View style={styles.wrapper} onLayout={onLayout}>
-      <View style={styles.headingRow}>
-        <ThemedText style={styles.heading}>
-          {stepNumber}. {section.heading}
-        </ThemedText>
-        <View style={styles.timePill}>
-          <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
-          <ThemedText style={styles.timePillText}>{estimateReadingMinutes(section.body)} min</ThemedText>
-        </View>
-      </View>
+      <ThemedText style={styles.heading}>
+        {stepNumber}. {section.heading}
+      </ThemedText>
       <HighlightedText
         text={section.body}
         highlights={section.highlights}
@@ -278,33 +250,12 @@ export function CourseContent({ content, onSectionLayout }: CourseContentProps) 
       padding: SPACING.element,
       ...cardBorder(COLORS),
     },
-    headingRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: SPACING.tight,
-      marginBottom: SPACING.tight,
-    },
     heading: {
       ...TYPOGRAPHY.body,
       fontSize: 18,
       fontWeight: '700',
       color: COLORS.text,
-      flex: 1,
-    },
-    timePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: COLORS.lockedBackground,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 4,
-      paddingHorizontal: 10,
-    },
-    timePillText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: COLORS.mutedText,
+      marginBottom: SPACING.tight,
     },
     situationText: {
       ...TYPOGRAPHY.body,
@@ -328,20 +279,10 @@ export function CourseContent({ content, onSectionLayout }: CourseContentProps) 
     },
   });
 
-  const evaluationMinutes = content.evaluation
-    ? estimateReadingMinutes([content.evaluation.scenario, ...content.evaluation.questions].join(' '))
-    : 0;
-
   return (
     <Animated.View entering={FadeIn.duration(400)}>
       <View style={styles.situationCard} onLayout={(event) => onSectionLayout?.(0, event.nativeEvent.layout.y)}>
-        <View style={styles.headingRow}>
-          <ThemedText style={styles.heading}>1. Introduction</ThemedText>
-          <View style={styles.timePill}>
-            <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
-            <ThemedText style={styles.timePillText}>{estimateReadingMinutes(content.situation.text)} min</ThemedText>
-          </View>
-        </View>
+        <ThemedText style={styles.heading}>1. Introduction</ThemedText>
         <ThemedText style={styles.situationText}>{content.situation.text}</ThemedText>
       </View>
 
@@ -358,13 +299,7 @@ export function CourseContent({ content, onSectionLayout }: CourseContentProps) 
         <View
           style={styles.evaluationBox}
           onLayout={(event) => onSectionLayout?.(content.sections.length + 1, event.nativeEvent.layout.y)}>
-          <View style={styles.headingRow}>
-            <ThemedText style={styles.heading}>{content.sections.length + 2}. Bilan</ThemedText>
-            <View style={styles.timePill}>
-              <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
-              <ThemedText style={styles.timePillText}>{evaluationMinutes} min</ThemedText>
-            </View>
-          </View>
+          <ThemedText style={styles.heading}>{content.sections.length + 2}. Bilan</ThemedText>
           <ThemedText style={styles.evaluationScenario}>{content.evaluation.scenario}</ThemedText>
           {content.evaluation.questions.map((question, index) => (
             <ThemedText key={index} style={styles.evaluationQuestion}>
