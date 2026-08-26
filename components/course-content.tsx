@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseContentV2, CourseFixation, CourseSection } from '@/lib/courses';
+import { formatMathNotation } from '@/lib/math-notation';
 
 function FixationBlock({ fixation }: { fixation: CourseFixation }) {
   const COLORS = useThemeColors();
@@ -65,10 +66,10 @@ function FixationBlock({ fixation }: { fixation: CourseFixation }) {
         <Ionicons name="create-outline" size={15} color={COLORS.accent} />
         <ThemedText style={styles.label}>Je m&apos;exerce</ThemedText>
       </View>
-      <ThemedText style={styles.question}>{fixation.question}</ThemedText>
+      <ThemedText style={styles.question}>{formatMathNotation(fixation.question)}</ThemedText>
       {revealed ? (
         <Animated.View entering={FadeIn.duration(250)}>
-          <ThemedText style={styles.solution}>{fixation.solution}</ThemedText>
+          <ThemedText style={styles.solution}>{formatMathNotation(fixation.solution)}</ThemedText>
         </Animated.View>
       ) : (
         <BouncyPressable style={styles.revealButton} onPress={() => setRevealed(true)}>
@@ -212,7 +213,7 @@ function SectionView({
             <Ionicons name="bulb-outline" size={15} color={COLORS.accent} />
             <ThemedText style={styles.propertyLabel}>{section.property.label}</ThemedText>
           </View>
-          <ThemedText style={styles.propertyText}>{section.property.text}</ThemedText>
+          <ThemedText style={styles.propertyText}>{formatMathNotation(section.property.text)}</ThemedText>
         </View>
       ) : null}
 
@@ -222,8 +223,8 @@ function SectionView({
             <Ionicons name="book-outline" size={15} color={COLORS.mutedText} />
             <ThemedText style={styles.exampleLabel}>Exemple</ThemedText>
           </View>
-          <ThemedText style={styles.exampleStatement}>{section.example.statement}</ThemedText>
-          <ThemedText style={styles.exampleSolution}>{section.example.solution}</ThemedText>
+          <ThemedText style={styles.exampleStatement}>{formatMathNotation(section.example.statement)}</ThemedText>
+          <ThemedText style={styles.exampleSolution}>{formatMathNotation(section.example.solution)}</ThemedText>
         </View>
       ) : null}
 
@@ -283,7 +284,7 @@ export function CourseContent({ content, onSectionLayout }: CourseContentProps) 
     <Animated.View entering={FadeIn.duration(400)}>
       <View style={styles.situationCard} onLayout={(event) => onSectionLayout?.(0, event.nativeEvent.layout.y)}>
         <ThemedText style={styles.heading}>1. Introduction</ThemedText>
-        <ThemedText style={styles.situationText}>{content.situation.text}</ThemedText>
+        <ThemedText style={styles.situationText}>{formatMathNotation(content.situation.text)}</ThemedText>
       </View>
 
       {content.sections.map((section, index) => (
@@ -300,10 +301,10 @@ export function CourseContent({ content, onSectionLayout }: CourseContentProps) 
           style={styles.evaluationBox}
           onLayout={(event) => onSectionLayout?.(content.sections.length + 1, event.nativeEvent.layout.y)}>
           <ThemedText style={styles.heading}>{content.sections.length + 2}. Bilan</ThemedText>
-          <ThemedText style={styles.evaluationScenario}>{content.evaluation.scenario}</ThemedText>
+          <ThemedText style={styles.evaluationScenario}>{formatMathNotation(content.evaluation.scenario)}</ThemedText>
           {content.evaluation.questions.map((question, index) => (
             <ThemedText key={index} style={styles.evaluationQuestion}>
-              {index + 1}. {question}
+              {index + 1}. {formatMathNotation(question)}
             </ThemedText>
           ))}
         </View>

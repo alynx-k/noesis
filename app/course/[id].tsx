@@ -57,10 +57,6 @@ export default function CourseScreen() {
   }, [contentV2]);
 
   const partsCount = steps.length;
-  // Real, and it actually moves: how far through the lesson's parts the
-  // student has scrolled — not tied to exercise scoring, which stays 0 for
-  // anyone who hasn't done the exercise yet regardless of reading progress.
-  const progressPercent = partsCount > 0 ? Math.round(((activeStep + 1) / partsCount) * 100) : 0;
 
   // The last section's "property" callout is usually the lesson's own
   // definition/key-takeaway — reused verbatim as "À retenir" rather than
@@ -146,9 +142,10 @@ export default function CourseScreen() {
       fontWeight: '700',
       fontSize: 13,
     },
-    fixedTop: {
+    scrollContent: {
       paddingHorizontal: SPACING.screen,
       paddingTop: SPACING.element,
+      paddingBottom: 24,
     },
     introCard: {
       backgroundColor: COLORS.surface,
@@ -203,32 +200,10 @@ export default function CourseScreen() {
       fontWeight: '600',
       color: COLORS.mutedText,
     },
-    progressRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: SPACING.tight,
-      marginTop: SPACING.element,
-    },
-    progressTrack: {
-      flex: 1,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.border,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      borderRadius: 3,
-      backgroundColor: COLORS.accent,
-    },
-    progressPercent: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: COLORS.accent,
-    },
     tabsRow: {
       flexDirection: 'row',
       gap: SPACING.section,
+      marginBottom: SPACING.element,
       borderBottomWidth: 1,
       borderBottomColor: COLORS.border,
     },
@@ -250,67 +225,6 @@ export default function CourseScreen() {
     },
     tabTextActive: {
       color: COLORS.accent,
-    },
-    bodyRow: {
-      flex: 1,
-      flexDirection: 'row',
-      paddingHorizontal: SPACING.screen,
-    },
-    stepperCol: {
-      width: 48,
-      paddingTop: SPACING.element,
-    },
-    stepItem: {
-      alignItems: 'center',
-      paddingBottom: SPACING.section,
-      position: 'relative',
-    },
-    stepCircle: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.surface,
-      marginBottom: 4,
-    },
-    stepCircleActive: {
-      backgroundColor: COLORS.accent,
-      borderColor: COLORS.accent,
-    },
-    stepCircleDone: {
-      backgroundColor: COLORS.accentSoft,
-      borderColor: COLORS.accent,
-    },
-    stepNumber: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: COLORS.mutedText,
-    },
-    stepNumberActive: {
-      color: '#FFFFFF',
-    },
-    stepLine: {
-      position: 'absolute',
-      top: 24,
-      bottom: -SPACING.tight,
-      width: 2,
-      backgroundColor: COLORS.border,
-    },
-    stepLabel: {
-      fontSize: 8.5,
-      fontWeight: '600',
-      color: COLORS.mutedText,
-      textAlign: 'center',
-    },
-    contentCol: {
-      flex: 1,
-    },
-    contentScroll: {
-      paddingLeft: SPACING.tight,
-      paddingBottom: 24,
     },
     paragraph: {
       ...TYPOGRAPHY.body,
@@ -449,7 +363,7 @@ export default function CourseScreen() {
           </View>
         </LinearGradient>
 
-        <View style={styles.fixedTop}>
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} onScroll={handleScroll} scrollEventThrottle={100}>
           <View style={styles.introCard}>
             <View style={styles.introTopRow}>
               <View style={styles.introTextCol}>
@@ -481,13 +395,6 @@ export default function CourseScreen() {
                 </View>
               </View>
             ) : null}
-
-            <View style={styles.progressRow}>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-              </View>
-              <ThemedText style={styles.progressPercent}>{progressPercent}%</ThemedText>
-            </View>
           </View>
 
           <View style={styles.tabsRow}>
@@ -502,62 +409,33 @@ export default function CourseScreen() {
               </BouncyPressable>
             </Link>
           </View>
-        </View>
 
-        <View style={styles.bodyRow}>
           {contentV2 ? (
-            <View style={styles.stepperCol}>
-              {steps.map((label, index) => (
-                <BouncyPressable key={index} style={styles.stepItem} onPress={() => scrollToStep(index)}>
-                  {index < steps.length - 1 ? <View style={styles.stepLine} /> : null}
-                  <View
-                    style={[
-                      styles.stepCircle,
-                      index === activeStep && styles.stepCircleActive,
-                      index < activeStep && styles.stepCircleDone,
-                    ]}>
-                    <ThemedText style={[styles.stepNumber, index === activeStep && styles.stepNumberActive]}>
-                      {index + 1}
-                    </ThemedText>
+            <>
+              <CourseContent
+                content={contentV2}
+                onSectionLayout={(index, y) => {
+                  sectionOffsets.current[index] = y;
+                }}
+              />
+              {takeaway ? (
+                <View style={styles.takeawayCard}>
+                  <Ionicons name="bookmark" size={18} color={COLORS.accent} />
+                  <View style={styles.takeawayTextCol}>
+                    <ThemedText style={styles.takeawayTitle}>À retenir</ThemedText>
+                    <ThemedText style={styles.takeawayText}>{takeaway.text}</ThemedText>
                   </View>
-                  <ThemedText style={styles.stepLabel} numberOfLines={2}>
-                    {label}
-                  </ThemedText>
-                </BouncyPressable>
-              ))}
-            </View>
-          ) : null}
-
-          <View style={styles.contentCol}>
-            <ScrollView ref={scrollRef} contentContainerStyle={styles.contentScroll} onScroll={handleScroll} scrollEventThrottle={100}>
-              {contentV2 ? (
-                <>
-                  <CourseContent
-                    content={contentV2}
-                    onSectionLayout={(index, y) => {
-                      sectionOffsets.current[index] = y;
-                    }}
-                  />
-                  {takeaway ? (
-                    <View style={styles.takeawayCard}>
-                      <Ionicons name="bookmark" size={18} color={COLORS.accent} />
-                      <View style={styles.takeawayTextCol}>
-                        <ThemedText style={styles.takeawayTitle}>À retenir</ThemedText>
-                        <ThemedText style={styles.takeawayText}>{takeaway.text}</ThemedText>
-                      </View>
-                    </View>
-                  ) : null}
-                </>
-              ) : 'paragraphs' in course.content ? (
-                course.content.paragraphs.map((paragraph, index) => (
-                  <ThemedText key={index} style={styles.paragraph}>
-                    {paragraph}
-                  </ThemedText>
-                ))
+                </View>
               ) : null}
-            </ScrollView>
-          </View>
-        </View>
+            </>
+          ) : 'paragraphs' in course.content ? (
+            course.content.paragraphs.map((paragraph, index) => (
+              <ThemedText key={index} style={styles.paragraph}>
+                {paragraph}
+              </ThemedText>
+            ))
+          ) : null}
+        </ScrollView>
 
         <View style={styles.footer}>
           <BouncyPressable

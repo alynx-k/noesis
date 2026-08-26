@@ -1,6 +1,7 @@
 import { StyleProp, TextStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { formatMathNotation } from '@/lib/math-notation';
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -17,14 +18,15 @@ type HighlightedTextProps = {
 // between the flashcard fiche renderer and the course content renderer so
 // both read as "underlined/colored like an actual course" the same way.
 export function HighlightedText({ text, highlights, style, highlightStyle }: HighlightedTextProps) {
+  const formattedText = formatMathNotation(text);
   const terms = highlights.filter((term) => term.trim().length > 0);
   if (terms.length === 0) {
-    return <ThemedText style={style}>{text}</ThemedText>;
+    return <ThemedText style={style}>{formattedText}</ThemedText>;
   }
 
   const sortedTerms = [...terms].sort((a, b) => b.length - a.length);
   const pattern = new RegExp(`(${sortedTerms.map(escapeRegExp).join('|')})`, 'gi');
-  const parts = text.split(pattern);
+  const parts = formattedText.split(pattern);
   const lowerTerms = sortedTerms.map((term) => term.toLowerCase());
 
   return (

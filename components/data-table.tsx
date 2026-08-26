@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { formatMathNotation } from '@/lib/math-notation';
 
 export type DataTableData = { headers: string[]; rows: string[][] };
 
@@ -41,7 +42,7 @@ export function DataTable({ table }: { table: DataTableData }) {
       <View style={[styles.row, styles.headerRow]}>
         {table.headers.map((header, index) => (
           <ThemedText key={index} style={[styles.cell, styles.headerCell]}>
-            {header}
+            {formatMathNotation(header)}
           </ThemedText>
         ))}
       </View>
@@ -49,7 +50,7 @@ export function DataTable({ table }: { table: DataTableData }) {
         <View key={rowIndex} style={styles.row}>
           {row.map((cell, cellIndex) => (
             <ThemedText key={cellIndex} style={styles.cell}>
-              {cell}
+              {formatMathNotation(cell)}
             </ThemedText>
           ))}
         </View>
