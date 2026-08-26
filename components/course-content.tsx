@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseContentV2, CourseFixation, CourseSection } from '@/lib/courses';
+import { estimateReadingMinutes } from '@/lib/reading-time';
 
 function FixationBlock({ fixation }: { fixation: CourseFixation }) {
   const COLORS = useThemeColors();
@@ -79,19 +80,52 @@ function FixationBlock({ fixation }: { fixation: CourseFixation }) {
   );
 }
 
-function SectionView({ section, isLast }: { section: CourseSection; isLast: boolean }) {
+function SectionView({
+  section,
+  stepNumber,
+  onLayout,
+}: {
+  section: CourseSection;
+  stepNumber: number;
+  onLayout?: (event: LayoutChangeEvent) => void;
+}) {
   const COLORS = useThemeColors();
 
   const styles = StyleSheet.create({
     wrapper: {
-      marginBottom: SPACING.section,
+      marginBottom: SPACING.tight,
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      ...cardBorder(COLORS),
+    },
+    headingRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: SPACING.tight,
+      marginBottom: SPACING.tight,
     },
     heading: {
       ...TYPOGRAPHY.body,
       fontSize: 18,
       fontWeight: '700',
       color: COLORS.text,
-      marginBottom: SPACING.tight,
+      flex: 1,
+    },
+    timePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: COLORS.lockedBackground,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+    },
+    timePillText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: COLORS.mutedText,
     },
     body: {
       ...TYPOGRAPHY.body,
@@ -176,17 +210,19 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
       lineHeight: 24,
       color: COLORS.text,
     },
-    separator: {
-      borderTopWidth: 1,
-      borderTopColor: COLORS.border,
-      borderStyle: 'dashed',
-      marginTop: SPACING.element,
-    },
   });
 
   return (
-    <View style={styles.wrapper}>
-      <ThemedText style={styles.heading}>{section.heading}</ThemedText>
+    <View style={styles.wrapper} onLayout={onLayout}>
+      <View style={styles.headingRow}>
+        <ThemedText style={styles.heading}>
+          {stepNumber}. {section.heading}
+        </ThemedText>
+        <View style={styles.timePill}>
+          <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
+          <ThemedText style={styles.timePillText}>{estimateReadingMinutes(section.body)} min</ThemedText>
+        </View>
+      </View>
       <HighlightedText
         text={section.body}
         highlights={section.highlights}
@@ -220,37 +256,65 @@ function SectionView({ section, isLast }: { section: CourseSection; isLast: bool
       ) : null}
 
       {section.fixation ? <FixationBlock fixation={section.fixation} /> : null}
-
-      {!isLast ? <View style={styles.separator} /> : null}
     </View>
   );
 }
 
 type CourseContentProps = {
   content: CourseContentV2;
+  // Reports each step's Y position (relative to the scroll container) as it
+  // lays out, so the course screen's stepper sidebar can scroll to it on tap.
+  onSectionLayout?: (index: number, y: number) => void;
 };
 
-export function CourseContent({ content }: CourseContentProps) {
+export function CourseContent({ content, onSectionLayout }: CourseContentProps) {
   const COLORS = useThemeColors();
 
   const styles = StyleSheet.create({
-    situation: {
+    situationCard: {
+      marginBottom: SPACING.tight,
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      ...cardBorder(COLORS),
+    },
+    headingRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: SPACING.tight,
+      marginBottom: SPACING.tight,
+    },
+    heading: {
       ...TYPOGRAPHY.body,
+      fontSize: 18,
+      fontWeight: '700',
+      color: COLORS.text,
+      flex: 1,
+    },
+    timePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: COLORS.lockedBackground,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+    },
+    timePillText: {
+      fontSize: 12,
+      fontWeight: '600',
       color: COLORS.mutedText,
-      fontStyle: 'italic',
-      marginBottom: SPACING.section,
+    },
+    situationText: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.text,
     },
     evaluationBox: {
-      marginTop: SPACING.element,
+      marginBottom: SPACING.tight,
       backgroundColor: COLORS.accentSoft,
       borderRadius: RADIUS,
       padding: SPACING.element,
-    },
-    evaluationLabel: {
-      ...TYPOGRAPHY.label,
-      color: COLORS.accent,
-      textTransform: 'uppercase',
-      marginBottom: 6,
     },
     evaluationScenario: {
       ...TYPOGRAPHY.body,
@@ -264,17 +328,43 @@ export function CourseContent({ content }: CourseContentProps) {
     },
   });
 
+  const evaluationMinutes = content.evaluation
+    ? estimateReadingMinutes([content.evaluation.scenario, ...content.evaluation.questions].join(' '))
+    : 0;
+
   return (
     <Animated.View entering={FadeIn.duration(400)}>
-      <ThemedText style={styles.situation}>{content.situation.text}</ThemedText>
+      <View style={styles.situationCard} onLayout={(event) => onSectionLayout?.(0, event.nativeEvent.layout.y)}>
+        <View style={styles.headingRow}>
+          <ThemedText style={styles.heading}>1. Introduction</ThemedText>
+          <View style={styles.timePill}>
+            <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
+            <ThemedText style={styles.timePillText}>{estimateReadingMinutes(content.situation.text)} min</ThemedText>
+          </View>
+        </View>
+        <ThemedText style={styles.situationText}>{content.situation.text}</ThemedText>
+      </View>
 
       {content.sections.map((section, index) => (
-        <SectionView key={index} section={section} isLast={index === content.sections.length - 1} />
+        <SectionView
+          key={index}
+          section={section}
+          stepNumber={index + 2}
+          onLayout={(event) => onSectionLayout?.(index + 1, event.nativeEvent.layout.y)}
+        />
       ))}
 
       {content.evaluation ? (
-        <View style={styles.evaluationBox}>
-          <ThemedText style={styles.evaluationLabel}>Situation d&apos;évaluation</ThemedText>
+        <View
+          style={styles.evaluationBox}
+          onLayout={(event) => onSectionLayout?.(content.sections.length + 1, event.nativeEvent.layout.y)}>
+          <View style={styles.headingRow}>
+            <ThemedText style={styles.heading}>{content.sections.length + 2}. Bilan</ThemedText>
+            <View style={styles.timePill}>
+              <Ionicons name="time-outline" size={12} color={COLORS.mutedText} />
+              <ThemedText style={styles.timePillText}>{evaluationMinutes} min</ThemedText>
+            </View>
+          </View>
           <ThemedText style={styles.evaluationScenario}>{content.evaluation.scenario}</ThemedText>
           {content.evaluation.questions.map((question, index) => (
             <ThemedText key={index} style={styles.evaluationQuestion}>
