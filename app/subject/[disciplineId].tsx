@@ -75,8 +75,6 @@ export default function SubjectScreen() {
       paddingHorizontal: SPACING.screen,
       paddingTop: SPACING.tight,
       paddingBottom: 36,
-      borderBottomLeftRadius: 32,
-      borderBottomRightRadius: 32,
     },
     headerTopRow: {
       flexDirection: 'row',
