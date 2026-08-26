@@ -19,6 +19,22 @@ function toSubscript(digits: string): string {
   return digits.split('').map((d) => SUBSCRIPT_DIGITS[d] ?? d).join('');
 }
 
+// Superscript forms for the single-letter variable names algebra actually
+// uses here (a, b, n, p, x, y...) plus digits and +/- for exponents like
+// "a^(n+p)" or "a^(-n)". No "q" — Unicode has no superscript for it, but
+// it doesn't show up as a variable name in this curriculum.
+const SUPERSCRIPT_CHARS: Record<string, string> = {
+  ...SUPERSCRIPT_DIGITS,
+  a: 'ᵃ', b: 'ᵇ', c: 'ᶜ', d: 'ᵈ', e: 'ᵉ', f: 'ᶠ', g: 'ᵍ', h: 'ʰ', i: 'ⁱ', j: 'ʲ',
+  k: 'ᵏ', l: 'ˡ', m: 'ᵐ', n: 'ⁿ', o: 'ᵒ', p: 'ᵖ', r: 'ʳ', s: 'ˢ', t: 'ᵗ', u: 'ᵘ',
+  v: 'ᵛ', w: 'ʷ', x: 'ˣ', y: 'ʸ', z: 'ᶻ',
+  '+': '⁺', '-': '⁻', '−': '⁻',
+};
+
+function toSuperscriptChars(value: string): string {
+  return value.split('').map((ch) => SUPERSCRIPT_CHARS[ch] ?? ch).join('');
+}
+
 // Common collège/lycée chemistry symbols only — deliberately not "any
 // capital letter" to avoid mangling ordinary letter+number text (a course
 // reference, a grade abbreviation) that just happens to be adjacent.
@@ -35,11 +51,21 @@ export function formatMathNotation(text: string): string {
   result = result.replace(new RegExp(`\\b(${ELEMENT_PATTERN})(\\d+)([+-])`, 'g'), (_match, element: string, digits: string, sign: string) => `${element}${toSuperscript(digits)}${sign === '+' ? '⁺' : '⁻'}`);
   result = result.replace(new RegExp(`\\b(${ELEMENT_PATTERN})([+-])(?=\\b)`, 'g'), (_match, element: string, sign: string) => `${element}${sign === '+' ? '⁺' : '⁻'}`);
 
-  // Molecular formulas: H2O -> H₂O, CO2 -> CO₂
-  result = result.replace(new RegExp(`\\b(${ELEMENT_PATTERN})(\\d+)`, 'g'), (_match, element: string, digits: string) => `${element}${toSubscript(digits)}`);
+  // Molecular formulas, including multi-element ones: H2O -> H₂O,
+  // CO2 -> CO₂ (a run of element+digit segments has to be matched as one
+  // block — matching "O2" on its own inside "CO2" fails since there's no
+  // word boundary between "C" and "O").
+  result = result.replace(
+    new RegExp(`\\b(?:(?:${ELEMENT_PATTERN})\\d*)+\\b`, 'g'),
+    (formula: string) => formula.replace(/([A-Z][a-z]?)(\d*)/g, (_seg, element: string, digits: string) => `${element}${digits ? toSubscript(digits) : ''}`),
+  );
 
   // Simple inline fractions: 3/2 -> ³⁄₂
   result = result.replace(/\b(\d{1,3})\/(\d{1,3})\b/g, (_match, num: string, den: string) => `${toSuperscript(num)}⁄${toSubscript(den)}`);
+
+  // Caret exponents: a^n -> aⁿ, a^(n+p) -> aⁿ⁺ᵖ, a^(-n) -> a⁻ⁿ, (a/b)^n -> (a/b)ⁿ
+  result = result.replace(/\^\(([a-zA-Z0-9+\-−]+)\)/g, (_match, exponent: string) => toSuperscriptChars(exponent));
+  result = result.replace(/\^(-?[a-zA-Z0-9]+)/g, (_match, exponent: string) => toSuperscriptChars(exponent));
 
   return result;
 }
