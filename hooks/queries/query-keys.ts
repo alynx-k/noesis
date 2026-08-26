@@ -8,6 +8,9 @@ export const queryKeys = {
     forGrade: (grade: GradeId | null, serie: SeriesId | null) => ['courses', grade, serie] as const,
     detail: (courseId: string) => ['course', courseId] as const,
   },
+  chapters: {
+    forGrade: (grade: GradeId | null, serie: SeriesId | null) => ['chapters', grade, serie] as const,
+  },
   progress: {
     forCourse: (userId: string | undefined, courseId: string) => ['progress', userId, courseId] as const,
     all: (userId: string | undefined) => ['progress', userId] as const,

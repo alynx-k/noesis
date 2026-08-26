@@ -1,26 +1,39 @@
-import { Link, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
+import { LessonCoverBanner } from '@/components/lesson-cover-banner';
+import { ScreenBackground } from '@/components/screen-background';
 import { SubjectPlacementPrompt } from '@/components/subject-placement-prompt';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Screen } from '@/components/ui/screen';
+import { ProgressRing } from '@/components/ui/progress-ring';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { SUBJECT_LABELS } from '@/constants/courses';
-import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
+import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
 import { useProgress } from '@/context/progress';
-import { useCoursesForGrade } from '@/hooks/queries/use-courses';
+import { useChaptersForGrade, useCoursesForGrade } from '@/hooks/queries/use-courses';
+import { useCourseHistory } from '@/hooks/queries/use-course-history';
+import { useFlashcardDecks } from '@/hooks/queries/use-flashcards';
 import { usePlacementStatus } from '@/hooks/queries/use-placement';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useNextReviewDates } from '@/hooks/queries/use-spaced-repetition';
+import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary } from '@/lib/courses';
+
+// Cycled per chapter row so a long chapter list doesn't read as one flat
+// color block — same palette family as the rest of the app's status colors,
+// not invented just for this screen.
+const CHAPTER_COLORS = [STATUS_COLORS.info, '#8B6FF0', FEEDBACK_COLORS.correct, STATUS_COLORS.warning, STATUS_COLORS.error, '#1FA6B0'];
 
 function subjectLabel(subject: string): string {
   return SUBJECT_LABELS[subject as keyof typeof SUBJECT_LABELS] ?? subject;
@@ -33,30 +46,199 @@ export default function SubjectScreen() {
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
   const coursesQuery = useCoursesForGrade();
+  const chaptersQuery = useChaptersForGrade();
   const profileQuery = useProfile();
   const placementQuery = usePlacementStatus(disciplineId);
+  const streakQuery = useStreak();
+  const historyQuery = useCourseHistory();
+  const decksQuery = useFlashcardDecks();
   const [lockedInfo, setLockedInfo] = useState<CourseSummary | null>(null);
 
-  const courses = coursesQuery.data ?? [];
-  const coursesForDiscipline = discipline ? courses.filter((course) => discipline.subjects.includes(course.subject)) : [];
+  const courses = useMemo(() => coursesQuery.data ?? [], [coursesQuery.data]);
+  const coursesForDiscipline = useMemo(
+    () => (discipline ? courses.filter((course) => discipline.subjects.includes(course.subject)) : []),
+    [courses, discipline],
+  );
   const courseIds = coursesForDiscipline.map((course) => course.id);
   const reviewDatesQuery = useNextReviewDates(courseIds);
   const nextReviewDates = reviewDatesQuery.data ?? {};
 
+  const chaptersForDiscipline = useMemo(
+    () => (discipline ? (chaptersQuery.data ?? []).filter((chapter) => discipline.subjects.includes(chapter.subject)) : []),
+    [chaptersQuery.data, discipline],
+  );
+  const hasChapters = chaptersForDiscipline.length > 0;
+
+  const historySection = historyQuery.data?.find((section) => section.discipline.id === disciplineId);
+  const attemptedEntries = (historySection?.courses ?? []).filter((entry) => entry.total > 0);
+  const totalDeckCards = (decksQuery.data ?? []).reduce((sum, deck) => sum + deck.cardCount, 0);
+
   const styles = StyleSheet.create({
-    title: {
-      ...TYPOGRAPHY.largeTitle,
-      color: COLORS.text,
-      marginBottom: SPACING.section,
+    safeArea: {
+      flex: 1,
     },
-    section: {
+    scrollContent: {
+      paddingBottom: 40,
+    },
+    header: {
+      paddingHorizontal: SPACING.screen,
+      paddingTop: SPACING.tight,
+      paddingBottom: 56,
+      borderBottomLeftRadius: 32,
+      borderBottomRightRadius: 32,
+    },
+    headerTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: SPACING.element,
     },
+    headerButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backIcon: {
+      transform: [{ scaleX: -1 }],
+    },
+    streakPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+    streakText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    headerMain: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.element,
+    },
+    headerIconBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      ...TYPOGRAPHY.title,
+      fontSize: 22,
+      color: '#FFFFFF',
+    },
+    headerSubtitle: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.85)',
+      marginTop: 2,
+    },
+    progressCard: {
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      marginHorizontal: SPACING.screen,
+      marginTop: -40,
+      marginBottom: SPACING.section,
+      ...cardBorder(COLORS),
+    },
+    progressTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: SPACING.element,
+    },
+    progressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+    },
+    ringBlock: {
+      alignItems: 'center',
+      width: 96,
+    },
+    ringOverlay: {
+      position: 'absolute',
+      alignItems: 'center',
+    },
+    ringPercent: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    ringLabel: {
+      fontSize: 11,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+      marginTop: 4,
+    },
+    statsGrid: {
+      flex: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    statItem: {
+      width: '50%',
+      alignItems: 'center',
+      paddingVertical: SPACING.tight,
+    },
+    statBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    statNumber: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    statLabel: {
+      fontSize: 10.5,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+    },
+    section: {
+      paddingHorizontal: SPACING.screen,
+      marginBottom: SPACING.section,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: SPACING.tight,
+    },
     sectionTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    sectionSeeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    sectionSeeAllText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.accent,
+    },
+    subjectLabel: {
       ...TYPOGRAPHY.label,
       color: COLORS.mutedText,
       textTransform: 'uppercase',
       marginBottom: SPACING.tight,
+      marginTop: SPACING.tight,
     },
     card: {
       backgroundColor: COLORS.surface,
@@ -64,6 +246,163 @@ export default function SubjectScreen() {
       padding: SPACING.element,
       marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
+    },
+    chapterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.element,
+    },
+    chapterIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chapterBody: {
+      flex: 1,
+    },
+    chapterTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 6,
+    },
+    chapterProgressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+    },
+    chapterTrack: {
+      flex: 1,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: COLORS.border,
+      overflow: 'hidden',
+    },
+    chapterFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    chapterPercent: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.mutedText,
+      width: 34,
+      textAlign: 'right',
+    },
+    continueCard: {
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.tight,
+      ...cardBorder(COLORS),
+    },
+    continueRow: {
+      flexDirection: 'row',
+      gap: SPACING.element,
+    },
+    continueBody: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    continueBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: COLORS.accentSoft,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 3,
+      paddingHorizontal: 10,
+      marginBottom: 6,
+    },
+    continueBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: COLORS.accent,
+    },
+    continueTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 8,
+    },
+    continueFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 'auto',
+    },
+    continuePercent: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.accent,
+    },
+    continueButton: {
+      backgroundColor: COLORS.accent,
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    continueButtonText: {
+      color: COLORS.accentText,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    resourceGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.tight,
+    },
+    resourceCard: {
+      width: '47%',
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      ...cardBorder(COLORS),
+    },
+    resourceCardDisabled: {
+      opacity: 0.55,
+    },
+    resourceIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.tight,
+    },
+    resourceLabel: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 2,
+    },
+    resourceCount: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+    },
+    exerciseRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      paddingVertical: SPACING.tight,
+    },
+    exerciseIconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    exerciseText: {
+      flex: 1,
+    },
+    exerciseTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    exercisePercent: {
+      fontSize: 15,
+      fontWeight: '700',
     },
     cardHeader: {
       flexDirection: 'row',
@@ -154,116 +493,375 @@ export default function SubjectScreen() {
 
   if (!discipline) {
     return (
-      <Screen>
-        <ErrorState title="Matière introuvable" />
-      </Screen>
+      <ScreenBackground>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ErrorState title="Matière introuvable" />
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
   if (coursesQuery.isPending || progressLoading) {
     return (
-      <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
-        <ThemedText style={styles.title}>{discipline.label}</ThemedText>
-        <SkeletonList count={6} cardHeight={64} />
-      </Screen>
+      <ScreenBackground>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <View style={styles.section}>
+            <ThemedText style={[TYPOGRAPHY.largeTitle, { color: COLORS.text, marginBottom: SPACING.section }]}>
+              {discipline.label}
+            </ThemedText>
+            <SkeletonList count={6} cardHeight={64} />
+          </View>
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
   if (coursesQuery.isError) {
     return (
-      <Screen>
-        <ErrorState
-          title="Impossible de charger les cours"
-          description="Vérifie ta connexion et réessaie."
-          onRetry={() => coursesQuery.refetch()}
-        />
-      </Screen>
+      <ScreenBackground>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ErrorState
+            title="Impossible de charger les cours"
+            description="Vérifie ta connexion et réessaie."
+            onRetry={() => coursesQuery.refetch()}
+          />
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
-  // "Où en es-tu ?" — shown the first time this discipline is opened
-  // (placementQuery.data.handled false), once we actually have a grade to
-  // fetch courses against and the discipline's course list loaded.
   const showPlacementPrompt =
     placementQuery.isSuccess && !placementQuery.data.handled && !!profileQuery.data?.grade;
 
+  const totalCourses = coursesForDiscipline.length;
+  const completedCount = coursesForDiscipline.filter((course) => completedCourseIds.includes(course.id)).length;
+  const overallProgress = totalCourses > 0 ? Math.round((completedCount / totalCourses) * 100) : 0;
+
+  const chaptersCompleted = chaptersForDiscipline.filter((chapter) => {
+    const chapterCourses = coursesForDiscipline.filter((course) => course.chapterId === chapter.id);
+    return chapterCourses.length > 0 && chapterCourses.every((course) => completedCourseIds.includes(course.id));
+  }).length;
+
+  const averageScore =
+    attemptedEntries.length > 0
+      ? Math.round(attemptedEntries.reduce((sum, entry) => sum + entry.goodPercentage, 0) / attemptedEntries.length)
+      : null;
+
+  // First course the student hasn't finished yet, in curriculum order,
+  // skipping anything still locked behind a prerequisite.
+  let nextCourse: CourseSummary | null = null;
+  for (const course of coursesForDiscipline) {
+    if (completedCourseIds.includes(course.id)) {
+      continue;
+    }
+    const prerequisiteSatisfied =
+      course.requiresCourseId === null ||
+      completedCourseIds.includes(course.requiresCourseId) ||
+      nextReviewDates[course.requiresCourseId] != null;
+    if (prerequisiteSatisfied) {
+      nextCourse = course;
+      break;
+    }
+  }
+  const nextCourseHistory = nextCourse ? historySection?.courses.find((entry) => entry.courseId === nextCourse!.id) : undefined;
+
+  const recentExercises = attemptedEntries.slice(0, 3);
+
   return (
-    <Screen scroll contentContainerStyle={{ paddingBottom: 40 }}>
-      <Animated.View entering={FadeIn.duration(400)}>
-      <ThemedText style={styles.title}>{discipline.label}</ThemedText>
+    <ScreenBackground color="#FAF8FC">
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Animated.View entering={FadeIn.duration(400)}>
+            <LinearGradient
+              colors={discipline.badgeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.header, { backgroundColor: discipline.badgeGradient[0] }]}>
+              <View style={styles.headerTopRow}>
+                <BouncyPressable style={styles.headerButton} onPress={() => router.back()} hitSlop={8}>
+                  <IconSymbol name="chevron.right" size={18} color="#FFFFFF" style={styles.backIcon} />
+                </BouncyPressable>
+                <View style={styles.streakPill}>
+                  <ThemedText style={{ fontSize: 14 }}>🔥</ThemedText>
+                  <ThemedText style={styles.streakText}>{streakQuery.data?.streak ?? 0}</ThemedText>
+                </View>
+                {/* Decorative for now — no per-discipline settings/menu exists yet. */}
+                <BouncyPressable style={styles.headerButton} hitSlop={8}>
+                  <Ionicons name="ellipsis-horizontal" size={18} color="#FFFFFF" />
+                </BouncyPressable>
+              </View>
+              <View style={styles.headerMain}>
+                <View style={styles.headerIconBadge}>
+                  <IconSymbol name={discipline.icon} size={26} color="#FFFFFF" />
+                </View>
+                <View>
+                  <ThemedText style={styles.headerTitle}>{discipline.label}</ThemedText>
+                  <ThemedText style={styles.headerSubtitle}>Apprends, révise, progresse 🚀</ThemedText>
+                </View>
+              </View>
+            </LinearGradient>
 
-      {discipline.subjects.map((subject) => {
-        const coursesForSubject = coursesForDiscipline.filter((course) => course.subject === subject);
-        if (coursesForSubject.length === 0) {
-          return null;
-        }
-
-        return (
-          <View key={subject} style={styles.section}>
-            {discipline.subjects.length > 1 ? (
-              <ThemedText style={styles.sectionTitle}>{subjectLabel(subject)}</ThemedText>
-            ) : null}
-            {coursesForSubject.map((course) => {
-              // A course also counts as unlocked when its prerequisite already has
-              // spaced-repetition state, which is how auto-placement grants access
-              // to lessons a student already saw in class without marking them
-              // "completed" one by one.
-              const prerequisiteSatisfied =
-                course.requiresCourseId === null ||
-                completedCourseIds.includes(course.requiresCourseId) ||
-                nextReviewDates[course.requiresCourseId] != null;
-              const isLocked = !prerequisiteSatisfied;
-
-              if (isLocked) {
-                return (
-                  <BouncyPressable
-                    key={course.id}
-                    style={[styles.card, styles.cardLocked]}
-                    onPress={() => setLockedInfo(course)}>
-                    <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
-                    <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
-                  </BouncyPressable>
-                );
-              }
-
-              const isCompleted = completedCourseIds.includes(course.id);
-              const nextReviewDate = nextReviewDates[course.id];
-
-              return (
-                <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
-                  <BouncyPressable style={styles.card}>
-                    <View style={styles.cardHeader}>
-                      <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
-                      {isCompleted ? (
-                        <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
-                      ) : null}
+            <View style={styles.progressCard}>
+              <ThemedText style={styles.progressTitle}>Ma progression</ThemedText>
+              <View style={styles.progressRow}>
+                <View style={styles.ringBlock}>
+                  <ProgressRing progress={overallProgress} size={84} strokeWidth={8} color={discipline.solidColor} trackColor={COLORS.border} />
+                  <View style={styles.ringOverlay}>
+                    <ThemedText style={styles.ringPercent}>{overallProgress}%</ThemedText>
+                  </View>
+                  <ThemedText style={styles.ringLabel}>Progression générale</ThemedText>
+                </View>
+                <View style={styles.statsGrid}>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statBadge, { backgroundColor: discipline.solidColor }]}>
+                      <Ionicons name="book" size={16} color="#FFFFFF" />
                     </View>
-                    {nextReviewDate ? (
-                      <ThemedText style={styles.cardSubtitle}>
-                        Prochaine révision :{' '}
-                        {nextReviewDate.toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </ThemedText>
-                    ) : null}
-                  </BouncyPressable>
-                </Link>
-              );
-            })}
-          </View>
-        );
-      })}
+                    <ThemedText style={styles.statNumber}>
+                      {hasChapters ? `${chaptersCompleted}/${chaptersForDiscipline.length}` : `${completedCount}/${totalCourses}`}
+                    </ThemedText>
+                    <ThemedText style={styles.statLabel}>{hasChapters ? 'Chapitres complétés' : 'Leçons complétées'}</ThemedText>
+                  </View>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.info }]}>
+                      <Ionicons name="eye" size={16} color="#FFFFFF" />
+                    </View>
+                    <ThemedText style={styles.statNumber}>{attemptedEntries.length}</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons vues</ThemedText>
+                  </View>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statBadge, { backgroundColor: FEEDBACK_COLORS.correct }]}>
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                    </View>
+                    <ThemedText style={styles.statNumber}>{averageScore !== null ? `${averageScore}%` : '—'}</ThemedText>
+                    <ThemedText style={styles.statLabel}>Score moyen aux exercices</ThemedText>
+                  </View>
+                  <View style={styles.statItem}>
+                    <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.warning }]}>
+                      <Ionicons name="flag" size={16} color="#FFFFFF" />
+                    </View>
+                    <ThemedText style={styles.statNumber}>{totalCourses - completedCount}</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons restantes</ThemedText>
+                  </View>
+                </View>
+              </View>
+            </View>
 
-      {coursesForDiscipline.length === 0 ? (
-        <EmptyState
-          icon="book-outline"
-          title="Aucun cours disponible"
-          description="Rien n'est encore disponible pour ta classe dans cette matière."
-        />
-      ) : null}
-      </Animated.View>
+            {hasChapters ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={styles.sectionTitle}>Chapitres</ThemedText>
+                </View>
+                {chaptersForDiscipline.map((chapter, index) => {
+                  const chapterCourses = coursesForDiscipline.filter((course) => course.chapterId === chapter.id);
+                  const chapterCompleted = chapterCourses.filter((course) => completedCourseIds.includes(course.id)).length;
+                  const chapterProgress = chapterCourses.length > 0 ? Math.round((chapterCompleted / chapterCourses.length) * 100) : 0;
+                  const color = CHAPTER_COLORS[index % CHAPTER_COLORS.length];
+
+                  return (
+                    <BouncyPressable
+                      key={chapter.id}
+                      style={styles.card}
+                      onPress={() => router.push({ pathname: '/chapter/[chapterId]', params: { chapterId: chapter.id } })}>
+                      <View style={styles.chapterRow}>
+                        <View style={[styles.chapterIcon, { backgroundColor: color }]}>
+                          <IconSymbol name={discipline.icon} size={20} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.chapterBody}>
+                          <ThemedText style={styles.chapterTitle}>
+                            {index + 1}. {chapter.title}
+                          </ThemedText>
+                          <View style={styles.chapterProgressRow}>
+                            <View style={styles.chapterTrack}>
+                              <View style={[styles.chapterFill, { width: `${chapterProgress}%`, backgroundColor: color }]} />
+                            </View>
+                            <ThemedText style={styles.chapterPercent}>{chapterProgress}%</ThemedText>
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.mutedText} />
+                      </View>
+                    </BouncyPressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.section}>
+                {discipline.subjects.map((subject) => {
+                  const coursesForSubject = coursesForDiscipline.filter((course) => course.subject === subject);
+                  if (coursesForSubject.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <View key={subject}>
+                      {discipline.subjects.length > 1 ? (
+                        <ThemedText style={styles.subjectLabel}>{subjectLabel(subject)}</ThemedText>
+                      ) : null}
+                      {coursesForSubject.map((course) => {
+                        const prerequisiteSatisfied =
+                          course.requiresCourseId === null ||
+                          completedCourseIds.includes(course.requiresCourseId) ||
+                          nextReviewDates[course.requiresCourseId] != null;
+                        const isLocked = !prerequisiteSatisfied;
+
+                        if (isLocked) {
+                          return (
+                            <BouncyPressable
+                              key={course.id}
+                              style={[styles.card, styles.cardLocked]}
+                              onPress={() => setLockedInfo(course)}>
+                              <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
+                              <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
+                            </BouncyPressable>
+                          );
+                        }
+
+                        const isCompleted = completedCourseIds.includes(course.id);
+                        const nextReviewDate = nextReviewDates[course.id];
+
+                        return (
+                          <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
+                            <BouncyPressable style={styles.card}>
+                              <View style={styles.cardHeader}>
+                                <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
+                                {isCompleted ? (
+                                  <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
+                                ) : null}
+                              </View>
+                              {nextReviewDate ? (
+                                <ThemedText style={styles.cardSubtitle}>
+                                  Prochaine révision :{' '}
+                                  {nextReviewDate.toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                  })}
+                                </ThemedText>
+                              ) : null}
+                            </BouncyPressable>
+                          </Link>
+                        );
+                      })}
+                    </View>
+                  );
+                })}
+
+                {coursesForDiscipline.length === 0 ? (
+                  <EmptyState
+                    icon="book-outline"
+                    title="Aucun cours disponible"
+                    description="Rien n'est encore disponible pour ta classe dans cette matière."
+                  />
+                ) : null}
+              </View>
+            )}
+
+            {nextCourse ? (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Continuer à apprendre</ThemedText>
+                <View style={{ height: SPACING.tight }} />
+                <View style={styles.continueCard}>
+                  <View style={styles.continueRow}>
+                    <LessonCoverBanner
+                      courseId={nextCourse.id}
+                      icon={discipline.icon}
+                      cardGradient={discipline.cardGradient}
+                      badgeGradient={discipline.badgeGradient}
+                    />
+                    <View style={styles.continueBody}>
+                      <View style={styles.continueBadge}>
+                        <ThemedText style={styles.continueBadgeText}>
+                          {nextCourseHistory && nextCourseHistory.total > 0 ? 'Leçon en cours' : 'Prochaine leçon'}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={styles.continueTitle} numberOfLines={2}>
+                        {nextCourse.title}
+                      </ThemedText>
+                      <View style={styles.continueFooter}>
+                        <ThemedText style={styles.continuePercent}>
+                          {nextCourseHistory ? `${nextCourseHistory.goodPercentage}%` : '0%'}
+                        </ThemedText>
+                        <Link href={{ pathname: '/course/[id]', params: { id: nextCourse.id } }} asChild>
+                          <BouncyPressable style={styles.continueButton}>
+                            <ThemedText style={styles.continueButtonText}>Continuer</ThemedText>
+                          </BouncyPressable>
+                        </Link>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.section}>
+              <ThemedText style={styles.sectionTitle}>Ressources</ThemedText>
+              <View style={{ height: SPACING.tight }} />
+              <View style={styles.resourceGrid}>
+                <BouncyPressable style={styles.resourceCard} onPress={() => router.push('/flashcards')}>
+                  <View style={[styles.resourceIcon, { backgroundColor: STATUS_COLORS.info }]}>
+                    <Ionicons name="document-text" size={18} color="#FFFFFF" />
+                  </View>
+                  <ThemedText style={styles.resourceLabel}>Fiches de révision</ThemedText>
+                  <ThemedText style={styles.resourceCount}>{totalDeckCards} fiches (toutes matières)</ThemedText>
+                </BouncyPressable>
+                <View style={[styles.resourceCard, styles.resourceCardDisabled]}>
+                  <View style={[styles.resourceIcon, { backgroundColor: FEEDBACK_COLORS.correct }]}>
+                    <Ionicons name="list" size={18} color="#FFFFFF" />
+                  </View>
+                  <ThemedText style={styles.resourceLabel}>Quiz</ThemedText>
+                  <ThemedText style={styles.resourceCount}>Bientôt disponible</ThemedText>
+                </View>
+                <View style={[styles.resourceCard, styles.resourceCardDisabled]}>
+                  <View style={[styles.resourceIcon, { backgroundColor: '#8B6FF0' }]}>
+                    <Ionicons name="play" size={18} color="#FFFFFF" />
+                  </View>
+                  <ThemedText style={styles.resourceLabel}>Vidéos</ThemedText>
+                  <ThemedText style={styles.resourceCount}>Bientôt disponible</ThemedText>
+                </View>
+                <View style={[styles.resourceCard, styles.resourceCardDisabled]}>
+                  <View style={[styles.resourceIcon, { backgroundColor: STATUS_COLORS.warning }]}>
+                    <Ionicons name="download" size={18} color="#FFFFFF" />
+                  </View>
+                  <ThemedText style={styles.resourceLabel}>Documents</ThemedText>
+                  <ThemedText style={styles.resourceCount}>Bientôt disponible</ThemedText>
+                </View>
+              </View>
+            </View>
+
+            {recentExercises.length > 0 ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={styles.sectionTitle}>Derniers exercices</ThemedText>
+                  <BouncyPressable style={styles.sectionSeeAll} onPress={() => router.push('/course-history')}>
+                    <ThemedText style={styles.sectionSeeAllText}>Voir tout</ThemedText>
+                    <Ionicons name="chevron-forward" size={13} color={COLORS.accent} />
+                  </BouncyPressable>
+                </View>
+                <View style={styles.card}>
+                  {recentExercises.map((entry) => {
+                    const isFull = entry.goodPercentage >= 100;
+                    return (
+                      <View key={entry.courseId} style={styles.exerciseRow}>
+                        <View
+                          style={[styles.exerciseIconBadge, { backgroundColor: isFull ? '#DFF4E7' : '#FCE7CF' }]}>
+                          <Ionicons name={isFull ? 'checkmark-circle' : 'time'} size={16} color={isFull ? '#22A55D' : '#F5893A'} />
+                        </View>
+                        <View style={styles.exerciseText}>
+                          <ThemedText style={styles.exerciseTitle} numberOfLines={1}>
+                            {entry.courseTitle}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={[styles.exercisePercent, { color: isFull ? '#22A55D' : '#F5893A' }]}>
+                          {entry.goodPercentage}%
+                        </ThemedText>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
 
       {lockedInfo ? (
         <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(150)} style={styles.lockDialogBackdrop}>
@@ -294,6 +892,6 @@ export default function SubjectScreen() {
           onDone={() => placementQuery.refetch()}
         />
       ) : null}
-    </Screen>
+    </ScreenBackground>
   );
 }

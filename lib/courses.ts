@@ -7,6 +7,23 @@ export type CourseSummary = {
   title: string;
   orderIndex: number;
   requiresCourseId: string | null;
+  // Not every grade/subject has a curated breakdown yet — null means "no
+  // chapter assigned", and the subject screen falls back to a flat list for
+  // that subject rather than a broken/half-empty chapter section.
+  chapterId: string | null;
+};
+
+// A named group of courses within one grade/serie/subject, with its own
+// aggregate progress on the subject screen — see
+// supabase/migrations/20260826160000_chapters_table_and_2nde_hg_chapters.sql
+// for the first curated breakdown (Seconde Histoire-Géographie).
+export type Chapter = {
+  id: string;
+  grade: string;
+  serie: string | null;
+  subject: string;
+  title: string;
+  orderIndex: number;
 };
 
 export type ExerciseQuestion = {
@@ -91,7 +108,7 @@ export async function getCourseTitle(courseId: string): Promise<string> {
 export async function getCoursesForGrade(grade: string, serie: string | null = null): Promise<CourseSummary[]> {
   let query = supabase
     .from('courses')
-    .select('id, grade, subject, title, order_index, requires_course_id')
+    .select('id, grade, subject, title, order_index, requires_course_id, chapter_id')
     .eq('grade', grade);
   query = serie ? query.eq('serie', serie) : query.is('serie', null);
 
@@ -109,6 +126,28 @@ export async function getCoursesForGrade(grade: string, serie: string | null = n
     title: row.title as string,
     orderIndex: row.order_index as number,
     requiresCourseId: row.requires_course_id as string | null,
+    chapterId: row.chapter_id as string | null,
+  }));
+}
+
+export async function getChaptersForGrade(grade: string, serie: string | null = null): Promise<Chapter[]> {
+  let query = supabase.from('chapters').select('id, grade, serie, subject, title, order_index').eq('grade', grade);
+  query = serie ? query.eq('serie', serie) : query.is('serie', null);
+
+  const { data, error } = await query.order('subject', { ascending: true }).order('order_index', { ascending: true });
+
+  if (error || !data) {
+    console.error('Failed to load chapters for grade:', error);
+    return [];
+  }
+
+  return data.map((row) => ({
+    id: row.id as string,
+    grade: row.grade as string,
+    serie: row.serie as string | null,
+    subject: row.subject as string,
+    title: row.title as string,
+    orderIndex: row.order_index as number,
   }));
 }
 

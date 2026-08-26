@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/hooks/queries/query-keys';
 import { CONTENT_STALE_TIME } from '@/lib/query-client';
-import { CourseDetail, getCoursesForGrade, getOrGenerateCourse } from '@/lib/courses';
+import { CourseDetail, getChaptersForGrade, getCoursesForGrade, getOrGenerateCourse } from '@/lib/courses';
 import { useProfile } from '@/hooks/queries/use-profile';
 
 export function useCoursesForGrade() {
@@ -13,6 +13,21 @@ export function useCoursesForGrade() {
   return useQuery({
     queryKey: queryKeys.courses.forGrade(grade, serie),
     queryFn: () => getCoursesForGrade(grade as string, serie),
+    enabled: !!grade,
+  });
+}
+
+// Empty for any grade/subject without a curated chapter breakdown yet — see
+// getChaptersForGrade. Callers should fall back to a flat course list rather
+// than treating an empty result as an error.
+export function useChaptersForGrade() {
+  const profileQuery = useProfile();
+  const grade = profileQuery.data?.grade ?? null;
+  const serie = profileQuery.data?.serie ?? null;
+
+  return useQuery({
+    queryKey: queryKeys.chapters.forGrade(grade, serie),
+    queryFn: () => getChaptersForGrade(grade as string, serie),
     enabled: !!grade,
   });
 }
