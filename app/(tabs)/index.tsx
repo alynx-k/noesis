@@ -16,7 +16,6 @@ import { ScreenBackground } from '@/components/screen-background';
 import { ErrorState } from '@/components/ui/error-state';
 import { Halo } from '@/components/ui/halo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ProgressRing } from '@/components/ui/progress-ring';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { DISCIPLINES, Discipline, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
@@ -264,27 +263,6 @@ export default function HomeScreen() {
       color: COLORS.text,
       marginBottom: 8,
     },
-    progressRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    progressTrack: {
-      flex: 1,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: 'rgba(255,255,255,0.55)',
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    progressLabel: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: COLORS.mutedText,
-    },
     subjectBadge: {
       alignSelf: 'flex-start',
       backgroundColor: COLORS.surface,
@@ -377,9 +355,6 @@ export default function HomeScreen() {
   );
 
   const courses = coursesQuery.data ?? [];
-  const totalCourses = courses.length;
-  const completedCount = courses.filter((course) => completedCourseIds.includes(course.id)).length;
-  const overallProgress = totalCourses > 0 ? Math.round((completedCount / totalCourses) * 100) : 0;
   const discCompletionRates = visibleDisciplines.map((discipline) => disciplineProgress(discipline, courses, completedCourseIds));
   const inProgressCount = discCompletionRates.filter((rate) => rate !== null && rate > 0 && rate < 100).length;
 
@@ -491,7 +466,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.subjectGrid}>
-              {visibleDisciplines.map((discipline, index) => {
+              {visibleDisciplines.map((discipline) => {
                 if (!discipline.available) {
                   return (
                     <View key={discipline.id} style={styles.subjectGridItem}>
@@ -514,8 +489,6 @@ export default function HomeScreen() {
                   );
                 }
 
-                const rate = discCompletionRates[index];
-
                 return (
                   <View key={discipline.id} style={styles.subjectGridItem}>
                     <Link href={{ pathname: '/subject/[disciplineId]', params: { disciplineId: discipline.id } }} asChild>
@@ -533,19 +506,6 @@ export default function HomeScreen() {
                           <ThemedText style={styles.subjectCardTitle} numberOfLines={2}>
                             {discipline.label}
                           </ThemedText>
-                          <View style={styles.progressRow}>
-                            <View style={styles.progressTrack}>
-                              {rate !== null ? (
-                                <View
-                                  style={[
-                                    styles.progressFill,
-                                    { width: `${rate}%`, backgroundColor: discipline.solidColor },
-                                  ]}
-                                />
-                              ) : null}
-                            </View>
-                            <ThemedText style={styles.progressLabel}>{rate !== null ? `${rate} %` : '—'}</ThemedText>
-                          </View>
                         </LinearGradient>
                       </BouncyPressable>
                     </Link>
@@ -555,14 +515,6 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.statsBar}>
-              <View style={styles.statItem}>
-                <ProgressRing progress={overallProgress} size={52} strokeWidth={6} color="#3B82F6" trackColor="#D6D0EE" />
-                <View>
-                  <ThemedText style={styles.statNumber}>{overallProgress}%</ThemedText>
-                  <ThemedText style={styles.statLabel}>Progression{'\n'}globale</ThemedText>
-                </View>
-              </View>
-              <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <ThemedText style={styles.statEmoji}>🔥</ThemedText>
                 <View>
