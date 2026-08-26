@@ -25,6 +25,19 @@ export async function finishFocusSession(sessionId: string, succeeded: boolean):
   }
 }
 
+// Total minutes across every successful focus session — only sessions that
+// actually finished count, same convention as getSuccessfulSessionCount and
+// getLaunches (an abandoned session isn't real focus time).
+export async function getTotalLearningMinutes(): Promise<number> {
+  const { data, error } = await supabase.from('focus_sessions').select('duration_minutes').eq('succeeded', true);
+
+  if (error || !data) {
+    console.error('Failed to load total learning minutes:', error);
+    return 0;
+  }
+  return data.reduce((sum, row) => sum + (row.duration_minutes as number), 0);
+}
+
 export async function getSuccessfulSessionCount(): Promise<number> {
   const { count, error } = await supabase
     .from('focus_sessions')

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/queries/query-keys';
 import { useAuth } from '@/context/auth';
 import { getAtlasOverview } from '@/lib/atlas';
-import { getLaunches, getSuccessfulSessionCount } from '@/lib/focus-session';
+import { getLaunches, getSuccessfulSessionCount, getTotalLearningMinutes } from '@/lib/focus-session';
 
 export function useAtlasOverview() {
   const { user } = useAuth();
@@ -31,6 +31,16 @@ export function useSuccessfulSessionCount() {
   return useQuery({
     queryKey: ['successful-session-count', user?.id],
     queryFn: getSuccessfulSessionCount,
+    enabled: !!user,
+  });
+}
+
+export function useTotalLearningMinutes() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['total-learning-minutes', user?.id],
+    queryFn: getTotalLearningMinutes,
     enabled: !!user,
   });
 }
