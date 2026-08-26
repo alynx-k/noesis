@@ -154,19 +154,20 @@ export default function SubjectScreen() {
     },
     ringBlock: {
       alignItems: 'center',
-      width: 96,
+      width: 68,
+      flexShrink: 0,
     },
     ringOverlay: {
       position: 'absolute',
       alignItems: 'center',
     },
     ringPercent: {
-      fontSize: 20,
+      fontSize: 15,
       fontWeight: '800',
       color: COLORS.text,
     },
     ringLabel: {
-      fontSize: 11,
+      fontSize: 9,
       color: COLORS.mutedText,
       textAlign: 'center',
       marginTop: 4,
@@ -174,28 +175,34 @@ export default function SubjectScreen() {
     statsGrid: {
       flex: 1,
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'center',
     },
     statItem: {
-      width: '50%',
+      flex: 1,
       alignItems: 'center',
-      paddingVertical: SPACING.tight,
+    },
+    statDivider: {
+      width: StyleSheet.hairlineWidth,
+      alignSelf: 'stretch',
+      backgroundColor: COLORS.border,
+      marginHorizontal: 4,
     },
     statBadge: {
-      width: 32,
-      height: 32,
-      borderRadius: 11,
+      width: 26,
+      height: 26,
+      borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 4,
     },
     statNumber: {
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: '800',
       color: COLORS.text,
     },
     statLabel: {
-      fontSize: 10.5,
+      fontSize: 9,
+      lineHeight: 11,
       color: COLORS.mutedText,
       textAlign: 'center',
     },
@@ -602,7 +609,7 @@ export default function SubjectScreen() {
               <ThemedText style={styles.progressTitle}>Ma progression</ThemedText>
               <View style={styles.progressRow}>
                 <View style={styles.ringBlock}>
-                  <ProgressRing progress={overallProgress} size={84} strokeWidth={8} color={discipline.solidColor} trackColor={COLORS.border} />
+                  <ProgressRing progress={overallProgress} size={64} strokeWidth={6} color={discipline.solidColor} trackColor={COLORS.border} />
                   <View style={styles.ringOverlay}>
                     <ThemedText style={styles.ringPercent}>{overallProgress}%</ThemedText>
                   </View>
@@ -611,31 +618,34 @@ export default function SubjectScreen() {
                 <View style={styles.statsGrid}>
                   <View style={styles.statItem}>
                     <View style={[styles.statBadge, { backgroundColor: discipline.solidColor }]}>
-                      <Ionicons name="book" size={16} color="#FFFFFF" />
+                      <Ionicons name="book" size={13} color="#FFFFFF" />
                     </View>
                     <ThemedText style={styles.statNumber}>{`${completedCount}/${totalCourses}`}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Leçons complétées</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons{'\n'}complétées</ThemedText>
                   </View>
+                  <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.info }]}>
-                      <Ionicons name="eye" size={16} color="#FFFFFF" />
+                      <Ionicons name="eye" size={13} color="#FFFFFF" />
                     </View>
                     <ThemedText style={styles.statNumber}>{attemptedEntries.length}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Leçons vues</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons{'\n'}vues</ThemedText>
                   </View>
+                  <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <View style={[styles.statBadge, { backgroundColor: FEEDBACK_COLORS.correct }]}>
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                      <Ionicons name="checkmark-circle" size={13} color="#FFFFFF" />
                     </View>
                     <ThemedText style={styles.statNumber}>{averageScore !== null ? `${averageScore}%` : '—'}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Score moyen aux exercices</ThemedText>
+                    <ThemedText style={styles.statLabel}>Score{'\n'}moyen</ThemedText>
                   </View>
+                  <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.warning }]}>
-                      <Ionicons name="flag" size={16} color="#FFFFFF" />
+                      <Ionicons name="flag" size={13} color="#FFFFFF" />
                     </View>
                     <ThemedText style={styles.statNumber}>{totalCourses - completedCount}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Leçons restantes</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons{'\n'}restantes</ThemedText>
                   </View>
                 </View>
               </View>
