@@ -1,9 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AiTutorChatBody, GENERAL_TUTOR_SUGGESTIONS } from '@/components/ai-tutor-chat';
+import { AiTutorChatBody, HOME_TUTOR_SUGGESTIONS } from '@/components/ai-tutor-chat';
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ChatSidebar } from '@/components/chat-sidebar';
 import { ScreenBackground } from '@/components/screen-background';
@@ -11,7 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonText } from '@/components/ui/skeleton';
-import { RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { GRADIENTS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import {
   useChatMessages,
   useChatSessions,
@@ -20,7 +21,7 @@ import {
   useRenameChatSession,
   useSaveChatMessage,
 } from '@/hooks/queries/use-chat';
-import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ChatMessage, deriveSessionTitle } from '@/lib/chat';
 
 // Wires the reusable chat body to a specific session's persistence: creates
@@ -72,7 +73,12 @@ function ChatSessionView({
     <AiTutorChatBody
       initialMessages={initialMessages}
       onMessage={handleMessage}
-      suggestions={GENERAL_TUTOR_SUGGESTIONS}
+      intro={{
+        title: "Comment puis-je t'aider aujourd'hui ?",
+        subtitle: "Pose une question, demande une explication, de l'aide pour un devoir ou révise un sujet.",
+      }}
+      popularSuggestions={HOME_TUTOR_SUGGESTIONS}
+      onCorrectTextPress={() => router.push('/homework')}
     />
   );
 }
@@ -131,55 +137,49 @@ export default function AiChatScreen() {
     },
     header: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       paddingHorizontal: SPACING.screen,
       paddingTop: SPACING.tight,
-      paddingBottom: SPACING.tight,
+      paddingBottom: SPACING.element,
     },
     headerButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 16,
       backgroundColor: COLORS.surface,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1.5,
-      borderColor: COLORS.borderStrong,
+    },
+    headerIconButtonsRow: {
+      flexDirection: 'row',
+      gap: SPACING.element,
+      paddingTop: 10,
     },
     backIcon: {
       transform: [{ scaleX: -1 }],
     },
-    headerTitle: {
-      ...TYPOGRAPHY.title,
-      color: COLORS.text,
-    },
-    actionsRow: {
-      flexDirection: 'row',
-      gap: SPACING.tight,
-      paddingHorizontal: SPACING.screen,
-      paddingBottom: SPACING.element,
-    },
-    actionCard: {
+    headerCenter: {
       flex: 1,
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      padding: SPACING.element,
-      gap: SPACING.tight,
-      ...cardBorder(COLORS),
+      alignItems: 'center',
     },
-    actionIcon: {
-      width: 32,
-      height: 32,
+    headerBadge: {
+      width: 48,
+      height: 48,
       borderRadius: 16,
-      backgroundColor: COLORS.accentSoft,
       alignItems: 'center',
       justifyContent: 'center',
+      marginBottom: SPACING.tight,
     },
-    actionLabel: {
-      ...TYPOGRAPHY.body,
-      fontWeight: '700',
+    headerTitle: {
+      ...TYPOGRAPHY.title,
+      fontSize: 22,
       color: COLORS.text,
+    },
+    headerSubtitle: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
+      marginTop: 4,
     },
     loadingArea: {
       padding: SPACING.screen,
@@ -193,19 +193,21 @@ export default function AiChatScreen() {
           <BouncyPressable style={styles.headerButton} onPress={() => router.back()} hitSlop={8}>
             <IconSymbol name="chevron.right" size={18} color={COLORS.text} style={styles.backIcon} />
           </BouncyPressable>
-          <ThemedText style={styles.headerTitle}>Assistant IA</ThemedText>
-          <BouncyPressable style={styles.headerButton} onPress={() => setSidebarVisible(true)} hitSlop={8}>
-            <IconSymbol name="line.3.horizontal" size={18} color={COLORS.text} />
-          </BouncyPressable>
-        </View>
-
-        <View style={styles.actionsRow}>
-          <BouncyPressable style={styles.actionCard} onPress={() => router.push('/homework')}>
-            <View style={styles.actionIcon}>
-              <IconSymbol name="doc.text.fill" size={16} color={COLORS.accent} />
-            </View>
-            <ThemedText style={styles.actionLabel}>Devoirs</ThemedText>
-          </BouncyPressable>
+          <View style={styles.headerCenter}>
+            <LinearGradient colors={GRADIENTS.badgeAzure} style={[styles.headerBadge, { backgroundColor: GRADIENTS.badgeAzure[0] }]}>
+              <IconSymbol name="text.bubble.fill" size={22} color="#FFFFFF" />
+            </LinearGradient>
+            <ThemedText style={styles.headerTitle}>Discuter avec l&apos;IA</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>Ton tuteur intelligent, toujours là pour t&apos;aider.</ThemedText>
+          </View>
+          <View style={styles.headerIconButtonsRow}>
+            <BouncyPressable onPress={() => setSidebarVisible(true)} hitSlop={8}>
+              <IconSymbol name="clock.arrow.circlepath" size={22} color={COLORS.text} />
+            </BouncyPressable>
+            <BouncyPressable onPress={() => setSidebarVisible(true)} hitSlop={8}>
+              <IconSymbol name="ellipsis" size={22} color={COLORS.text} />
+            </BouncyPressable>
+          </View>
         </View>
 
         {isResolving ? (

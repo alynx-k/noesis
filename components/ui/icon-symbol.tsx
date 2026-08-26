@@ -54,6 +54,12 @@ const MAPPING = {
   'xmark': 'close',
   'lightbulb.fill': 'lightbulb',
   'crown.fill': 'workspace-premium',
+  'flask.fill': 'science',
+  'clock.arrow.circlepath': 'history',
+  'camera.fill': 'photo-camera',
+  'paperclip': 'attach-file',
+  'mic.fill': 'mic',
+  'chevron.down': 'expand-more',
 } as IconMapping;
 
 /**

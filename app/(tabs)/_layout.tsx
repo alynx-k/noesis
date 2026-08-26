@@ -1,22 +1,30 @@
-import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BLUR } from '@/constants/design';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
 export default function TabsLayout() {
   const COLORS = useThemeColors();
-  const scheme = useColorScheme();
 
   const styles = StyleSheet.create({
+    // Floating rounded "island" bar, not a full-width bar hugging the
+    // screen edges — matches the pastel Home redesign's soft, separated
+    // card language instead of the OS-default docked tab bar.
     tabBar: {
       position: 'absolute',
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: COLORS.border,
-      elevation: 0,
+      left: 16,
+      right: 16,
+      bottom: 16,
+      height: 68,
+      borderRadius: 32,
+      borderTopWidth: 0,
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
     },
     label: {
       fontSize: 11,
@@ -32,9 +40,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: COLORS.mutedText,
         tabBarButton: HapticTab,
         tabBarLabelStyle: styles.label,
-        tabBarBackground: () => (
-          <BlurView intensity={BLUR.standard} tint={scheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-        ),
+        tabBarBackground: () => <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.surface, borderRadius: 32 }]} />,
         tabBarStyle: styles.tabBar,
       }}>
       <Tabs.Screen

@@ -7,7 +7,6 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 const CORRECT_SOUND = require('../assets/sounds/correct.wav');
 const LESSON_COMPLETE_SOUND = require('../assets/sounds/lesson-complete.wav');
 const ACHIEVEMENT_SOUND = require('../assets/sounds/achievement.wav');
-const LAUNCH_SOUND = require('../assets/sounds/launch.wav');
 
 // Without this, iOS mutes app audio whenever the hardware silent switch is
 // on — these are short feedback chimes, not music, so they should still
@@ -47,33 +46,6 @@ function playOnce(source: number, volume: number) {
   }
 }
 
-// createAudioPlayer() returns before its asset is actually loaded (see
-// AudioPlayer.isLoaded in expo-audio's types) — in dev, "loading" is a
-// network fetch of the asset from the Metro bundler. playOnce's
-// create-then-immediately-play pattern is fine for the other three chimes
-// (a few hundred ms of lag before a "ding" is unnoticeable), but it's what
-// made playLaunchSound noticeably lag behind LiftoffSequence's tightly
-// timed 2.2s animation instead of starting with it. This keeps one
-// preloaded player alive and reuses it (seekTo(0) + play()) instead of
-// creating — and re-fetching — a fresh one on every launch.
-let launchPlayer: ReturnType<typeof createAudioPlayer> | null = null;
-
-// Call this as soon as a screen that can trigger playLaunchSound mounts
-// (focus-session.tsx), well before the button that would call it can
-// actually be pressed.
-export function preloadLaunchSound(): void {
-  ensureAudioMode();
-  if (launchPlayer) {
-    return;
-  }
-  try {
-    launchPlayer = createAudioPlayer(LAUNCH_SOUND);
-    launchPlayer.volume = 0.6;
-  } catch (error) {
-    console.error('Failed to preload launch sound:', error);
-  }
-}
-
 // A correct exercise answer — light, doesn't need to grab attention.
 export function playCorrectSound(): void {
   playOnce(CORRECT_SOUND, 0.5);
@@ -88,23 +60,4 @@ export function playLessonCompleteSound(): void {
 // the three, paired with a longer on-screen celebration than the other two.
 export function playAchievementSound(): void {
   playOnce(ACHIEVEMENT_SOUND, 0.7);
-}
-
-// The rocket taking off, when a focus session starts (focus-session.tsx) —
-// a whoosh, not a chime, so it's kept distinct from the other three. Reuses
-// the preloaded player (see preloadLaunchSound) rather than playOnce's
-// create-fresh-player pattern, which would reintroduce the exact load
-// latency preloading exists to avoid.
-export function playLaunchSound(): void {
-  ensureAudioMode();
-  if (!launchPlayer) {
-    preloadLaunchSound();
-  }
-  if (!launchPlayer) {
-    return;
-  }
-  launchPlayer
-    .seekTo(0)
-    .then(() => launchPlayer?.play())
-    .catch((error) => console.error('Failed to play launch sound:', error));
 }

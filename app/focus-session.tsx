@@ -1,60 +1,31 @@
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { CelebrationBurst } from '@/components/celebration-burst';
-import { LiftoffSequence } from '@/components/liftoff-sequence';
-import { RocketIcon } from '@/components/rocket-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
-import { GRADIENTS, PILL_RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { ProgressRing } from '@/components/ui/progress-ring';
+import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useFocusSession } from '@/context/focus-session';
-import { useReferralCode } from '@/hooks/queries/use-referral';
+import { useCourseHistory } from '@/hooks/queries/use-course-history';
+import { useStreak } from '@/hooks/queries/use-streak';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { shareDestinationUnlockViaWhatsApp } from '@/lib/referral';
-import { playLaunchSound, preloadLaunchSound } from '@/lib/sound';
 
-const QUICK_DURATIONS = [10, 25, 45];
+const DURATION_PRESETS = [20, 30, 45, 60];
 
-const PREVIEW_STAR_POSITIONS = [
-  { top: '6%', left: '22%' },
-  { top: '10%', left: '68%' },
-  { top: '16%', left: '42%' },
-  { top: '4%', left: '55%' },
-  { top: '22%', left: '15%' },
-  { top: '14%', left: '85%' },
-  { top: '28%', left: '60%' },
-  { top: '20%', left: '32%' },
-  { top: '32%', left: '78%' },
-  { top: '9%', left: '10%' },
-] as const;
+const DAILY_TIPS = [
+  'Travaille en profondeur pendant 20 minutes, prends une pause de 5 minutes. Répète. La constance bat la motivation.',
+  "Coupe les notifications avant de commencer — la concentration se construit, elle ne se récupère pas en 3 secondes.",
+  "Relis tes erreurs d'hier avant d'attaquer un nouveau chapitre : c'est là que se cache la vraie progression.",
+];
 
-const SKY_STAR_POSITIONS = [
-  { top: '4%', left: '12%', size: 3 },
-  { top: '8%', left: '82%', size: 2 },
-  { top: '3%', left: '48%', size: 2 },
-  { top: '14%', left: '25%', size: 3 },
-  { top: '18%', left: '90%', size: 2 },
-  { top: '11%', left: '65%', size: 3 },
-  { top: '22%', left: '8%', size: 2 },
-  { top: '2%', left: '75%', size: 2 },
-  { top: '40%', left: '15%', size: 3 },
-  { top: '46%', left: '88%', size: 2 },
-  { top: '52%', left: '10%', size: 2 },
-  { top: '38%', left: '92%', size: 3 },
-  { top: '58%', left: '20%', size: 2 },
-  { top: '62%', left: '78%', size: 3 },
-  { top: '30%', left: '38%', size: 2 },
-  { top: '35%', left: '58%', size: 2 },
-  { top: '68%', left: '40%', size: 2 },
-  { top: '72%', left: '65%', size: 3 },
-  { top: '26%', left: '70%', size: 2 },
-  { top: '48%', left: '48%', size: 2 },
-] as const;
+type ToggleKey = 'notifications' | 'music' | 'nature' | 'dnd';
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -62,343 +33,57 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function milestoneLabel(progress: number): string {
-  if (progress >= 0.97) {
-    return 'Atterrissage sur Mars !';
-  }
-  if (progress >= 0.7) {
-    return 'Direction Mars';
-  }
-  if (progress >= 0.4) {
-    return 'Cap sur la Lune';
-  }
-  if (progress >= 0.12) {
-    return 'En orbite';
-  }
-  return 'Décollage';
-}
-
-// Small preview of the launch track shown before the session starts (idle
-// phase) — the full-screen night sky only appears once "inside" a running
-// session, per the user's request.
-function LaunchPreview() {
+// Purely decorative mountain-with-flag scene tucked into the bottom-right
+// corner of the "Conseil du jour" card — a summit motif for "keep climbing",
+// monochrome purple so it reads as background texture, not competing with
+// the tip text next to it.
+function TipMountainIllustration() {
   return (
-    <View style={previewStyles.wrapper}>
-      <LinearGradient
-        colors={['#0B0F2B', '#2B2560', '#F2A65A']}
-        locations={[0, 0.62, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={previewStyles.track}>
-        {PREVIEW_STAR_POSITIONS.map((position, index) => (
-          <View key={index} style={[previewStyles.star, position]} />
-        ))}
-        <View style={previewStyles.mars} />
-        <View style={previewStyles.moon} />
-        <View style={previewStyles.rocket}>
-          <RocketIcon size={40} floating />
-        </View>
-      </LinearGradient>
-    </View>
+    <Svg width={90} height={60} viewBox="0 0 90 60" pointerEvents="none">
+      <Path d="M0 60 L28 20 L46 42 L58 26 L90 60 Z" fill="#B7A6E8" opacity={0.9} />
+      <Path d="M34 60 L60 18 L90 60 Z" fill="#8F79D6" />
+      <Path d="M60 18 L60 6" stroke="#5B3FA8" strokeWidth={1.5} />
+      <Path d="M60 6 L72 10 L60 14 Z" fill="#E8544F" />
+    </Svg>
   );
 }
-
-const previewStyles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    marginBottom: SPACING.section,
-  },
-  track: {
-    width: 220,
-    height: 300,
-    borderRadius: 24,
-    overflow: 'hidden',
-    // Fallback so the track is never invisible if the gradient fails to paint.
-    backgroundColor: '#2B2560',
-  },
-  star: {
-    position: 'absolute',
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-  },
-  moon: {
-    position: 'absolute',
-    top: '5%',
-    right: '14%',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#D9D9E3',
-  },
-  mars: {
-    position: 'absolute',
-    top: '1%',
-    left: '56%',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#D96A4A',
-  },
-  rocket: {
-    position: 'absolute',
-    left: '50%',
-    bottom: '18%',
-    marginLeft: -20,
-  },
-});
-
-// Full-screen night sky BACKDROP (no content) shown while a session is
-// running or has just succeeded: purple gradient, visible stars, a large
-// destination planet, and a rocket that climbs toward it and visibly lands
-// on it at 100%. Mounted outside SafeAreaView (see the root ScreenBackground
-// below) so it reaches the true screen edges; text/buttons render
-// separately, inside SafeAreaView, over this backdrop.
-function NightSkyBackdrop({
-  progress,
-  landed,
-  celebrate,
-}: {
-  progress: number;
-  landed: boolean;
-  celebrate?: boolean;
-}) {
-  const bottom = useSharedValue(4);
-
-  useEffect(() => {
-    bottom.value = withTiming(4 + progress * 66, { duration: 900 });
-  }, [progress, bottom]);
-
-  const flightStyle = useAnimatedStyle(() => ({
-    bottom: `${bottom.value}%`,
-  }));
-
-  return (
-    <View style={nightStyles.container} pointerEvents="none">
-      <LinearGradient colors={GRADIENTS.night} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} />
-
-      {SKY_STAR_POSITIONS.map((star, index) => (
-        <View
-          key={index}
-          style={[
-            nightStyles.star,
-            { top: star.top, left: star.left, width: star.size, height: star.size, borderRadius: star.size },
-          ]}
-        />
-      ))}
-
-      <View style={nightStyles.planetWrapper}>
-        <LinearGradient
-          colors={['#F2A65A', '#C1502E']}
-          start={{ x: 0.3, y: 0 }}
-          end={{ x: 0.7, y: 1 }}
-          style={nightStyles.planet}>
-          <View style={nightStyles.crater1} />
-          <View style={nightStyles.crater2} />
-          <View style={nightStyles.crater3} />
-        </LinearGradient>
-      </View>
-
-      {landed ? (
-        <View style={nightStyles.rocketLanded}>
-          <RocketIcon size={34} floating />
-        </View>
-      ) : (
-        <Animated.View style={[nightStyles.rocketFlying, flightStyle]}>
-          <RocketIcon size={44} />
-        </Animated.View>
-      )}
-
-      {celebrate ? <CelebrationBurst /> : null}
-    </View>
-  );
-}
-
-const nightStyles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    // Fallback so the sky is never invisible if the gradient fails to paint
-    // (otherwise the screen would fall back to the navigation theme's
-    // background, which can be plain black).
-    backgroundColor: '#1C1650',
-  },
-  star: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    opacity: 0.9,
-  },
-  planetWrapper: {
-    position: 'absolute',
-    top: '9%',
-    left: '50%',
-    marginLeft: -85,
-    width: 170,
-    height: 170,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planet: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    overflow: 'hidden',
-    // Fallback so the planet is never invisible if the gradient fails to paint.
-    backgroundColor: '#D9723D',
-  },
-  crater1: {
-    position: 'absolute',
-    top: 28,
-    left: 34,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.12)',
-  },
-  crater2: {
-    position: 'absolute',
-    top: 92,
-    left: 100,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-  },
-  crater3: {
-    position: 'absolute',
-    top: 60,
-    left: 120,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-  },
-  rocketFlying: {
-    position: 'absolute',
-    left: '50%',
-    marginLeft: -22,
-  },
-  rocketLanded: {
-    position: 'absolute',
-    top: '17%',
-    left: '50%',
-    marginLeft: -17,
-  },
-});
-
-// A gentle, static-feeling "it's okay" visual for the failed phase — the
-// rocket on its side, softly rocking, rather than just bare text on an
-// otherwise empty screen. Deliberately calmer than LaunchPreview/NightSky
-// (no stars, no destination): this moment is a reassurance, not a
-// spectacle.
-function FallenRocketIllustration() {
-  const rock = useSharedValue(0);
-
-  useEffect(() => {
-    rock.value = withTiming(1, { duration: 900 });
-  }, [rock]);
-
-  const wobbleStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${100 + rock.value * 6}deg` }, { translateY: rock.value * -4 }],
-  }));
-
-  return (
-    <View style={fallenStyles.wrapper}>
-      <View style={fallenStyles.shadow} />
-      <Animated.View style={wobbleStyle}>
-        <RocketIcon size={48} />
-      </Animated.View>
-    </View>
-  );
-}
-
-const fallenStyles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    height: 100,
-    marginBottom: SPACING.element,
-  },
-  shadow: {
-    position: 'absolute',
-    bottom: 6,
-    width: 64,
-    height: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-  },
-});
 
 export default function FocusSessionScreen() {
   const COLORS = useThemeColors();
-  const { phase, durationMinutes, remainingSeconds, destinationReached, destinationJustUnlocked, start, reset } =
-    useFocusSession();
-  const referralCodeQuery = useReferralCode();
-  const [durationInput, setDurationInput] = useState('25');
-  // A short scripted beat (LiftoffSequence) between pressing "Lancer" and
-  // the actual session starting — start() only fires once it completes, so
-  // the running screen's own instant flip to phase 'running' lands exactly
-  // when the liftoff animation (and its synchronized sound) finish, rather
-  // than racing ahead of them.
-  const [launching, setLaunching] = useState(false);
+  const { phase, durationMinutes, remainingSeconds, start, reset } = useFocusSession();
+  const streakQuery = useStreak();
+  const historyQuery = useCourseHistory();
 
-  // LiftoffSequence's onComplete is captured once, at mount, and never
-  // re-subscribed (its effect deliberately doesn't depend on onComplete —
-  // see that file). A plain closure over `phase` in handleLiftoffComplete
-  // would therefore always see phase as it was at that mount ('idle'),
-  // never a later update — a ref sidesteps that staleness since reading
-  // .current always gets the live value.
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
+  const [selectedDuration, setSelectedDuration] = useState(20);
+  const [customMode, setCustomMode] = useState(false);
+  const [customInput, setCustomInput] = useState('20');
+  const [objective, setObjective] = useState('');
+  const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({
+    notifications: false,
+    music: false,
+    nature: false,
+    dnd: false,
+  });
 
-  // Loads the launch sound's asset well before it can possibly be needed
-  // (the user still has to pick a duration and press "Lancer") — playing it
-  // fresh at press time meant waiting on a network fetch of the asset in
-  // dev, which is what made it noticeably lag behind LiftoffSequence's
-  // animation instead of starting with it.
-  useEffect(() => {
-    preloadLaunchSound();
-  }, []);
+  const tip = useMemo(() => DAILY_TIPS[new Date().getDate() % DAILY_TIPS.length], []);
 
-  // AppState backgrounding fails the session immediately (see
-  // context/focus-session.tsx's fail()), regardless of whether the liftoff
-  // cinematic is still playing — if that happens mid-animation, cut the
-  // cinematic short right away instead of leaving the "failed" screen
-  // waiting behind a still-running backdrop for however long is left.
-  useEffect(() => {
-    if (launching && phase === 'failed') {
-      setLaunching(false);
-    }
-  }, [launching, phase]);
+  const parsedCustom = parseInt(customInput, 10);
+  const chosenMinutes = customMode ? parsedCustom : selectedDuration;
+  const canStart = Number.isFinite(chosenMinutes) && chosenMinutes > 0 && chosenMinutes <= 240;
 
   const totalSeconds = durationMinutes * 60;
-  const progress =
-    phase === 'running' ? 1 - remainingSeconds / totalSeconds : phase === 'success' ? 1 : 0;
-
-  const parsedMinutes = parseInt(durationInput, 10);
-  const canStart = Number.isFinite(parsedMinutes) && parsedMinutes > 0 && parsedMinutes <= 240;
+  const elapsedMinutes = phase === 'running' ? Math.floor((totalSeconds - remainingSeconds) / 60) : 0;
+  // The ring reads as "time left in the tank": full at the start of a
+  // session, draining down to empty at 0:00 — not the more common
+  // "progress toward completion" direction.
+  const ringProgress =
+    phase === 'running' ? (remainingSeconds / totalSeconds) * 100 : phase === 'success' ? 0 : 92;
 
   const handleStart = () => {
     if (!canStart) {
       return;
     }
-    playLaunchSound();
-    setLaunching(true);
-  };
-
-  const handleLiftoffComplete = () => {
-    setLaunching(false);
-    // If backgrounding failed the session while the cinematic was still
-    // playing (phaseRef.current would now be 'failed', not the 'idle' it
-    // was when this callback was captured at mount), don't let this stale
-    // callback force a fresh start() on top of that — the student already
-    // saw (or will see) the "failed" screen and may have already reacted
-    // to it.
-    if (phaseRef.current !== 'idle') {
-      return;
-    }
-    start(parsedMinutes);
+    start(chosenMinutes);
   };
 
   const handleRestart = () => {
@@ -410,129 +95,380 @@ export default function FocusSessionScreen() {
     router.replace('/');
   };
 
-  const handleBrowseElsewhere = () => {
-    router.replace('/');
+  const handleViewObjectives = () => {
+    router.push('/course-history');
   };
 
-  const handleViewAtlas = () => {
-    reset();
-    router.replace('/garden');
-  };
+  const toggleKey = (key: ToggleKey) => setToggles((previous) => ({ ...previous, [key]: !previous[key] }));
 
-  const handleShareUnlock = () => {
-    if (!destinationReached) {
-      return;
-    }
-    shareDestinationUnlockViaWhatsApp(destinationReached.name, referralCodeQuery.data ?? null).catch((error) => {
-      console.error('Failed to open WhatsApp share:', error);
-    });
-  };
-
-  const isNight = phase === 'running' || phase === 'success' || launching;
+  // Flattened, most-recent-first slice across every discipline's history —
+  // there's no per-attempt timestamp to sort by yet, so "recent" here means
+  // "first entries returned per discipline", good enough for a 2-item
+  // preview whose whole point is a teaser, not an audit trail (see
+  // app/course-history.tsx for the full, real list).
+  const recentSessions = (historyQuery.data ?? [])
+    .flatMap((section) => section.courses.map((course) => ({ ...course, discipline: section.discipline })))
+    .slice(0, 3);
 
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
     },
-    centered: {
-      flex: 1,
+    scrollContent: {
+      padding: SPACING.screen,
+      paddingBottom: SPACING.section + 24,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: SPACING.element,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      backgroundColor: '#F0EDFB',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: SPACING.screen,
     },
-    // Same shape as `centered`, but as a ScrollView contentContainerStyle
-    // (flexGrow instead of flex) for the idle phase — that's the one phase
-    // with a TextInput above the "Lancer" button, so it's the one that needs
-    // to be scrollable: when the keyboard opens, KeyboardAvoidingView alone
-    // isn't enough on Android (edge-to-edge is on in app.json, which makes
-    // the usual automatic window resize unreliable), so the content also
-    // needs to be scrollable for the button to always be reachable.
-    idleScrollContent: {
-      flexGrow: 1,
+    moreButton: {
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: SPACING.screen,
     },
-    nightContentArea: {
+    headerCenter: {
       flex: 1,
-      justifyContent: 'flex-end',
       alignItems: 'center',
-      padding: SPACING.screen,
+    },
+    rocketBadge: {
+      width: 56,
+      height: 56,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.tight,
     },
     title: {
       ...TYPOGRAPHY.title,
+      fontSize: 24,
       color: COLORS.text,
       textAlign: 'center',
-      marginBottom: 8,
     },
     subtitle: {
       ...TYPOGRAPHY.body,
       color: COLORS.mutedText,
       textAlign: 'center',
-      marginBottom: SPACING.section,
-    },
-    durationInputRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 8,
+      marginTop: 4,
       marginBottom: SPACING.element,
     },
-    durationInput: {
-      ...TYPOGRAPHY.largeTitle,
-      color: COLORS.text,
+    card: {
       backgroundColor: COLORS.surface,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 8,
-      paddingHorizontal: 24,
-      minWidth: 100,
-      textAlign: 'center',
-      borderWidth: 1.5,
-      borderColor: COLORS.borderStrong,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      marginBottom: SPACING.element,
     },
-    durationInputLabel: {
+    cardLabel: {
       ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
+    },
+    pillRow: {
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+      gap: 4,
+      marginBottom: SPACING.tight,
+    },
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      backgroundColor: '#F0EFF5',
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 6,
+      paddingHorizontal: 7,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      flexShrink: 1,
+    },
+    pillSelected: {
+      backgroundColor: '#E7DFFC',
+      borderColor: '#6D5BD0',
+    },
+    pillText: {
+      fontSize: 10.5,
+      fontWeight: '700',
       color: COLORS.mutedText,
     },
-    durationRow: {
-      flexDirection: 'row',
-      gap: 10,
-      marginBottom: SPACING.section,
+    pillTextSelected: {
+      color: '#6D5BD0',
     },
-    durationChip: {
-      backgroundColor: COLORS.surface,
+    customInput: {
+      alignSelf: 'flex-start',
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.text,
+      backgroundColor: '#F0EFF5',
       borderRadius: PILL_RADIUS,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderWidth: 1.5,
-      borderColor: COLORS.borderStrong,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      minWidth: 60,
+      textAlign: 'center',
+      marginBottom: SPACING.tight,
     },
-    durationChipSelected: {
-      backgroundColor: COLORS.accent,
-      borderColor: COLORS.accent,
+    objectiveInput: {
+      ...TYPOGRAPHY.body,
+      fontSize: 14,
+      color: COLORS.text,
+      backgroundColor: '#F0EFF5',
+      borderRadius: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
     },
-    durationChipText: {
+    timerCardWrapper: {
+      borderRadius: RADIUS + 4,
+      overflow: 'hidden',
+      marginBottom: SPACING.element,
+    },
+    timerCard: {
+      padding: SPACING.element,
+      alignItems: 'center',
+    },
+    modeFocusPill: {
+      alignSelf: 'flex-end',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#FFFFFF',
+      borderRadius: PILL_RADIUS,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      marginBottom: SPACING.tight,
+    },
+    modeFocusText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#6D5BD0',
+    },
+    ringRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: SPACING.tight,
+      width: '100%',
+      marginBottom: 24,
+    },
+    ringStage: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ringOverlay: {
+      position: 'absolute',
+      alignItems: 'center',
+    },
+    focusLabel: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+      marginBottom: 2,
+    },
+    timerText: {
+      fontSize: 22,
+      lineHeight: 28,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    readySubtitle: {
+      fontSize: 10,
+      color: COLORS.mutedText,
+      marginTop: 2,
+      textAlign: 'center',
+      paddingHorizontal: 8,
+    },
+    playButton: {
+      position: 'absolute',
+      bottom: -20,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: '#6D5BD0',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#6D5BD0',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    sideStat: {
+      alignItems: 'center',
+      width: 58,
+      flexShrink: 0,
+    },
+    sideStatBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 11,
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 6,
+    },
+    sideStatNumber: {
       fontSize: 14,
       fontWeight: '700',
       color: COLORS.text,
     },
-    durationChipTextSelected: {
-      color: COLORS.accentText,
+    sideStatLabel: {
+      fontSize: 11,
+      color: COLORS.mutedText,
+      textAlign: 'center',
     },
-    primaryButton: {
-      backgroundColor: COLORS.accent,
+    resetButton: {
+      alignSelf: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: SPACING.section + 16,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    resetText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#6D5BD0',
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    toggleItem: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 4,
+    },
+    toggleDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: COLORS.border,
+    },
+    toggleLabel: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+      textAlign: 'center',
+      lineHeight: 15,
+    },
+    toggleLabelActive: {
+      color: '#6D5BD0',
+      fontWeight: '700',
+    },
+    tipCardWrapper: {
+      borderRadius: RADIUS,
+      overflow: 'hidden',
+      marginBottom: SPACING.element,
+    },
+    tipCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: SPACING.element,
+      gap: SPACING.tight,
+    },
+    tipBadge: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tipText: {
+      flex: 1,
+    },
+    tipMountainBox: {
+      width: 78,
+      alignSelf: 'stretch',
+      alignItems: 'flex-end',
+      justifyContent: 'flex-end',
+    },
+    tipTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 4,
+    },
+    tipBody: {
+      fontSize: 13,
+      color: COLORS.mutedText,
+      lineHeight: 18,
+    },
+    historyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: SPACING.tight,
+    },
+    historyTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    historySeeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    historySeeAllText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#6D5BD0',
+    },
+    historyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      paddingVertical: SPACING.tight,
+    },
+    historyIconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    historyText: {
+      flex: 1,
+    },
+    historyCourseTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    historySubtitle: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+      marginTop: 2,
+    },
+    historyPercent: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    bigButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#6D5BD0',
       borderRadius: PILL_RADIUS,
       paddingVertical: 16,
-      paddingHorizontal: 32,
-      alignItems: 'center',
     },
-    primaryButtonText: {
-      color: COLORS.accentText,
+    bigButtonText: {
+      color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '700',
     },
     secondaryButton: {
-      paddingVertical: 14,
-      alignItems: 'center',
+      alignSelf: 'center',
+      paddingVertical: 12,
       marginTop: SPACING.tight,
     },
     secondaryButtonText: {
@@ -541,167 +477,260 @@ export default function FocusSessionScreen() {
       fontWeight: '600',
       textDecorationLine: 'underline',
     },
-    unlockBadge: {
-      backgroundColor: '#F2C879',
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 6,
-      paddingHorizontal: 14,
-      marginBottom: SPACING.tight,
-    },
-    unlockBadgeText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#4A3400',
-    },
-    nightTitle: {
-      ...TYPOGRAPHY.title,
-      color: '#FFFFFF',
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    nightTimer: {
-      ...TYPOGRAPHY.largeTitle,
-      fontSize: 44,
-      // TYPOGRAPHY.largeTitle's lineHeight (34) is smaller than this
-      // fontSize, which clips the digits top/bottom — override both together.
-      lineHeight: 52,
-      color: '#FFFFFF',
-      marginBottom: 4,
-    },
-    nightMilestone: {
-      ...TYPOGRAPHY.label,
-      color: '#C9B8FF',
-      textTransform: 'uppercase',
-      marginBottom: SPACING.tight,
-    },
-    nightSubtitle: {
-      ...TYPOGRAPHY.body,
-      color: '#C9C3E8',
-      textAlign: 'center',
-      marginBottom: SPACING.element,
-    },
-    nightSecondaryButton: {
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: PILL_RADIUS,
-      borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.4)',
-      marginVertical: SPACING.tight,
-    },
-    nightSecondaryButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '700',
-    },
   });
 
+  const timerLabel = phase === 'running' ? formatTime(remainingSeconds) : phase === 'success' ? '00:00' : `${chosenMinutes || 0}:00`;
+  const readyText =
+    phase === 'running'
+      ? 'Concentration en cours…'
+      : phase === 'success'
+        ? 'Session terminée, bravo ! 🎉'
+        : "Prêt ? C'est parti ! 🚀";
+
   return (
-    <ScreenBackground color={isNight ? '#1C1650' : COLORS.background}>
-      {phase === 'running' ? <NightSkyBackdrop progress={progress} landed={false} /> : null}
-      {phase === 'success' ? <NightSkyBackdrop progress={1} landed celebrate /> : null}
-      {launching ? <LiftoffSequence onComplete={handleLiftoffComplete} /> : null}
-
+    <ScreenBackground color="#FAF8FC">
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {phase === 'idle' && !launching ? (
-          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <ScrollView contentContainerStyle={styles.idleScrollContent} keyboardShouldPersistTaps="handled">
-              <LaunchPreview />
-              <ThemedText style={styles.title}>Session de concentration</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Choisis une durée. La fusée décolle et s&apos;éloigne pendant la session — elle retombe si tu quittes
-                Noesis (autre app, verrouillage) avant la fin.
-              </ThemedText>
-
-              <View style={styles.durationInputRow}>
-                <TextInput
-                  style={styles.durationInput}
-                  keyboardType="number-pad"
-                  value={durationInput}
-                  onChangeText={setDurationInput}
-                  maxLength={3}
-                />
-                <ThemedText style={styles.durationInputLabel}>minutes</ThemedText>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <View style={styles.header}>
+              <BouncyPressable style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+              </BouncyPressable>
+              <View style={styles.headerCenter}>
+                <LinearGradient colors={GRADIENTS.badgeViolet} style={[styles.rocketBadge, { backgroundColor: GRADIENTS.badgeViolet[0] }]}>
+                  <Ionicons name="rocket" size={26} color="#FFFFFF" />
+                </LinearGradient>
+                <ThemedText style={styles.title}>Session focus</ThemedText>
+                <ThemedText style={styles.subtitle}>Reste concentré, construis ton futur.</ThemedText>
               </View>
+              <View style={styles.moreButton}>
+                <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.mutedText} />
+              </View>
+            </View>
 
-              <View style={styles.durationRow}>
-                {QUICK_DURATIONS.map((minutes) => (
+            {phase === 'idle' ? (
+              <View style={styles.card}>
+                <ThemedText style={styles.cardLabel}>Durée de la session</ThemedText>
+                <View style={styles.pillRow}>
+                  {DURATION_PRESETS.map((minutes) => {
+                    const selected = !customMode && selectedDuration === minutes;
+                    return (
+                      <BouncyPressable
+                        key={minutes}
+                        style={[styles.pill, selected && styles.pillSelected]}
+                        onPress={() => {
+                          setCustomMode(false);
+                          setSelectedDuration(minutes);
+                        }}>
+                        <ThemedText style={[styles.pillText, selected && styles.pillTextSelected]}>{minutes} min</ThemedText>
+                      </BouncyPressable>
+                    );
+                  })}
                   <BouncyPressable
-                    key={minutes}
-                    style={[styles.durationChip, durationInput === String(minutes) && styles.durationChipSelected]}
-                    onPress={() => setDurationInput(String(minutes))}>
-                    <ThemedText
-                      style={[
-                        styles.durationChipText,
-                        durationInput === String(minutes) && styles.durationChipTextSelected,
-                      ]}>
-                      {minutes} min
+                    style={[styles.pill, customMode && styles.pillSelected]}
+                    onPress={() => setCustomMode(true)}>
+                    <ThemedText style={[styles.pillText, customMode && styles.pillTextSelected]} numberOfLines={1}>
+                      Personnalisé
                     </ThemedText>
+                    <Ionicons name="pencil" size={11} color={customMode ? '#6D5BD0' : COLORS.mutedText} />
                   </BouncyPressable>
-                ))}
-              </View>
+                </View>
 
-              <BouncyPressable style={styles.primaryButton} onPress={handleStart} disabled={!canStart}>
-                <ThemedText style={styles.primaryButtonText}>Lancer la fusée</ThemedText>
-              </BouncyPressable>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        ) : null}
+                {customMode ? (
+                  <TextInput
+                    style={styles.customInput}
+                    keyboardType="number-pad"
+                    value={customInput}
+                    onChangeText={setCustomInput}
+                    maxLength={3}
+                    placeholder="Minutes"
+                  />
+                ) : null}
 
-        {phase === 'running' ? (
-          <View style={styles.nightContentArea}>
-            <ThemedText style={styles.nightTimer}>{formatTime(remainingSeconds)}</ThemedText>
-            <BouncyPressable style={styles.nightSecondaryButton} onPress={handleBrowseElsewhere}>
-              <ThemedText style={styles.nightSecondaryButtonText}>Continuer sur Noesis</ThemedText>
-            </BouncyPressable>
-            <ThemedText style={styles.nightMilestone}>{milestoneLabel(progress)}</ThemedText>
-            <ThemedText style={styles.nightSubtitle}>
-              Tu peux consulter d&apos;autres écrans de Noesis, la fusée continue son vol. Elle retombe seulement si
-              tu quittes l&apos;app.
-            </ThemedText>
-          </View>
-        ) : null}
-
-        {phase === 'success' ? (
-          <View style={styles.nightContentArea}>
-            {destinationJustUnlocked && destinationReached ? (
-              <View style={styles.unlockBadge}>
-                <ThemedText style={styles.unlockBadgeText}>🎉 Nouvelle destination débloquée</ThemedText>
+                <ThemedText style={styles.cardLabel}>Objectif de la session</ThemedText>
+                <TextInput
+                  style={styles.objectiveInput}
+                  value={objective}
+                  onChangeText={setObjective}
+                  placeholder="Ex : Réviser les systèmes politiques de la Grèce antique"
+                  placeholderTextColor={COLORS.placeholderText}
+                  multiline
+                />
               </View>
             ) : null}
-            <ThemedText style={styles.nightTitle}>
-              {destinationReached ? `Arrivée sur ${destinationReached.name} !` : 'Fusée arrivée à destination !'}
-            </ThemedText>
-            <ThemedText style={styles.nightSubtitle}>
-              Tu es resté concentré {durationMinutes} minutes complètes. Bravo.
-            </ThemedText>
-            <BouncyPressable style={styles.primaryButton} onPress={handleBackHome}>
-              <ThemedText style={styles.primaryButtonText}>Retour à l&apos;accueil</ThemedText>
-            </BouncyPressable>
-            {destinationJustUnlocked && destinationReached ? (
-              <BouncyPressable style={styles.nightSecondaryButton} onPress={handleShareUnlock}>
-                <ThemedText style={styles.nightSecondaryButtonText}>Partager sur WhatsApp</ThemedText>
+
+            <View style={styles.timerCardWrapper}>
+              <LinearGradient
+                colors={GRADIENTS.focusTimerCard}
+                start={{ x: 0.1, y: 0 }}
+                end={{ x: 0.9, y: 1 }}
+                style={[styles.timerCard, { backgroundColor: GRADIENTS.focusTimerCard[1] }]}>
+                <BouncyPressable style={styles.modeFocusPill} onPress={handleViewObjectives}>
+                  <Ionicons name="locate" size={14} color="#6D5BD0" />
+                  <ThemedText style={styles.modeFocusText}>Mode focus</ThemedText>
+                  <Ionicons name="chevron-forward" size={13} color="#6D5BD0" />
+                </BouncyPressable>
+
+                <View style={styles.ringRow}>
+                  <View style={styles.sideStat}>
+                    <View style={styles.sideStatBadge}>
+                      <Ionicons name="stats-chart" size={18} color="#6D5BD0" />
+                    </View>
+                    <ThemedText style={styles.sideStatNumber}>{elapsedMinutes} min</ThemedText>
+                    <ThemedText style={styles.sideStatLabel}>concentré</ThemedText>
+                  </View>
+
+                  <View style={styles.ringStage}>
+                    <ProgressRing progress={ringProgress} size={132} strokeWidth={7} color="#6D5BD0" trackColor="#E8E3F7" />
+                    <View style={styles.ringOverlay}>
+                      <ThemedText style={styles.focusLabel}>Focus</ThemedText>
+                      <ThemedText style={styles.timerText}>{timerLabel}</ThemedText>
+                      <ThemedText style={styles.readySubtitle}>{readyText}</ThemedText>
+                    </View>
+                    {phase === 'idle' ? (
+                      <BouncyPressable style={styles.playButton} onPress={handleStart} disabled={!canStart}>
+                        <Ionicons name="play" size={26} color="#FFFFFF" />
+                      </BouncyPressable>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.sideStat}>
+                    <View style={styles.sideStatBadge}>
+                      <ThemedText style={{ fontSize: 18 }}>🔥</ThemedText>
+                    </View>
+                    <ThemedText style={styles.sideStatNumber}>Série actuelle</ThemedText>
+                    <ThemedText style={styles.sideStatLabel}>{streakQuery.data?.streak ?? 0} jour</ThemedText>
+                  </View>
+                </View>
+
+                {phase !== 'idle' ? (
+                  <BouncyPressable style={styles.resetButton} onPress={handleRestart}>
+                    <Ionicons name="refresh" size={16} color="#6D5BD0" />
+                    <ThemedText style={styles.resetText}>Réinitialiser</ThemedText>
+                  </BouncyPressable>
+                ) : null}
+              </LinearGradient>
+            </View>
+
+            {phase === 'idle' ? (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.toggleRow}>
+                    {(
+                      [
+                        { key: 'notifications' as const, icon: 'notifications-off-outline' as const, label: 'Bloquer\nnotifications' },
+                        { key: 'music' as const, icon: 'musical-notes-outline' as const, label: 'Musique\nfocus' },
+                        { key: 'nature' as const, icon: 'leaf-outline' as const, label: 'Sons\nnature' },
+                        { key: 'dnd' as const, icon: 'moon-outline' as const, label: 'Mode\nne pas déranger' },
+                      ]
+                    ).map((item, index, array) => (
+                      <View key={item.key} style={{ flexDirection: 'row', flex: 1 }}>
+                        <BouncyPressable style={styles.toggleItem} onPress={() => toggleKey(item.key)}>
+                          <Ionicons name={item.icon} size={22} color={toggles[item.key] ? '#6D5BD0' : COLORS.mutedText} />
+                          <ThemedText style={[styles.toggleLabel, toggles[item.key] && styles.toggleLabelActive]}>
+                            {item.label}
+                          </ThemedText>
+                        </BouncyPressable>
+                        {index < array.length - 1 ? <View style={styles.toggleDivider} /> : null}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.tipCardWrapper}>
+                  <LinearGradient
+                    colors={GRADIENTS.hero}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.tipCard, { backgroundColor: GRADIENTS.hero[0] }]}>
+                    <LinearGradient colors={GRADIENTS.badgeViolet} style={[styles.tipBadge, { backgroundColor: GRADIENTS.badgeViolet[0] }]}>
+                      <Ionicons name="bulb" size={22} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.tipText}>
+                      <ThemedText style={styles.tipTitle}>Conseil du jour</ThemedText>
+                      <ThemedText style={styles.tipBody}>{tip}</ThemedText>
+                    </View>
+                    <View style={styles.tipMountainBox}>
+                      <TipMountainIllustration />
+                    </View>
+                  </LinearGradient>
+                </View>
+
+                {recentSessions.length > 0 ? (
+                  <View style={styles.card}>
+                    <View style={styles.historyHeader}>
+                      <ThemedText style={styles.historyTitle}>Tes dernières sessions</ThemedText>
+                      <BouncyPressable style={styles.historySeeAll} onPress={() => router.push('/course-history')}>
+                        <ThemedText style={styles.historySeeAllText}>Voir tout</ThemedText>
+                        <Ionicons name="chevron-forward" size={13} color="#6D5BD0" />
+                      </BouncyPressable>
+                    </View>
+                    {recentSessions.map((entry) => {
+                      const isFull = entry.goodPercentage >= 100;
+                      return (
+                        <View key={entry.courseId} style={styles.historyRow}>
+                          <View
+                            style={[
+                              styles.historyIconBadge,
+                              { backgroundColor: isFull ? '#DFF4E7' : '#FCE7CF' },
+                            ]}>
+                            <Ionicons
+                              name={isFull ? 'checkmark-circle' : 'time'}
+                              size={18}
+                              color={isFull ? '#22A55D' : '#F5893A'}
+                            />
+                          </View>
+                          <View style={styles.historyText}>
+                            <ThemedText style={styles.historyCourseTitle} numberOfLines={1}>
+                              {entry.courseTitle}
+                            </ThemedText>
+                            <ThemedText style={styles.historySubtitle}>{entry.discipline.label}</ThemedText>
+                          </View>
+                          <ThemedText style={[styles.historyPercent, { color: isFull ? '#22A55D' : '#F5893A' }]}>
+                            {entry.goodPercentage} %
+                          </ThemedText>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                <BouncyPressable style={styles.bigButton} onPress={handleViewObjectives}>
+                  <Ionicons name="locate" size={18} color="#FFFFFF" />
+                  <ThemedText style={styles.bigButtonText}>Voir mes objectifs</ThemedText>
+                </BouncyPressable>
+              </>
+            ) : null}
+
+            {phase === 'success' ? (
+              <BouncyPressable style={styles.bigButton} onPress={handleBackHome}>
+                <ThemedText style={styles.bigButtonText}>Retour à l&apos;accueil</ThemedText>
               </BouncyPressable>
             ) : null}
-            <BouncyPressable style={styles.nightSecondaryButton} onPress={handleViewAtlas}>
-              <ThemedText style={styles.nightSecondaryButtonText}>Voir mon atlas spatial</ThemedText>
-            </BouncyPressable>
-          </View>
-        ) : null}
 
-        {phase === 'failed' ? (
-          <View style={styles.centered}>
-            <FallenRocketIllustration />
-            <ThemedText style={styles.title}>La fusée est retombée</ThemedText>
-            <ThemedText style={styles.subtitle}>Pas de panique, on retente quand tu veux !</ThemedText>
-            <BouncyPressable style={styles.primaryButton} onPress={handleRestart}>
-              <ThemedText style={styles.primaryButtonText}>Réessayer</ThemedText>
-            </BouncyPressable>
-            <BouncyPressable style={styles.secondaryButton} onPress={handleBackHome}>
-              <ThemedText style={styles.secondaryButtonText}>Retour à l&apos;accueil</ThemedText>
-            </BouncyPressable>
-          </View>
-        ) : null}
+            {phase === 'failed' ? (
+              <View style={styles.card}>
+                <ThemedText style={styles.cardLabel}>La session s&apos;est arrêtée</ThemedText>
+                <ThemedText style={styles.tipBody}>Pas de panique, on retente quand tu veux !</ThemedText>
+                <BouncyPressable style={[styles.bigButton, { marginTop: SPACING.element }]} onPress={handleRestart}>
+                  <ThemedText style={styles.bigButtonText}>Réessayer</ThemedText>
+                </BouncyPressable>
+                <BouncyPressable style={styles.secondaryButton} onPress={handleBackHome}>
+                  <ThemedText style={styles.secondaryButtonText}>Retour à l&apos;accueil</ThemedText>
+                </BouncyPressable>
+              </View>
+            ) : null}
+
+            {phase === 'running' ? (
+              <BouncyPressable style={styles.secondaryButton} onPress={() => router.replace('/')}>
+                <ThemedText style={styles.secondaryButtonText}>Continuer sur Noesis</ThemedText>
+              </BouncyPressable>
+            ) : null}
+
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
+      {phase === 'success' ? <CelebrationBurst /> : null}
     </ScreenBackground>
   );
 }

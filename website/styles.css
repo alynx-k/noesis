@@ -22,7 +22,7 @@
   --max-width: 1160px;
   --shadow: 0 1px 2px rgba(20, 24, 27, 0.04), 0 8px 24px -12px rgba(20, 24, 27, 0.12);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --font-display: "Fraunces", "Inter", serif;
+  --font-display: "Cinzel", "Inter", serif;
   color-scheme: light;
 }
 

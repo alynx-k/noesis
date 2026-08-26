@@ -4,22 +4,22 @@
 // one or the other via that hook, so a missing key silently falls back to
 // undefined in dark mode instead of erroring.
 export const LIGHT_COLORS = {
-  accent: '#0F6E56',
-  accentSoft: '#E3F1EC',
+  accent: '#6D5BD0',
+  accentSoft: '#EFEBFC',
   accentText: '#FFFFFF',
-  background: '#F3F1EA',
+  background: '#FAF8FC',
   surface: '#FFFFFF',
-  border: '#EDEEF0',
+  border: '#ECEAF5',
   // Visibly darker than `border`, for interactive chips/inputs that need to
-  // read as tappable against the cream background (plain `border` is too
-  // close to `background` for that).
-  borderStrong: '#D9D4C4',
-  text: '#14181B',
+  // read as tappable against the pale lavender background (plain `border`
+  // is too close to `background` for that).
+  borderStrong: '#DAD6EC',
+  text: '#1B2140',
   mutedText: '#6B7280',
   placeholderText: '#9AA1A9',
   locked: '#C7CBD1',
-  lockedBackground: '#F4F5F6',
-  danger: '#B3261E',
+  lockedBackground: '#F4F3FA',
+  danger: '#EF4444',
 };
 
 // Dark counterpart — same roles, same relative contrast (surface a touch
@@ -27,19 +27,19 @@ export const LIGHT_COLORS = {
 // inverted. accent/danger are brightened slightly versus their light values
 // since the light versions read as muddy on a near-black background.
 export const DARK_COLORS: typeof LIGHT_COLORS = {
-  accent: '#22B58C',
-  accentSoft: '#163A31',
+  accent: '#8B7AF0',
+  accentSoft: '#241F42',
   accentText: '#FFFFFF',
-  background: '#17181C',
-  surface: '#1E2025',
-  border: '#2A2C31',
-  borderStrong: '#3D3F46',
-  text: '#F1F2F4',
-  mutedText: '#9BA1AC',
-  placeholderText: '#6E7480',
-  locked: '#4A4D55',
-  lockedBackground: '#20222A',
-  danger: '#FF6B60',
+  background: '#131226',
+  surface: '#1C1A34',
+  border: '#2A2748',
+  borderStrong: '#3C3860',
+  text: '#F1EFFB',
+  mutedText: '#A8A4C7',
+  placeholderText: '#736E99',
+  locked: '#3C3860',
+  lockedBackground: '#1F1D3A',
+  danger: '#FF6B6B',
 };
 
 // Kept for any file not yet migrated to useThemeColors() — always the light
@@ -54,10 +54,13 @@ export const COLORS = LIGHT_COLORS;
 // light and dark mode — inverting them would fight their own design intent.
 export const GRADIENTS = {
   rainbow: ['#B9A6FF', '#FFD98A', '#93E7B0'] as const,
-  badge: ['#C9B8FF', '#8F7BF0'] as const,
-  hero: ['#7C6FE0', '#F2C879', '#8FE3A8'] as const,
-  // Purple night-sky gradient for the full-screen focus-session view.
-  night: ['#0B0F2B', '#1C1650', '#3A2E7A'] as const,
+  badge: ['#FDBA74', '#FB923C'] as const,
+  // Soft pastel lavender — the "Session focus" card background.
+  hero: ['#E9E1FC', '#F3EEFD'] as const,
+  // Soft pastel mint — the "Reprise rapide" card background.
+  mint: ['#DFF4E7', '#EEF9F1'] as const,
+  // Deep indigo night gradient for the full-screen focus-session view.
+  night: ['#0B0A1A', '#1A1740', '#2E2A63'] as const,
   // Achievement tier skins (facile/moyen/difficile), for the profile's
   // achievements board.
   bronze: ['#D9A066', '#8C5A2B'] as const,
@@ -65,17 +68,27 @@ export const GRADIENTS = {
   gold: ['#F6D97A', '#C9971F'] as const,
   // Flame gradient for the achievements card background.
   fire: ['#FFCB69', '#FF7A30', '#D6401D'] as const,
-  // Deep-space gradient for the "fusées lancées" card background.
-  cosmic: ['#1C1650', '#4B3F94', '#7C6FE0'] as const,
+  // Soft pastel sky-blue — the "Discuter avec IA" and "Sessions
+  // personnalisées" card background.
+  cosmic: ['#DCE7FC', '#EEF3FE'] as const,
+  // Medium-saturated duotone icon-badge fills for the three Home action
+  // cards (Reprise rapide / Session focus / Discuter avec IA) — same
+  // light-to-dark-same-hue formula as each discipline's badgeGradient.
+  badgeMint: ['#1A9C7C', '#0D5C46'] as const,
+  badgeViolet: ['#8B6FF0', '#6142C7'] as const,
+  badgeAzure: ['#4F7DF0', '#2F58C7'] as const,
+  // Soft three-stop lavender blend — the big timer card on the focus
+  // session screen.
+  focusTimerCard: ['#F5EEFB', '#E9E3FA', '#DDD6F7'] as const,
 };
 
-export const RADIUS = 14;
+export const RADIUS = 20;
 export const PILL_RADIUS = 999;
 
 export const FEEDBACK_COLORS = {
-  correct: '#2E7D32',
-  partial: '#ED6C02',
-  incorrect: '#B3261E',
+  correct: '#22A55D',
+  partial: '#F5893A',
+  incorrect: '#EF4444',
 };
 
 // Semantic status colors — success/warning/info alongside the existing
@@ -83,10 +96,10 @@ export const FEEDBACK_COLORS = {
 // validation, toasts, error/empty states). Same value in light/dark: these
 // are always paired with white text/icons like GRADIENTS, not text-on-background.
 export const STATUS_COLORS = {
-  success: '#2E7D32',
-  warning: '#ED6C02',
-  error: '#B3261E',
-  info: '#2F6FED',
+  success: '#22A55D',
+  warning: '#F5893A',
+  error: '#EF4444',
+  info: '#3B82F6',
 };
 
 // Cross-platform shadow scale for the few places that need real depth
@@ -154,9 +167,9 @@ export const MOTION_EASE_CONTROL_POINTS: readonly [number, number, number, numbe
 // same hues as the website's floating hero blobs, used at low opacity behind
 // blurred circles rather than as flat fills.
 export const HALO_COLORS = {
-  violet: '#7C6FE0',
-  gold: '#F2C879',
-  teal: '#0F6E56',
+  violet: '#6D5BD0',
+  gold: '#F6C6E0',
+  teal: '#16A085',
 } as const;
 
 export const SPACING = {
@@ -167,37 +180,40 @@ export const SPACING = {
   screen: 24,
 };
 
-// Named font families for the two Fraunces weights loaded in app/_layout.tsx
+// Named font families for the two Cinzel weights loaded in app/_layout.tsx
 // (via useFonts) — screens reference these constants rather than the raw
-// string, so a weight swap only needs to happen here.
-export const FONT_DISPLAY = 'Fraunces_600SemiBold';
-export const FONT_DISPLAY_ITALIC = 'Fraunces_600SemiBold_Italic';
-export const FONT_DISPLAY_BOLD = 'Fraunces_700Bold';
+// string, so a weight swap only needs to happen here. Cinzel has no true
+// italic face, so FONT_DISPLAY_ITALIC reuses the SemiBold face; TYPOGRAPHY
+// applies a synthetic `fontStyle: 'italic'` slant on top where needed.
+export const FONT_DISPLAY = 'Cinzel_600SemiBold';
+export const FONT_DISPLAY_ITALIC = 'Cinzel_600SemiBold';
+export const FONT_DISPLAY_BOLD = 'Cinzel_700Bold';
 
-// largeTitle/title/displayItalic use the Fraunces display face (loaded as
-// its own weight-specific font file, so no separate fontWeight — mixing the
-// two can make RN fail to resolve the exact variant on Android). Everything
-// else stays on the system/sans face for legibility at small sizes.
+// largeTitle/title/displayItalic use the Cinzel display face (loaded as its
+// own weight-specific font file, so no separate fontWeight — mixing the two
+// can make RN fail to resolve the exact variant on Android). Everything else
+// stays on the system/sans face for legibility at small sizes.
 export const TYPOGRAPHY = {
   largeTitle: {
     fontFamily: FONT_DISPLAY,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.4,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: 0.2,
   },
   title: {
     fontFamily: FONT_DISPLAY,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: -0.2,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: 0.1,
   },
   // Reserved for one hero moment per screen at most — matches the site's
-  // hero-title italic accent span, not a general-purpose style.
+  // hero-title accent span, not a general-purpose style.
   displayItalic: {
     fontFamily: FONT_DISPLAY_ITALIC,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: -0.2,
+    fontStyle: 'italic' as const,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: 0.1,
   },
   label: {
     fontSize: 13,

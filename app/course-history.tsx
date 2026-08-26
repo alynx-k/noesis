@@ -128,7 +128,7 @@ function DisciplineSection({ section, isLast }: { section: CourseHistorySection;
     <ThemedView style={[styles.card, !isLast && styles.cardSpacing]}>
       <View style={styles.sectionHeader}>
         <LinearGradient
-          colors={section.discipline.gradient}
+          colors={section.discipline.badgeGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.sectionIcon}>
