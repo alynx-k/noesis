@@ -247,49 +247,22 @@ export default function SubjectScreen() {
       marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
     },
-    chapterRow: {
+    chapterHeadingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: SPACING.element,
+      justifyContent: 'space-between',
+      marginTop: SPACING.tight,
+      marginBottom: SPACING.tight,
     },
-    chapterIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    chapterBody: {
-      flex: 1,
-    },
-    chapterTitle: {
-      ...TYPOGRAPHY.body,
-      fontWeight: '700',
-      color: COLORS.text,
-      marginBottom: 6,
-    },
-    chapterProgressRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: SPACING.tight,
-    },
-    chapterTrack: {
-      flex: 1,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: COLORS.border,
-      overflow: 'hidden',
-    },
-    chapterFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    chapterPercent: {
-      fontSize: 12,
-      fontWeight: '700',
+    chapterHeading: {
+      ...TYPOGRAPHY.label,
       color: COLORS.mutedText,
-      width: 34,
-      textAlign: 'right',
+      textTransform: 'uppercase',
+      flexShrink: 1,
+    },
+    chapterHeadingPercent: {
+      fontSize: 12,
+      fontWeight: '800',
     },
     continueCard: {
       backgroundColor: COLORS.surface,
@@ -567,6 +540,47 @@ export default function SubjectScreen() {
 
   const recentExercises = attemptedEntries.slice(0, 3);
 
+  // Shared between the chapters branch and the flat-list fallback below —
+  // same card, same lock/complete/next-review logic, just grouped differently.
+  function renderCourseCard(course: CourseSummary) {
+    const prerequisiteSatisfied =
+      course.requiresCourseId === null ||
+      completedCourseIds.includes(course.requiresCourseId) ||
+      nextReviewDates[course.requiresCourseId] != null;
+
+    if (!prerequisiteSatisfied) {
+      return (
+        <BouncyPressable
+          key={course.id}
+          style={[styles.card, styles.cardLocked]}
+          onPress={() => setLockedInfo(course)}>
+          <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
+          <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
+        </BouncyPressable>
+      );
+    }
+
+    const isCompleted = completedCourseIds.includes(course.id);
+    const nextReviewDate = nextReviewDates[course.id];
+
+    return (
+      <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
+        <BouncyPressable style={styles.card}>
+          <View style={styles.cardHeader}>
+            <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
+            {isCompleted ? <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} /> : null}
+          </View>
+          {nextReviewDate ? (
+            <ThemedText style={styles.cardSubtitle}>
+              Prochaine révision :{' '}
+              {nextReviewDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </ThemedText>
+          ) : null}
+        </BouncyPressable>
+      </Link>
+    );
+  }
+
   return (
     <ScreenBackground color="#FAF8FC">
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -649,7 +663,7 @@ export default function SubjectScreen() {
             {hasChapters ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <ThemedText style={styles.sectionTitle}>Chapitres</ThemedText>
+                  <ThemedText style={styles.sectionTitle}>Cours</ThemedText>
                 </View>
                 {chaptersForDiscipline.map((chapter, index) => {
                   const chapterCourses = coursesForDiscipline.filter((course) => course.chapterId === chapter.id);
@@ -658,28 +672,15 @@ export default function SubjectScreen() {
                   const color = CHAPTER_COLORS[index % CHAPTER_COLORS.length];
 
                   return (
-                    <BouncyPressable
-                      key={chapter.id}
-                      style={styles.card}
-                      onPress={() => router.push({ pathname: '/chapter/[chapterId]', params: { chapterId: chapter.id } })}>
-                      <View style={styles.chapterRow}>
-                        <View style={[styles.chapterIcon, { backgroundColor: color }]}>
-                          <IconSymbol name={discipline.icon} size={20} color="#FFFFFF" />
-                        </View>
-                        <View style={styles.chapterBody}>
-                          <ThemedText style={styles.chapterTitle}>
-                            {index + 1}. {chapter.title}
-                          </ThemedText>
-                          <View style={styles.chapterProgressRow}>
-                            <View style={styles.chapterTrack}>
-                              <View style={[styles.chapterFill, { width: `${chapterProgress}%`, backgroundColor: color }]} />
-                            </View>
-                            <ThemedText style={styles.chapterPercent}>{chapterProgress}%</ThemedText>
-                          </View>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={COLORS.mutedText} />
+                    <View key={chapter.id}>
+                      <View style={styles.chapterHeadingRow}>
+                        <ThemedText style={styles.chapterHeading}>
+                          {index + 1}. {chapter.title}
+                        </ThemedText>
+                        <ThemedText style={[styles.chapterHeadingPercent, { color }]}>{chapterProgress}%</ThemedText>
                       </View>
-                    </BouncyPressable>
+                      {chapterCourses.map((course) => renderCourseCard(course))}
+                    </View>
                   );
                 })}
               </View>
@@ -696,51 +697,7 @@ export default function SubjectScreen() {
                       {discipline.subjects.length > 1 ? (
                         <ThemedText style={styles.subjectLabel}>{subjectLabel(subject)}</ThemedText>
                       ) : null}
-                      {coursesForSubject.map((course) => {
-                        const prerequisiteSatisfied =
-                          course.requiresCourseId === null ||
-                          completedCourseIds.includes(course.requiresCourseId) ||
-                          nextReviewDates[course.requiresCourseId] != null;
-                        const isLocked = !prerequisiteSatisfied;
-
-                        if (isLocked) {
-                          return (
-                            <BouncyPressable
-                              key={course.id}
-                              style={[styles.card, styles.cardLocked]}
-                              onPress={() => setLockedInfo(course)}>
-                              <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
-                              <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
-                            </BouncyPressable>
-                          );
-                        }
-
-                        const isCompleted = completedCourseIds.includes(course.id);
-                        const nextReviewDate = nextReviewDates[course.id];
-
-                        return (
-                          <Link key={course.id} href={{ pathname: '/course/[id]', params: { id: course.id } }} asChild>
-                            <BouncyPressable style={styles.card}>
-                              <View style={styles.cardHeader}>
-                                <ThemedText style={styles.cardTitle}>{course.title}</ThemedText>
-                                {isCompleted ? (
-                                  <IconSymbol name="checkmark.circle.fill" size={20} color={COLORS.accent} />
-                                ) : null}
-                              </View>
-                              {nextReviewDate ? (
-                                <ThemedText style={styles.cardSubtitle}>
-                                  Prochaine révision :{' '}
-                                  {nextReviewDate.toLocaleDateString('fr-FR', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric',
-                                  })}
-                                </ThemedText>
-                              ) : null}
-                            </BouncyPressable>
-                          </Link>
-                        );
-                      })}
+                      {coursesForSubject.map((course) => renderCourseCard(course))}
                     </View>
                   );
                 })}
