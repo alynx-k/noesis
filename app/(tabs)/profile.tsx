@@ -28,6 +28,12 @@ import { getDisplayName } from '@/lib/profile';
 
 const WEEKDAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+const OBJECTIVE_STYLE: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  'weekly-lessons': { icon: 'book', color: '#8B6FF0' },
+  streak: { icon: 'flame', color: FEEDBACK_COLORS.correct },
+  score: { icon: 'stats-chart', color: STATUS_COLORS.info },
+};
+
 export default function ProfileScreen() {
   const COLORS = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
@@ -74,11 +80,6 @@ export default function ProfileScreen() {
     header: {
       marginBottom: SPACING.section,
     },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
     title: {
       ...TYPOGRAPHY.largeTitle,
       color: COLORS.text,
@@ -87,15 +88,6 @@ export default function ProfileScreen() {
       ...TYPOGRAPHY.body,
       color: COLORS.mutedText,
       marginTop: 4,
-    },
-    settingsButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 14,
-      backgroundColor: COLORS.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...cardBorder(COLORS),
     },
     profileCard: {
       flexDirection: 'row',
@@ -131,35 +123,34 @@ export default function ProfileScreen() {
     },
     statsGrid: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: SPACING.tight,
-      marginBottom: SPACING.element,
-    },
-    statCard: {
-      width: '48%',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: SPACING.tight,
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
-      padding: SPACING.element,
+      padding: SPACING.tight,
+      marginBottom: SPACING.element,
       ...cardBorder(COLORS),
     },
+    statCard: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: SPACING.tight,
+    },
     statBadge: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
+      width: 30,
+      height: 30,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
     },
     statNumber: {
-      fontSize: 17,
+      fontSize: 14,
       fontWeight: '800',
       color: COLORS.text,
     },
     statLabel: {
-      fontSize: 11,
+      fontSize: 9.5,
       color: COLORS.mutedText,
+      textAlign: 'center',
     },
     streakCard: {
       backgroundColor: '#FDF1DE',
@@ -282,7 +273,21 @@ export default function ProfileScreen() {
       color: COLORS.accent,
     },
     objectiveRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: SPACING.tight,
       marginBottom: SPACING.element,
+    },
+    objectiveBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
+    objectiveBody: {
+      flex: 1,
     },
     objectiveTopRow: {
       flexDirection: 'row',
@@ -414,21 +419,12 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <Animated.View entering={FadeIn.duration(400)}>
             <View style={styles.header}>
-              <View style={styles.headerRow}>
-                <View>
-                  <ThemedText style={styles.title}>Mon profil</ThemedText>
-                  <ThemedText style={styles.subtitle}>Gère ton compte et suis tes progrès.</ThemedText>
-                </View>
-                <Link href="/settings" asChild>
-                  <BouncyPressable style={styles.settingsButton} hitSlop={8}>
-                    <IconSymbol name="gearshape.fill" size={20} color={COLORS.mutedText} />
-                  </BouncyPressable>
-                </Link>
-              </View>
+              <ThemedText style={styles.title}>Mon profil</ThemedText>
+              <ThemedText style={styles.subtitle}>Gère ton compte et suis tes progrès.</ThemedText>
             </View>
 
             <View style={styles.profileCard}>
-              <LinearGradient colors={GRADIENTS.badge} style={styles.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <LinearGradient colors={GRADIENTS.badgeViolet} style={styles.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                 <ThemedText style={styles.avatarText}>{initial}</ThemedText>
               </LinearGradient>
               <View>
@@ -440,39 +436,31 @@ export default function ProfileScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.info }]}>
-                  <Ionicons name="book" size={16} color="#FFFFFF" />
+                  <Ionicons name="book" size={14} color="#FFFFFF" />
                 </View>
-                <View>
-                  <ThemedText style={styles.statNumber}>{visibleDisciplines.length}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Matières suivies</ThemedText>
-                </View>
+                <ThemedText style={styles.statNumber}>{visibleDisciplines.length}</ThemedText>
+                <ThemedText style={styles.statLabel}>Matières{'\n'}suivies</ThemedText>
               </View>
               <View style={styles.statCard}>
                 <View style={[styles.statBadge, { backgroundColor: '#8B6FF0' }]}>
-                  <Ionicons name="school" size={16} color="#FFFFFF" />
+                  <Ionicons name="school" size={14} color="#FFFFFF" />
                 </View>
-                <View>
-                  <ThemedText style={styles.statNumber}>{completedCourseIds.length}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Leçons complétées</ThemedText>
-                </View>
+                <ThemedText style={styles.statNumber}>{completedCourseIds.length}</ThemedText>
+                <ThemedText style={styles.statLabel}>Leçons{'\n'}complétées</ThemedText>
               </View>
               <View style={styles.statCard}>
                 <View style={[styles.statBadge, { backgroundColor: FEEDBACK_COLORS.correct }]}>
-                  <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
                 </View>
-                <View>
-                  <ThemedText style={styles.statNumber}>{averageScore !== null ? `${averageScore}%` : '—'}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Score moyen</ThemedText>
-                </View>
+                <ThemedText style={styles.statNumber}>{averageScore !== null ? `${averageScore}%` : '—'}</ThemedText>
+                <ThemedText style={styles.statLabel}>Score{'\n'}moyen</ThemedText>
               </View>
               <BouncyPressable style={styles.statCard} onPress={() => router.push('/garden')}>
                 <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.warning }]}>
-                  <Ionicons name="time" size={16} color="#FFFFFF" />
+                  <Ionicons name="time" size={14} color="#FFFFFF" />
                 </View>
-                <View>
-                  <ThemedText style={styles.statNumber}>{totalHours !== null ? `${totalHours}h` : '—'}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Temps d&apos;apprentissage</ThemedText>
-                </View>
+                <ThemedText style={styles.statNumber}>{totalHours !== null ? `${totalHours}h` : '—'}</ThemedText>
+                <ThemedText style={styles.statLabel}>Temps{'\n'}d&apos;apprentissage</ThemedText>
               </BouncyPressable>
             </View>
 
@@ -523,21 +511,36 @@ export default function ProfileScreen() {
               <View style={styles.sectionHeader}>
                 <ThemedText style={styles.sectionTitle}>Mes objectifs</ThemedText>
               </View>
-              {(objectives ?? []).map((objective) => (
-                <View key={objective.id} style={styles.objectiveRow}>
-                  <View style={styles.objectiveTopRow}>
-                    <ThemedText style={styles.objectiveTitle} numberOfLines={1}>
-                      {objective.title}
-                    </ThemedText>
-                    <ThemedText style={styles.objectiveFraction}>
-                      {objective.current}/{objective.target}
-                    </ThemedText>
+              {(objectives ?? []).map((objective) => {
+                const style = OBJECTIVE_STYLE[objective.id];
+                return (
+                  <View key={objective.id} style={styles.objectiveRow}>
+                    {style ? (
+                      <View style={[styles.objectiveBadge, { backgroundColor: style.color }]}>
+                        <Ionicons name={style.icon} size={16} color="#FFFFFF" />
+                      </View>
+                    ) : null}
+                    <View style={styles.objectiveBody}>
+                      <View style={styles.objectiveTopRow}>
+                        <ThemedText style={styles.objectiveTitle} numberOfLines={1}>
+                          {objective.title}
+                        </ThemedText>
+                        <ThemedText style={styles.objectiveFraction}>
+                          {objective.current}/{objective.target}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.objectiveTrack}>
+                        <View
+                          style={[
+                            styles.objectiveFill,
+                            { width: `${Math.round((objective.current / objective.target) * 100)}%`, backgroundColor: style?.color ?? COLORS.accent },
+                          ]}
+                        />
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.objectiveTrack}>
-                    <View style={[styles.objectiveFill, { width: `${Math.round((objective.current / objective.target) * 100)}%` }]} />
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
 
             <View style={styles.section}>
