@@ -1,4 +1,5 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -12,12 +13,16 @@ import { ThemedView } from '@/components/themed-view';
 import { ErrorState } from '@/components/ui/error-state';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY } from '@/constants/design';
 import { useFlashcardDecks, useGenerateFlashcards } from '@/hooks/queries/use-flashcards';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { assetToDataUrl } from '@/lib/image-capture';
 
 const MAX_CAPTURED_PHOTOS = 5;
+
+// Cycled per deck row so a long list doesn't read as one flat color block —
+// decks have no subject/category to derive a color from (see below).
+const DECK_COLORS = [STATUS_COLORS.info, '#8B6FF0', FEEDBACK_COLORS.correct, STATUS_COLORS.warning, STATUS_COLORS.error];
 
 export default function FlashcardsScreen() {
   const COLORS = useThemeColors();
@@ -130,11 +135,16 @@ export default function FlashcardsScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: SPACING.section,
+      marginBottom: SPACING.element,
     },
     title: {
       ...TYPOGRAPHY.largeTitle,
       color: COLORS.text,
+    },
+    subtitle: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.mutedText,
+      marginTop: 4,
     },
     addButton: {
       width: 40,
@@ -143,6 +153,43 @@ export default function FlashcardsScreen() {
       backgroundColor: COLORS.accent,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: SPACING.tight,
+      marginBottom: SPACING.section,
+    },
+    statCard: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      ...cardBorder(COLORS),
+    },
+    statBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statNumber: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    statLabel: {
+      fontSize: 11,
+      color: COLORS.mutedText,
+    },
+    sectionTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
     },
     scanCard: {
       backgroundColor: COLORS.surface,
@@ -220,11 +267,24 @@ export default function FlashcardsScreen() {
       marginBottom: SPACING.element,
     },
     deckCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
       padding: SPACING.element,
       marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
+    },
+    deckIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deckTextCol: {
+      flex: 1,
     },
     deckTitle: {
       ...TYPOGRAPHY.body,
@@ -290,11 +350,37 @@ export default function FlashcardsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <View style={styles.header}>
-            <ThemedText style={styles.title}>Mes fiches</ThemedText>
+            <View>
+              <ThemedText style={styles.title}>Fiches</ThemedText>
+              <ThemedText style={styles.subtitle}>Tes fiches créées à partir de tes notes scannées.</ThemedText>
+            </View>
             <BouncyPressable style={styles.addButton} onPress={handleToggleScanOptions} hitSlop={8}>
               <IconSymbol name="plus" size={20} color={COLORS.accentText} />
             </BouncyPressable>
           </View>
+
+          {decksQuery.isSuccess && decks.length > 0 ? (
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.info }]}>
+                  <Ionicons name="documents" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <ThemedText style={styles.statNumber}>{decks.length}</ThemedText>
+                  <ThemedText style={styles.statLabel}>Fiches créées</ThemedText>
+                </View>
+              </View>
+              <View style={styles.statCard}>
+                <View style={[styles.statBadge, { backgroundColor: '#8B6FF0' }]}>
+                  <Ionicons name="albums" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <ThemedText style={styles.statNumber}>{decks.reduce((sum, deck) => sum + deck.cardCount, 0)}</ThemedText>
+                  <ThemedText style={styles.statLabel}>Cartes au total</ThemedText>
+                </View>
+              </View>
+            </View>
+          ) : null}
 
           {showScanOptions ? (
             <ThemedView style={styles.scanCard}>
@@ -385,13 +471,21 @@ export default function FlashcardsScreen() {
             </ThemedView>
           ) : null}
 
-          {decks.map((deck) => (
+          {decks.length > 0 ? <ThemedText style={styles.sectionTitle}>Tes fiches</ThemedText> : null}
+          {decks.map((deck, index) => (
             <Link key={deck.id} href={{ pathname: '/flashcard-deck', params: { id: deck.id } }} asChild>
               <BouncyPressable style={styles.deckCard}>
-                <ThemedText style={styles.deckTitle}>{deck.title}</ThemedText>
-                <ThemedText style={styles.deckSubtitle}>
-                  {deck.cardCount} fiche{deck.cardCount > 1 ? 's' : ''}
-                </ThemedText>
+                <View style={[styles.deckIcon, { backgroundColor: DECK_COLORS[index % DECK_COLORS.length] }]}>
+                  <Ionicons name="document-text" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.deckTextCol}>
+                  <ThemedText style={styles.deckTitle}>{deck.title}</ThemedText>
+                  <ThemedText style={styles.deckSubtitle}>
+                    {deck.cardCount} carte{deck.cardCount > 1 ? 's' : ''} ·{' '}
+                    {deck.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={COLORS.mutedText} />
               </BouncyPressable>
             </Link>
           ))}
