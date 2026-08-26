@@ -20,7 +20,7 @@ import { SUBJECT_LABELS } from '@/constants/courses';
 import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
 import { useProgress } from '@/context/progress';
-import { useChaptersForGrade, useCoursesForGrade } from '@/hooks/queries/use-courses';
+import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { useCourseHistory } from '@/hooks/queries/use-course-history';
 import { useFlashcardDecks } from '@/hooks/queries/use-flashcards';
 import { usePlacementStatus } from '@/hooks/queries/use-placement';
@@ -30,10 +30,7 @@ import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { CourseSummary } from '@/lib/courses';
 
-// Cycled per chapter row so a long chapter list doesn't read as one flat
-// color block — same palette family as the rest of the app's status colors,
-// not invented just for this screen.
-const CHAPTER_COLORS = [STATUS_COLORS.info, '#8B6FF0', FEEDBACK_COLORS.correct, STATUS_COLORS.warning, STATUS_COLORS.error, '#1FA6B0'];
+const VISIBLE_COURSES_LIMIT = 5;
 
 function subjectLabel(subject: string): string {
   return SUBJECT_LABELS[subject as keyof typeof SUBJECT_LABELS] ?? subject;
@@ -46,13 +43,13 @@ export default function SubjectScreen() {
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
   const coursesQuery = useCoursesForGrade();
-  const chaptersQuery = useChaptersForGrade();
   const profileQuery = useProfile();
   const placementQuery = usePlacementStatus(disciplineId);
   const streakQuery = useStreak();
   const historyQuery = useCourseHistory();
   const decksQuery = useFlashcardDecks();
   const [lockedInfo, setLockedInfo] = useState<CourseSummary | null>(null);
+  const [showAllCourses, setShowAllCourses] = useState(false);
 
   const courses = useMemo(() => coursesQuery.data ?? [], [coursesQuery.data]);
   const coursesForDiscipline = useMemo(
@@ -62,12 +59,6 @@ export default function SubjectScreen() {
   const courseIds = coursesForDiscipline.map((course) => course.id);
   const reviewDatesQuery = useNextReviewDates(courseIds);
   const nextReviewDates = reviewDatesQuery.data ?? {};
-
-  const chaptersForDiscipline = useMemo(
-    () => (discipline ? (chaptersQuery.data ?? []).filter((chapter) => discipline.subjects.includes(chapter.subject)) : []),
-    [chaptersQuery.data, discipline],
-  );
-  const hasChapters = chaptersForDiscipline.length > 0;
 
   const historySection = historyQuery.data?.find((section) => section.discipline.id === disciplineId);
   const attemptedEntries = (historySection?.courses ?? []).filter((entry) => entry.total > 0);
@@ -247,22 +238,19 @@ export default function SubjectScreen() {
       marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
     },
-    chapterHeadingRow: {
+    seeMoreButton: {
       flexDirection: 'row',
+      alignSelf: 'center',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      gap: 4,
       marginTop: SPACING.tight,
-      marginBottom: SPACING.tight,
+      paddingVertical: SPACING.tight,
+      paddingHorizontal: SPACING.element,
     },
-    chapterHeading: {
-      ...TYPOGRAPHY.label,
-      color: COLORS.mutedText,
-      textTransform: 'uppercase',
-      flexShrink: 1,
-    },
-    chapterHeadingPercent: {
-      fontSize: 12,
-      fontWeight: '800',
+    seeMoreText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.accent,
     },
     continueCard: {
       backgroundColor: COLORS.surface,
@@ -510,11 +498,6 @@ export default function SubjectScreen() {
   const completedCount = coursesForDiscipline.filter((course) => completedCourseIds.includes(course.id)).length;
   const overallProgress = totalCourses > 0 ? Math.round((completedCount / totalCourses) * 100) : 0;
 
-  const chaptersCompleted = chaptersForDiscipline.filter((chapter) => {
-    const chapterCourses = coursesForDiscipline.filter((course) => course.chapterId === chapter.id);
-    return chapterCourses.length > 0 && chapterCourses.every((course) => completedCourseIds.includes(course.id));
-  }).length;
-
   const averageScore =
     attemptedEntries.length > 0
       ? Math.round(attemptedEntries.reduce((sum, entry) => sum + entry.goodPercentage, 0) / attemptedEntries.length)
@@ -630,10 +613,8 @@ export default function SubjectScreen() {
                     <View style={[styles.statBadge, { backgroundColor: discipline.solidColor }]}>
                       <Ionicons name="book" size={16} color="#FFFFFF" />
                     </View>
-                    <ThemedText style={styles.statNumber}>
-                      {hasChapters ? `${chaptersCompleted}/${chaptersForDiscipline.length}` : `${completedCount}/${totalCourses}`}
-                    </ThemedText>
-                    <ThemedText style={styles.statLabel}>{hasChapters ? 'Chapitres complétés' : 'Leçons complétées'}</ThemedText>
+                    <ThemedText style={styles.statNumber}>{`${completedCount}/${totalCourses}`}</ThemedText>
+                    <ThemedText style={styles.statLabel}>Leçons complétées</ThemedText>
                   </View>
                   <View style={styles.statItem}>
                     <View style={[styles.statBadge, { backgroundColor: STATUS_COLORS.info }]}>
@@ -660,57 +641,50 @@ export default function SubjectScreen() {
               </View>
             </View>
 
-            {hasChapters ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <ThemedText style={styles.sectionTitle}>Cours</ThemedText>
-                </View>
-                {chaptersForDiscipline.map((chapter, index) => {
-                  const chapterCourses = coursesForDiscipline.filter((course) => course.chapterId === chapter.id);
-                  const chapterCompleted = chapterCourses.filter((course) => completedCourseIds.includes(course.id)).length;
-                  const chapterProgress = chapterCourses.length > 0 ? Math.round((chapterCompleted / chapterCourses.length) * 100) : 0;
-                  const color = CHAPTER_COLORS[index % CHAPTER_COLORS.length];
-
-                  return (
-                    <View key={chapter.id}>
-                      <View style={styles.chapterHeadingRow}>
-                        <ThemedText style={styles.chapterHeading}>
-                          {index + 1}. {chapter.title}
-                        </ThemedText>
-                        <ThemedText style={[styles.chapterHeadingPercent, { color }]}>{chapterProgress}%</ThemedText>
-                      </View>
-                      {chapterCourses.map((course) => renderCourseCard(course))}
-                    </View>
-                  );
-                })}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={styles.sectionTitle}>Cours</ThemedText>
               </View>
-            ) : (
-              <View style={styles.section}>
-                {discipline.subjects.map((subject) => {
-                  const coursesForSubject = coursesForDiscipline.filter((course) => course.subject === subject);
-                  if (coursesForSubject.length === 0) {
-                    return null;
-                  }
+              {(() => {
+                const visibleCourses = showAllCourses ? coursesForDiscipline : coursesForDiscipline.slice(0, VISIBLE_COURSES_LIMIT);
+                const remaining = coursesForDiscipline.length - visibleCourses.length;
 
-                  return (
-                    <View key={subject}>
-                      {discipline.subjects.length > 1 ? (
-                        <ThemedText style={styles.subjectLabel}>{subjectLabel(subject)}</ThemedText>
-                      ) : null}
-                      {coursesForSubject.map((course) => renderCourseCard(course))}
-                    </View>
-                  );
-                })}
+                return (
+                  <>
+                    {discipline.subjects.map((subject) => {
+                      const coursesForSubject = visibleCourses.filter((course) => course.subject === subject);
+                      if (coursesForSubject.length === 0) {
+                        return null;
+                      }
 
-                {coursesForDiscipline.length === 0 ? (
-                  <EmptyState
-                    icon="book-outline"
-                    title="Aucun cours disponible"
-                    description="Rien n'est encore disponible pour ta classe dans cette matière."
-                  />
-                ) : null}
-              </View>
-            )}
+                      return (
+                        <View key={subject}>
+                          {discipline.subjects.length > 1 ? (
+                            <ThemedText style={styles.subjectLabel}>{subjectLabel(subject)}</ThemedText>
+                          ) : null}
+                          {coursesForSubject.map((course) => renderCourseCard(course))}
+                        </View>
+                      );
+                    })}
+
+                    {coursesForDiscipline.length === 0 ? (
+                      <EmptyState
+                        icon="book-outline"
+                        title="Aucun cours disponible"
+                        description="Rien n'est encore disponible pour ta classe dans cette matière."
+                      />
+                    ) : null}
+
+                    {remaining > 0 ? (
+                      <BouncyPressable style={styles.seeMoreButton} onPress={() => setShowAllCourses(true)}>
+                        <ThemedText style={styles.seeMoreText}>Voir plus ({remaining})</ThemedText>
+                        <Ionicons name="chevron-down" size={16} color={COLORS.accent} />
+                      </BouncyPressable>
+                    ) : null}
+                  </>
+                );
+              })()}
+            </View>
 
             {nextCourse ? (
               <View style={styles.section}>
