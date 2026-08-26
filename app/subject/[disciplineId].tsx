@@ -74,7 +74,7 @@ export default function SubjectScreen() {
     header: {
       paddingHorizontal: SPACING.screen,
       paddingTop: SPACING.tight,
-      paddingBottom: 56,
+      paddingBottom: 36,
       borderBottomLeftRadius: 32,
       borderBottomRightRadius: 32,
     },
@@ -137,7 +137,7 @@ export default function SubjectScreen() {
       borderRadius: RADIUS,
       padding: SPACING.element,
       marginHorizontal: SPACING.screen,
-      marginTop: -40,
+      marginTop: -22,
       marginBottom: SPACING.section,
       ...cardBorder(COLORS),
     },
@@ -156,10 +156,15 @@ export default function SubjectScreen() {
       alignItems: 'center',
       width: 68,
       flexShrink: 0,
+      position: 'relative',
     },
     ringOverlay: {
       position: 'absolute',
+      top: 0,
+      width: 64,
+      height: 64,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     ringPercent: {
       fontSize: 15,
