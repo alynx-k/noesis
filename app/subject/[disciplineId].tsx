@@ -4,12 +4,11 @@ import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { LessonCoverBanner } from '@/components/lesson-cover-banner';
 import { ScreenBackground } from '@/components/screen-background';
-import { SubjectPlacementPrompt } from '@/components/subject-placement-prompt';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -17,14 +16,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { SUBJECT_LABELS } from '@/constants/courses';
-import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY, Z_INDEX } from '@/constants/design';
+import { FEEDBACK_COLORS, PILL_RADIUS, RADIUS, SPACING, STATUS_COLORS, TYPOGRAPHY } from '@/constants/design';
 import { DISCIPLINES, DisciplineId } from '@/constants/disciplines';
 import { useProgress } from '@/context/progress';
 import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { useCourseHistory } from '@/hooks/queries/use-course-history';
 import { useFlashcardDecks } from '@/hooks/queries/use-flashcards';
-import { usePlacementStatus } from '@/hooks/queries/use-placement';
-import { useProfile } from '@/hooks/queries/use-profile';
 import { useNextReviewDates } from '@/hooks/queries/use-spaced-repetition';
 import { useStreak } from '@/hooks/queries/use-streak';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
@@ -43,12 +40,9 @@ export default function SubjectScreen() {
 
   const { completedCourseIds, loading: progressLoading } = useProgress();
   const coursesQuery = useCoursesForGrade();
-  const profileQuery = useProfile();
-  const placementQuery = usePlacementStatus(disciplineId);
   const streakQuery = useStreak();
   const historyQuery = useCourseHistory();
   const decksQuery = useFlashcardDecks();
-  const [lockedInfo, setLockedInfo] = useState<CourseSummary | null>(null);
   const [showAllCourses, setShowAllCourses] = useState(false);
 
   const courses = useMemo(() => coursesQuery.data ?? [], [coursesQuery.data]);
@@ -393,73 +387,6 @@ export default function SubjectScreen() {
       fontWeight: '600',
       marginTop: 6,
     },
-    cardLocked: {
-      backgroundColor: COLORS.lockedBackground,
-      borderColor: COLORS.lockedBackground,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    cardTitleLocked: {
-      ...TYPOGRAPHY.body,
-      fontWeight: '600',
-      color: COLORS.locked,
-      flexShrink: 1,
-      marginRight: SPACING.tight,
-    },
-    lockDialogBackdrop: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: SPACING.screen,
-      zIndex: Z_INDEX.modal,
-    },
-    lockDialogCard: {
-      width: '100%',
-      maxWidth: 360,
-      backgroundColor: COLORS.surface,
-      borderRadius: RADIUS,
-      padding: SPACING.element,
-      alignItems: 'center',
-      gap: SPACING.tight,
-      ...cardBorder(COLORS),
-    },
-    lockDialogIcon: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: COLORS.lockedBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 4,
-    },
-    lockDialogTitle: {
-      ...TYPOGRAPHY.title,
-      color: COLORS.text,
-      textAlign: 'center',
-    },
-    lockDialogMessage: {
-      ...TYPOGRAPHY.body,
-      color: COLORS.mutedText,
-      textAlign: 'center',
-    },
-    lockDialogButton: {
-      marginTop: SPACING.tight,
-      backgroundColor: COLORS.accent,
-      borderRadius: PILL_RADIUS,
-      paddingVertical: 12,
-      paddingHorizontal: 28,
-    },
-    lockDialogButtonText: {
-      color: COLORS.accentText,
-      fontWeight: '700',
-      fontSize: 15,
-    },
   });
 
   if (!discipline) {
@@ -501,9 +428,6 @@ export default function SubjectScreen() {
     );
   }
 
-  const showPlacementPrompt =
-    placementQuery.isSuccess && !placementQuery.data.handled && !!profileQuery.data?.grade;
-
   const totalCourses = coursesForDiscipline.length;
   const completedCount = coursesForDiscipline.filter((course) => completedCourseIds.includes(course.id)).length;
   const overallProgress = totalCourses > 0 ? Math.round((completedCount / totalCourses) * 100) : 0;
@@ -513,46 +437,15 @@ export default function SubjectScreen() {
       ? Math.round(attemptedEntries.reduce((sum, entry) => sum + entry.goodPercentage, 0) / attemptedEntries.length)
       : null;
 
-  // First course the student hasn't finished yet, in curriculum order,
-  // skipping anything still locked behind a prerequisite.
-  let nextCourse: CourseSummary | null = null;
-  for (const course of coursesForDiscipline) {
-    if (completedCourseIds.includes(course.id)) {
-      continue;
-    }
-    const prerequisiteSatisfied =
-      course.requiresCourseId === null ||
-      completedCourseIds.includes(course.requiresCourseId) ||
-      nextReviewDates[course.requiresCourseId] != null;
-    if (prerequisiteSatisfied) {
-      nextCourse = course;
-      break;
-    }
-  }
+  // First course the student hasn't finished yet, in curriculum order —
+  // every course is accessible regardless of order, no prerequisite gate.
+  const nextCourse = coursesForDiscipline.find((course) => !completedCourseIds.includes(course.id)) ?? null;
   const nextCourseHistory = nextCourse ? historySection?.courses.find((entry) => entry.courseId === nextCourse!.id) : undefined;
 
   const recentExercises = attemptedEntries.slice(0, 3);
 
-  // Shared between the chapters branch and the flat-list fallback below —
-  // same card, same lock/complete/next-review logic, just grouped differently.
+  // Shared between the chapters branch and the flat-list fallback below.
   function renderCourseCard(course: CourseSummary) {
-    const prerequisiteSatisfied =
-      course.requiresCourseId === null ||
-      completedCourseIds.includes(course.requiresCourseId) ||
-      nextReviewDates[course.requiresCourseId] != null;
-
-    if (!prerequisiteSatisfied) {
-      return (
-        <BouncyPressable
-          key={course.id}
-          style={[styles.card, styles.cardLocked]}
-          onPress={() => setLockedInfo(course)}>
-          <ThemedText style={styles.cardTitleLocked}>{course.title}</ThemedText>
-          <IconSymbol name="lock.fill" size={18} color={COLORS.locked} />
-        </BouncyPressable>
-      );
-    }
-
     const isCompleted = completedCourseIds.includes(course.id);
     const nextReviewDate = nextReviewDates[course.id];
 
@@ -806,36 +699,6 @@ export default function SubjectScreen() {
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
-
-      {lockedInfo ? (
-        <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(150)} style={styles.lockDialogBackdrop}>
-          <View style={styles.lockDialogCard}>
-            <View style={styles.lockDialogIcon}>
-              <IconSymbol name="lock.fill" size={22} color={COLORS.locked} />
-            </View>
-            <ThemedText style={styles.lockDialogTitle}>Cours verrouillé</ThemedText>
-            <ThemedText style={styles.lockDialogMessage}>
-              {lockedInfo.requiresCourseId
-                ? `Termine « ${courses.find((c) => c.id === lockedInfo.requiresCourseId)?.title ?? 'le chapitre précédent'} » pour débloquer ce cours !`
-                : 'Termine le chapitre précédent pour débloquer ce cours !'}
-            </ThemedText>
-            <BouncyPressable style={styles.lockDialogButton} onPress={() => setLockedInfo(null)}>
-              <ThemedText style={styles.lockDialogButtonText}>Compris</ThemedText>
-            </BouncyPressable>
-          </View>
-        </Animated.View>
-      ) : null}
-
-      {profileQuery.data?.grade ? (
-        <SubjectPlacementPrompt
-          visible={showPlacementPrompt}
-          discipline={discipline}
-          courses={coursesForDiscipline}
-          grade={profileQuery.data.grade}
-          serie={profileQuery.data.serie}
-          onDone={() => placementQuery.refetch()}
-        />
-      ) : null}
     </ScreenBackground>
   );
 }

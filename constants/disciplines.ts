@@ -16,7 +16,6 @@ export type DisciplineId =
 export type Discipline = {
   id: DisciplineId;
   label: string;
-  available: boolean;
   icon:
     | 'globe'
     | 'function'
@@ -46,13 +45,11 @@ export type Discipline = {
 // Espagnol and Allemand are the LV2 (second foreign language) disciplines:
 // a student studies exactly one of them at their real school, so exactly one
 // of these two entries is ever shown — filtered by the student's saved
-// choice (see lib/lv2.ts), never both. Both are declared `available: true`
-// since availability isn't the gate here, the LV2 choice is.
+// choice (see lib/lv2.ts), never both.
 export const DISCIPLINES: Discipline[] = [
   {
     id: 'histoire-geographie',
     label: 'Histoire-Géographie',
-    available: true,
     icon: 'globe',
     subjects: ['geographie', 'histoire'],
     cardGradient: ['#CDEEF0', '#E4F7F7'],
@@ -62,7 +59,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'mathematiques',
     label: 'Mathématiques',
-    available: true,
     icon: 'function',
     subjects: ['mathematiques'],
     cardGradient: ['#E1D9FC', '#EEE9FD'],
@@ -72,7 +68,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'anglais',
     label: 'Anglais',
-    available: true,
     icon: 'text.bubble.fill',
     subjects: ['anglais'],
     cardGradient: ['#D7F2E0', '#E9F8EE'],
@@ -82,7 +77,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'francais',
     label: 'Français',
-    available: true,
     icon: 'book.fill',
     subjects: ['francais'],
     cardGradient: ['#FBD9D3', '#FCE9E4'],
@@ -92,7 +86,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'edhc',
     label: 'EDHC',
-    available: true,
     icon: 'heart.fill',
     subjects: ['edhc'],
     cardGradient: ['#FCE1EE', '#FDEDF5'],
@@ -102,7 +95,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'physique-chimie',
     label: 'Physique-Chimie',
-    available: true,
     icon: 'atom',
     subjects: ['physique-chimie'],
     cardGradient: ['#FCE4C8', '#FDF0DE'],
@@ -112,7 +104,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'svt',
     label: 'SVT',
-    available: true,
     icon: 'leaf.fill',
     subjects: ['svt'],
     cardGradient: ['#D7F2E0', '#E9F8EE'],
@@ -122,7 +113,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'espagnol',
     label: 'Espagnol',
-    available: true,
     icon: 'flag.fill',
     subjects: ['espagnol'],
     cardGradient: ['#FBD9DC', '#FCE7E9'],
@@ -132,7 +122,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'allemand',
     label: 'Allemand',
-    available: true,
     icon: 'character.book.closed.fill',
     subjects: ['allemand'],
     cardGradient: ['#FCE4C8', '#FDF0DE'],
@@ -144,7 +133,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'philosophie',
     label: 'Philosophie',
-    available: true,
     icon: 'brain.head.profile',
     subjects: ['philosophie'],
     cardGradient: ['#E1D9FC', '#EEE9FD'],
@@ -154,7 +142,6 @@ export const DISCIPLINES: Discipline[] = [
   {
     id: 'tice',
     label: 'TICE',
-    available: true,
     icon: 'desktopcomputer',
     subjects: ['tice'],
     cardGradient: ['#DCE7FC', '#EEF3FE'],

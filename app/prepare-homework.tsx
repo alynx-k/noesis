@@ -354,7 +354,6 @@ export default function PrepareHomeworkScreen() {
               <SkeletonList count={4} cardHeight={52} />
             ) : (
               availableSubjects
-                .filter((d) => d.available)
                 .map((discipline) => (
                   <BouncyPressable
                     key={discipline.id}

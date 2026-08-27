@@ -92,49 +92,6 @@ export async function scheduleNextReview(
   return nextCard.due;
 }
 
-// Grants access to a course via auto-placement without pretending it was
-// reviewed: inserts the FSRS card in its untouched createEmptyCard() state
-// (due immediately) so it enters the normal review cycle and its real
-// mastery gets checked over time, instead of skipping straight to a graded
-// state it never earned. Never overwrites an existing row (real progress
-// on that course must not be reset).
-export async function initializeNeutralReviewState(userId: string, courseId: string): Promise<void> {
-  const { data: existingRow, error: fetchError } = await supabase
-    .from('spaced_repetition_state')
-    .select('course_id')
-    .eq('course_id', courseId)
-    .maybeSingle();
-
-  if (fetchError) {
-    console.error('Failed to check existing review state:', fetchError);
-    return;
-  }
-  if (existingRow) {
-    return;
-  }
-
-  const card = createEmptyCard(new Date());
-  const { error: insertError } = await supabase.from('spaced_repetition_state').insert({
-    user_id: userId,
-    course_id: courseId,
-    due: card.due.toISOString(),
-    stability: card.stability,
-    difficulty: card.difficulty,
-    elapsed_days: card.elapsed_days,
-    scheduled_days: card.scheduled_days,
-    learning_steps: card.learning_steps,
-    reps: card.reps,
-    lapses: card.lapses,
-    state: card.state,
-    last_review: card.last_review ? card.last_review.toISOString() : null,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (insertError) {
-    console.error('Failed to initialize neutral review state:', insertError);
-  }
-}
-
 // Batched variant of getNextReviewDate for a subject's whole course list —
 // one round trip instead of one per course.
 export async function getNextReviewDates(courseIds: string[]): Promise<Record<string, Date | null>> {

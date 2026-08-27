@@ -410,20 +410,6 @@ export default function HomeScreen() {
       opacity: 0.75,
       marginBottom: 8,
     },
-    subjectBadge: {
-      alignSelf: 'flex-start',
-      backgroundColor: COLORS.surface,
-      borderRadius: 999,
-      paddingVertical: 4,
-      paddingHorizontal: 9,
-      borderWidth: 1,
-      borderColor: COLORS.borderStrong,
-    },
-    subjectBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: COLORS.text,
-    },
     challengeCard: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -697,28 +683,6 @@ export default function HomeScreen() {
             </View>
             <View style={styles.subjectGrid}>
               {visibleDisciplines.map((discipline) => {
-                if (!discipline.available) {
-                  return (
-                    <View key={discipline.id} style={styles.subjectGridItem}>
-                      <View style={[styles.subjectCardWrapper, { backgroundColor: COLORS.lockedBackground }]}>
-                        <View style={styles.subjectCard}>
-                          <View style={[styles.subjectIconBadge, { backgroundColor: COLORS.locked }]}>
-                            <IconSymbol name={discipline.icon} size={22} color={COLORS.text} />
-                          </View>
-                          <ThemedText style={styles.subjectCardTitle} numberOfLines={2}>
-                            {discipline.label}
-                          </ThemedText>
-                          <View style={styles.subjectBadge}>
-                            <ThemedText style={styles.subjectBadgeText} numberOfLines={1}>
-                              Bientôt disponible
-                            </ThemedText>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                }
-
                 const progress = disciplineProgress(discipline, coursesQuery.data ?? [], completedCourseIds);
 
                 return (
