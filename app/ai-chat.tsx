@@ -204,9 +204,6 @@ export default function AiChatScreen() {
             <BouncyPressable onPress={() => setSidebarVisible(true)} hitSlop={8}>
               <IconSymbol name="clock.arrow.circlepath" size={22} color={COLORS.text} />
             </BouncyPressable>
-            <BouncyPressable onPress={() => setSidebarVisible(true)} hitSlop={8}>
-              <IconSymbol name="ellipsis" size={22} color={COLORS.text} />
-            </BouncyPressable>
           </View>
         </View>
 
