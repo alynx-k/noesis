@@ -10,11 +10,11 @@ export type Objective = {
   target: number;
 };
 
-const WEEKLY_LESSONS_TARGET = 5;
+export const WEEKLY_LESSONS_TARGET = 5;
 const STREAK_TARGET = 7;
 const SCORE_TARGET = 80;
 
-function startOfWeekIso(): string {
+export function startOfWeekIso(): string {
   const now = new Date();
   const day = now.getDay(); // 0 = Sunday
   const mondayOffset = day === 0 ? -6 : 1 - day;

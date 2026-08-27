@@ -17,20 +17,20 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Halo } from '@/components/ui/halo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
-import { DISCIPLINES, Discipline, getDisciplineIdsFor } from '@/constants/disciplines';
+import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
 import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
-import { useProgress } from '@/context/progress';
 import { useTour, useTourTarget } from '@/context/tour';
-import { useCoursesForGrade } from '@/hooks/queries/use-courses';
-import { useNextUpCourse } from '@/hooks/queries/use-next-up';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useStreak } from '@/hooks/queries/use-streak';
-import { useThemeColors } from '@/hooks/use-theme-colors';
-import { CourseSummary } from '@/lib/courses';
+import { useWeeklyLessonsCompleted } from '@/hooks/queries/use-weekly-lessons';
+import { useWeeklyQuizChallenge } from '@/hooks/queries/use-xp';
+import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { WEEKLY_LESSONS_TARGET } from '@/lib/objectives';
 import { getDisplayName } from '@/lib/profile';
 import { consumeTourPending } from '@/lib/tour';
+import { WEEKLY_QUIZ_BONUS_XP } from '@/lib/xp';
 
 // Dark forest-green — the header avatar's own fixed color, not theme-driven
 // (it's a brand mark, like the subject badges, not text-on-background).
@@ -67,19 +67,6 @@ function HomeHeaderWave() {
   );
 }
 
-// Percentage of this discipline's courses (for the student's grade) marked
-// completed — null when the discipline has no courses yet for this grade,
-// which renders as "—" instead of "0 %" (a card with no assigned work isn't
-// the same as a card the student hasn't started).
-function disciplineProgress(discipline: Discipline, courses: CourseSummary[], completedIds: string[]): number | null {
-  const subjectCourses = courses.filter((course) => discipline.subjects.includes(course.subject));
-  if (subjectCourses.length === 0) {
-    return null;
-  }
-  const completedCount = subjectCourses.filter((course) => completedIds.includes(course.id)).length;
-  return Math.round((completedCount / subjectCourses.length) * 100);
-}
-
 export default function HomeScreen() {
   const COLORS = useThemeColors();
   const isLight = useColorScheme() !== 'dark';
@@ -90,12 +77,11 @@ export default function HomeScreen() {
   // No gating/redirect logic here anymore — Stack.Protected in app/_layout.tsx
   // guarantees session+grade+lv2+placement are all satisfied before this
   // screen can even mount. Each widget degrades independently: a failed
-  // streak or next-up fetch doesn't blank the rest of the screen.
+  // streak or weekly-progress fetch doesn't blank the rest of the screen.
   const profileQuery = useProfile();
-  const nextUpQuery = useNextUpCourse();
-  const coursesQuery = useCoursesForGrade();
   const streakQuery = useStreak();
-  const { completedCourseIds } = useProgress();
+  const weeklyLessonsQuery = useWeeklyLessonsCompleted();
+  const quizChallenge = useWeeklyQuizChallenge();
   const tour = useTour();
   const greetingTarget = useTourTarget('home-greeting');
   const focusTarget = useTourTarget('home-focus-session');
@@ -140,15 +126,30 @@ export default function HomeScreen() {
       justifyContent: 'space-between',
       marginBottom: SPACING.tight,
     },
+    headerText: {
+      flex: 1,
+    },
+    hey: {
+      ...TYPOGRAPHY.body,
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
+    },
     greeting: {
       ...TYPOGRAPHY.largeTitle,
       color: COLORS.text,
+    },
+    greetingAccent: {
+      color: COLORS.accent,
     },
     subtitle: {
       ...TYPOGRAPHY.body,
       color: COLORS.mutedText,
       marginTop: SPACING.tight,
       marginBottom: SPACING.section,
+    },
+    avatarWrap: {
+      width: 52,
+      height: 52,
     },
     avatar: {
       width: 52,
@@ -162,6 +163,99 @@ export default function HomeScreen() {
       color: '#FFFFFF',
       fontSize: 18,
       fontWeight: '700',
+    },
+    streakBadge: {
+      position: 'absolute',
+      bottom: -8,
+      right: -10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: COLORS.surface,
+      borderRadius: 999,
+      paddingVertical: 3,
+      paddingHorizontal: 7,
+      ...cardBorder(COLORS),
+    },
+    streakBadgeEmoji: {
+      fontSize: 12,
+    },
+    streakBadgeText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: COLORS.accent,
+    },
+    todayCard: {
+      flexDirection: 'row',
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      marginBottom: SPACING.section,
+      ...cardBorder(COLORS),
+    },
+    todayCol: {
+      flex: 1,
+    },
+    todayDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: COLORS.border,
+      marginHorizontal: SPACING.element,
+    },
+    todayIconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: SPACING.tight,
+    },
+    todayLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.mutedText,
+      marginBottom: 2,
+    },
+    todayValue: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
+    },
+    progressTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.lockedBackground,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 3,
+      backgroundColor: COLORS.accent,
+    },
+    progressCaption: {
+      fontSize: 11,
+      color: COLORS.mutedText,
+      marginTop: 4,
+      textAlign: 'right',
+    },
+    streakRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    streakEmoji: {
+      fontSize: 14,
+    },
+    streakValue: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: COLORS.accent,
+    },
+    streakCaption: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+      marginTop: 2,
     },
     actionRow: {
       flexDirection: 'row',
@@ -214,6 +308,7 @@ export default function HomeScreen() {
       flexWrap: 'wrap',
       justifyContent: 'space-between',
       rowGap: SPACING.tight,
+      marginBottom: SPACING.section,
     },
     subjectGridItem: {
       width: '31%',
@@ -256,38 +351,53 @@ export default function HomeScreen() {
       fontWeight: '700',
       color: COLORS.text,
     },
-    statsBar: {
+    challengeCard: {
       flexDirection: 'row',
-      backgroundColor: '#EDE9FA',
+      alignItems: 'center',
+      backgroundColor: COLORS.accentSoft,
       borderRadius: RADIUS,
       padding: SPACING.element,
-      marginTop: SPACING.section,
-      alignItems: 'center',
+      gap: SPACING.element,
     },
-    statItem: {
+    challengeIconBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: COLORS.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    challengeBody: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: SPACING.tight,
     },
-    statDivider: {
-      width: StyleSheet.hairlineWidth,
-      alignSelf: 'stretch',
-      backgroundColor: '#D6D0EE',
-      marginHorizontal: SPACING.tight,
-    },
-    statEmoji: {
-      fontSize: 26,
-    },
-    statNumber: {
-      fontSize: 18,
+    challengeTitle: {
+      ...TYPOGRAPHY.body,
       fontWeight: '700',
-      color: COLORS.text,
+      color: COLORS.accent,
+      marginBottom: 2,
     },
-    statLabel: {
-      fontSize: 12,
+    challengeText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: COLORS.text,
+      marginBottom: SPACING.tight,
+    },
+    challengeCaption: {
+      fontSize: 11,
       color: COLORS.mutedText,
-      lineHeight: 15,
+      marginTop: 4,
+    },
+    challengeButton: {
+      borderRadius: 999,
+      borderWidth: 1.5,
+      borderColor: COLORS.accent,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+    },
+    challengeButtonText: {
+      color: COLORS.accent,
+      fontWeight: '700',
+      fontSize: 13,
     },
   });
 
@@ -322,7 +432,6 @@ export default function HomeScreen() {
     );
   }
 
-  const nextUp = nextUpQuery.data;
   const firstName = getDisplayName(user);
   const avatarInitial = firstName.charAt(0).toUpperCase();
   const profile = profileQuery.data;
@@ -333,9 +442,10 @@ export default function HomeScreen() {
       ((discipline.id !== 'espagnol' && discipline.id !== 'allemand') || discipline.id === profile?.lv2),
   );
 
-  const courses = coursesQuery.data ?? [];
-  const discCompletionRates = visibleDisciplines.map((discipline) => disciplineProgress(discipline, courses, completedCourseIds));
-  const inProgressCount = discCompletionRates.filter((rate) => rate !== null && rate > 0 && rate < 100).length;
+  const streak = streakQuery.data?.streak ?? 0;
+  const lessonsThisWeek = Math.min(weeklyLessonsQuery.data ?? 0, WEEKLY_LESSONS_TARGET);
+  const lessonsProgress = WEEKLY_LESSONS_TARGET > 0 ? lessonsThisWeek / WEEKLY_LESSONS_TARGET : 0;
+  const quizProgress = quizChallenge.target > 0 ? quizChallenge.quizCount / quizChallenge.target : 0;
 
   return (
     <ScreenBackground color={isLight ? undefined : COLORS.background}>
@@ -351,40 +461,51 @@ export default function HomeScreen() {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
           <Animated.View entering={FadeIn.duration(450)}>
             <View style={styles.header}>
-              <View ref={greetingTarget.ref} onLayout={greetingTarget.onLayout} style={{ flex: 1 }}>
-                <ThemedText style={styles.greeting}>Hey 👋</ThemedText>
-                <ThemedText style={styles.greeting}>On révise, {firstName} !</ThemedText>
+              <View ref={greetingTarget.ref} onLayout={greetingTarget.onLayout} style={styles.headerText}>
+                <ThemedText style={styles.hey}>Hey {firstName} 👋</ThemedText>
+                <ThemedText style={styles.greeting}>Prêt à devenir</ThemedText>
+                <ThemedText style={[styles.greeting, styles.greetingAccent]}>ta meilleure version ?</ThemedText>
               </View>
-              <View style={styles.avatar}>
-                <ThemedText style={styles.avatarText}>{avatarInitial}</ThemedText>
+              <View style={styles.avatarWrap}>
+                <View style={styles.avatar}>
+                  <ThemedText style={styles.avatarText}>{avatarInitial}</ThemedText>
+                </View>
+                <View style={styles.streakBadge}>
+                  <ThemedText style={styles.streakBadgeEmoji}>🔥</ThemedText>
+                  <ThemedText style={styles.streakBadgeText}>{streak}</ThemedText>
+                </View>
               </View>
             </View>
-            <ThemedText style={styles.subtitle}>Un peu chaque jour, un grand pas demain.</ThemedText>
+            <ThemedText style={styles.subtitle}>Chaque jour compte. Chaque révision te rapproche de tes objectifs.</ThemedText>
+
+            <View style={styles.todayCard}>
+              <View style={styles.todayCol}>
+                <View style={styles.todayIconBadge}>
+                  <ThemedText>🎯</ThemedText>
+                </View>
+                <ThemedText style={styles.todayLabel}>Objectif de la semaine</ThemedText>
+                <ThemedText style={styles.todayValue}>Terminer {WEEKLY_LESSONS_TARGET} leçons</ThemedText>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${Math.round(lessonsProgress * 100)}%` }]} />
+                </View>
+                <ThemedText style={styles.progressCaption}>
+                  {lessonsThisWeek}/{WEEKLY_LESSONS_TARGET}
+                </ThemedText>
+              </View>
+
+              <View style={styles.todayDivider} />
+
+              <View style={styles.todayCol}>
+                <View style={styles.streakRow}>
+                  <ThemedText style={styles.streakEmoji}>🔥</ThemedText>
+                  <ThemedText style={styles.todayLabel}>Série actuelle</ThemedText>
+                </View>
+                <ThemedText style={styles.streakValue}>{streak} jours</ThemedText>
+                <ThemedText style={styles.streakCaption}>Continue comme ça !</ThemedText>
+              </View>
+            </View>
 
             <View style={styles.actionRow}>
-              {nextUp ? (
-                <Link href={{ pathname: '/course/[id]', params: { id: nextUp.courseId } }} asChild>
-                  <BouncyPressable style={styles.actionCardWrapper}>
-                    <LinearGradient
-                      colors={GRADIENTS.mint}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={[styles.actionCard, { backgroundColor: GRADIENTS.mint[0] }]}>
-                      <LinearGradient colors={GRADIENTS.badgeMint} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeMint[0] }]}>
-                        <Ionicons name="flash" size={22} color="#FFFFFF" />
-                      </LinearGradient>
-                      <ThemedText style={[styles.actionCardTitle, { color: '#0F5C46' }]}>Reprise rapide</ThemedText>
-                      <View style={styles.actionCardSubtitleRow}>
-                        <ThemedText style={styles.actionCardSubtitle} numberOfLines={2}>
-                          {nextUp.courseTitle}
-                        </ThemedText>
-                        <IconSymbol name="chevron.right" size={14} color={COLORS.mutedText} />
-                      </View>
-                    </LinearGradient>
-                  </BouncyPressable>
-                </Link>
-              ) : null}
-
               <View ref={focusTarget.ref} onLayout={focusTarget.onLayout} style={styles.actionCardWrapper}>
                 <Link href="/focus-session" asChild>
                   <BouncyPressable>
@@ -487,22 +608,27 @@ export default function HomeScreen() {
               })}
             </View>
 
-            <View style={styles.statsBar}>
-              <View style={styles.statItem}>
-                <ThemedText style={styles.statEmoji}>🔥</ThemedText>
-                <View>
-                  <ThemedText style={styles.statNumber}>{streakQuery.data?.streak ?? 0}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Séries de{'\n'}jours</ThemedText>
-                </View>
+            <View style={styles.challengeCard}>
+              <View style={styles.challengeIconBadge}>
+                <IconSymbol name="trophy.fill" size={26} color={COLORS.accent} />
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <ThemedText style={styles.statEmoji}>🎯</ThemedText>
-                <View>
-                  <ThemedText style={styles.statNumber}>{inProgressCount}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Objectifs{'\n'}en cours</ThemedText>
+              <View style={styles.challengeBody}>
+                <ThemedText style={styles.challengeTitle}>Défi de la semaine</ThemedText>
+                <ThemedText style={styles.challengeText}>
+                  Réussis {quizChallenge.target} quiz cette semaine et gagne {WEEKLY_QUIZ_BONUS_XP} XP bonus !
+                </ThemedText>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${Math.round(quizProgress * 100)}%` }]} />
                 </View>
+                <ThemedText style={styles.challengeCaption}>
+                  {quizChallenge.quizCount}/{quizChallenge.target}
+                </ThemedText>
               </View>
+              <Link href="/prepare-homework" asChild>
+                <BouncyPressable style={styles.challengeButton}>
+                  <ThemedText style={styles.challengeButtonText}>Voir mon défi</ThemedText>
+                </BouncyPressable>
+              </Link>
             </View>
           </Animated.View>
         </ScrollView>
