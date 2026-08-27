@@ -180,39 +180,31 @@ export const SPACING = {
   screen: 24,
 };
 
-// Named font families for the two Cinzel weights loaded in app/_layout.tsx
-// (via useFonts) — screens reference these constants rather than the raw
-// string, so a weight swap only needs to happen here. Cinzel has no true
-// italic face, so FONT_DISPLAY_ITALIC reuses the SemiBold face; TYPOGRAPHY
-// applies a synthetic `fontStyle: 'italic'` slant on top where needed.
-export const FONT_DISPLAY = 'Cinzel_600SemiBold';
-export const FONT_DISPLAY_ITALIC = 'Cinzel_600SemiBold';
-export const FONT_DISPLAY_BOLD = 'Cinzel_700Bold';
-
-// largeTitle/title/displayItalic use the Cinzel display face (loaded as its
-// own weight-specific font file, so no separate fontWeight — mixing the two
-// can make RN fail to resolve the exact variant on Android). Everything else
-// stays on the system/sans face for legibility at small sizes.
+// Every style here stays on the system sans-serif face (no fontFamily
+// override) — largeTitle/title used to load a Cinzel serif display face
+// from an earlier, abandoned redesign; that font never got a matching
+// visual pass on the rest of the app, so headlines ended up looking
+// mismatched against the plain-sans body/caption text everywhere else.
 export const TYPOGRAPHY = {
   largeTitle: {
-    fontFamily: FONT_DISPLAY,
     fontSize: 28,
     lineHeight: 34,
+    fontWeight: '700' as const,
     letterSpacing: 0.2,
   },
   title: {
-    fontFamily: FONT_DISPLAY,
     fontSize: 20,
     lineHeight: 26,
+    fontWeight: '700' as const,
     letterSpacing: 0.1,
   },
   // Reserved for one hero moment per screen at most — matches the site's
   // hero-title accent span, not a general-purpose style.
   displayItalic: {
-    fontFamily: FONT_DISPLAY_ITALIC,
     fontStyle: 'italic' as const,
     fontSize: 20,
     lineHeight: 26,
+    fontWeight: '700' as const,
     letterSpacing: 0.1,
   },
   label: {

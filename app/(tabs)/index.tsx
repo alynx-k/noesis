@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useEffect } from 'react';
-import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
@@ -17,20 +17,37 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Halo } from '@/components/ui/halo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
-import { DISCIPLINES, getDisciplineIdsFor } from '@/constants/disciplines';
-import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { DISCIPLINES, Discipline, getDisciplineIdsFor } from '@/constants/disciplines';
+import { ELEVATION, GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
+import { useProgress } from '@/context/progress';
 import { useTour, useTourTarget } from '@/context/tour';
+import { useCoursesForGrade } from '@/hooks/queries/use-courses';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useStreak } from '@/hooks/queries/use-streak';
 import { useWeeklyLessonsCompleted } from '@/hooks/queries/use-weekly-lessons';
 import { useWeeklyQuizChallenge } from '@/hooks/queries/use-xp';
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
+import { CourseSummary } from '@/lib/courses';
 import { WEEKLY_LESSONS_TARGET } from '@/lib/objectives';
 import { getDisplayName } from '@/lib/profile';
 import { consumeTourPending } from '@/lib/tour';
 import { WEEKLY_QUIZ_BONUS_XP } from '@/lib/xp';
+
+const ROCKET_3D = require('@/assets/images/3d/rocket.png');
+const CHAT_BUBBLES_3D = require('@/assets/images/3d/chat-bubbles.png');
+const TROPHY_3D = require('@/assets/images/3d/trophy.png');
+const TARGET_3D = require('@/assets/images/3d/target.png');
+const BRAIN_3D = require('@/assets/images/3d/brain.png');
+
+// Real weekly-challenge target crossed the mockup's exact "6/10" fixture
+// value into a hardcoded display number — explicitly requested even after
+// being told it wouldn't move with real activity. The underlying XP award
+// (lib/xp.ts / hooks/queries/use-xp.ts) is unaffected: it still only pays
+// out once a genuine 10 quizzes are completed, this only touches the
+// number rendered in this one place.
+const CHALLENGE_DISPLAY_COUNT = 6;
 
 // Dark forest-green — the header avatar's own fixed color, not theme-driven
 // (it's a brand mark, like the subject badges, not text-on-background).
@@ -67,6 +84,23 @@ function HomeHeaderWave() {
   );
 }
 
+// Real completion for this discipline: courses for the student's grade that
+// belong to it, vs. how many are in completedCourseIds — null (rendered as
+// no count/bar at all) when the discipline has no courses yet for this
+// grade, since a card with no assigned work isn't the same as 0% done.
+function disciplineProgress(
+  discipline: Discipline,
+  courses: CourseSummary[],
+  completedIds: string[],
+): { total: number; completed: number; percent: number } | null {
+  const subjectCourses = courses.filter((course) => discipline.subjects.includes(course.subject));
+  if (subjectCourses.length === 0) {
+    return null;
+  }
+  const completed = subjectCourses.filter((course) => completedIds.includes(course.id)).length;
+  return { total: subjectCourses.length, completed, percent: Math.round((completed / subjectCourses.length) * 100) };
+}
+
 export default function HomeScreen() {
   const COLORS = useThemeColors();
   const isLight = useColorScheme() !== 'dark';
@@ -82,6 +116,8 @@ export default function HomeScreen() {
   const streakQuery = useStreak();
   const weeklyLessonsQuery = useWeeklyLessonsCompleted();
   const quizChallenge = useWeeklyQuizChallenge();
+  const coursesQuery = useCoursesForGrade();
+  const { completedCourseIds } = useProgress();
   const tour = useTour();
   const greetingTarget = useTourTarget('home-greeting');
   const focusTarget = useTourTarget('home-focus-session');
@@ -210,6 +246,10 @@ export default function HomeScreen() {
       justifyContent: 'center',
       marginBottom: SPACING.tight,
     },
+    todayIconImage: {
+      width: 26,
+      height: 26,
+    },
     todayLabel: {
       fontSize: 12,
       fontWeight: '700',
@@ -265,11 +305,37 @@ export default function HomeScreen() {
     actionCardWrapper: {
       flex: 1,
       borderRadius: RADIUS,
-      overflow: 'hidden',
+      ...ELEVATION.sm,
     },
     actionCard: {
+      flex: 1,
+      justifyContent: 'space-between',
+      borderRadius: RADIUS,
       padding: SPACING.element,
       minHeight: 180,
+    },
+    actionCardDecoration: {
+      position: 'absolute',
+      right: -10,
+      bottom: -5,
+      width: 92,
+      height: 92,
+    },
+    actionPillButton: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      borderRadius: 25,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      marginTop: SPACING.tight,
+    },
+    actionPillButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
     },
     actionIconBadge: {
       width: 48,
@@ -315,9 +381,10 @@ export default function HomeScreen() {
     },
     subjectCardWrapper: {
       borderRadius: 18,
-      overflow: 'hidden',
+      ...ELEVATION.sm,
     },
     subjectCard: {
+      borderRadius: 18,
       padding: 12,
       minHeight: 142,
       justifyContent: 'space-between',
@@ -335,7 +402,24 @@ export default function HomeScreen() {
       lineHeight: 16,
       fontWeight: '700',
       color: COLORS.text,
+      marginBottom: 4,
+    },
+    subjectLessonCount: {
+      fontSize: 11,
+      color: COLORS.text,
+      opacity: 0.75,
       marginBottom: 8,
+    },
+    subjectProgressTrack: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: 'rgba(255,255,255,0.5)',
+      overflow: 'hidden',
+    },
+    subjectProgressFill: {
+      height: '100%',
+      borderRadius: 2,
+      backgroundColor: '#FFFFFF',
     },
     subjectBadge: {
       alignSelf: 'flex-start',
@@ -358,12 +442,61 @@ export default function HomeScreen() {
       borderRadius: RADIUS,
       padding: SPACING.element,
       gap: SPACING.element,
+      marginBottom: SPACING.section,
+      ...ELEVATION.sm,
     },
     challengeIconBadge: {
       width: 52,
       height: 52,
       borderRadius: 16,
       backgroundColor: COLORS.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    challengeIconImage: {
+      width: 40,
+      height: 40,
+    },
+    recommendedCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: COLORS.surface,
+      borderRadius: RADIUS,
+      padding: SPACING.element,
+      gap: SPACING.element,
+      ...cardBorder(COLORS),
+      ...ELEVATION.sm,
+    },
+    recommendedIconBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recommendedIconImage: {
+      width: 32,
+      height: 32,
+    },
+    recommendedBody: {
+      flex: 1,
+    },
+    recommendedTitle: {
+      ...TYPOGRAPHY.body,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    recommendedSubtitle: {
+      fontSize: 12,
+      color: COLORS.mutedText,
+      marginTop: 2,
+    },
+    recommendedPlayButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: COLORS.accent,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -445,7 +578,7 @@ export default function HomeScreen() {
   const streak = streakQuery.data?.streak ?? 0;
   const lessonsThisWeek = Math.min(weeklyLessonsQuery.data ?? 0, WEEKLY_LESSONS_TARGET);
   const lessonsProgress = WEEKLY_LESSONS_TARGET > 0 ? lessonsThisWeek / WEEKLY_LESSONS_TARGET : 0;
-  const quizProgress = quizChallenge.target > 0 ? quizChallenge.quizCount / quizChallenge.target : 0;
+  const quizProgress = quizChallenge.target > 0 ? CHALLENGE_DISPLAY_COUNT / quizChallenge.target : 0;
 
   return (
     <ScreenBackground color={isLight ? undefined : COLORS.background}>
@@ -481,7 +614,7 @@ export default function HomeScreen() {
             <View style={styles.todayCard}>
               <View style={styles.todayCol}>
                 <View style={styles.todayIconBadge}>
-                  <ThemedText>🎯</ThemedText>
+                  <Image source={TARGET_3D} style={styles.todayIconImage} resizeMode="contain" />
                 </View>
                 <ThemedText style={styles.todayLabel}>Objectif de la semaine</ThemedText>
                 <ThemedText style={styles.todayValue}>Terminer {WEEKLY_LESSONS_TARGET} leçons</ThemedText>
@@ -514,16 +647,23 @@ export default function HomeScreen() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={[styles.actionCard, { backgroundColor: GRADIENTS.hero[0] }]}>
-                      <LinearGradient colors={GRADIENTS.badgeViolet} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeViolet[0] }]}>
-                        <RocketIcon size={22} floating />
-                      </LinearGradient>
-                      <ThemedText style={[styles.actionCardTitle, { color: '#5B3FA8' }]}>Session focus</ThemedText>
-                      <ThemedText style={styles.actionCardSubtitle}>
-                        {focusPhase === 'running' ? `${formatTime(remainingSeconds)}` : '20 min'}
-                      </ThemedText>
-                      <ThemedText style={styles.actionCardSubtitle}>
-                        {focusPhase === 'running' ? 'La fusée vole 🚀' : 'Concentration intense 🚀'}
-                      </ThemedText>
+                      <View>
+                        <LinearGradient colors={GRADIENTS.badgeViolet} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeViolet[0] }]}>
+                          <RocketIcon size={22} floating />
+                        </LinearGradient>
+                        <ThemedText style={[styles.actionCardTitle, { color: '#5B3FA8' }]}>Session focus</ThemedText>
+                        <ThemedText style={styles.actionCardSubtitle}>
+                          {focusPhase === 'running' ? `${formatTime(remainingSeconds)}` : '20 min'}
+                        </ThemedText>
+                        <ThemedText style={styles.actionCardSubtitle}>
+                          {focusPhase === 'running' ? 'La fusée vole 🚀' : 'Concentration intense 🚀'}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.actionPillButton}>
+                        <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
+                        <IconSymbol name="chevron.right" size={13} color={COLORS.text} />
+                      </View>
+                      <Image source={ROCKET_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                     </LinearGradient>
                   </BouncyPressable>
                 </Link>
@@ -537,16 +677,23 @@ export default function HomeScreen() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={[styles.actionCard, { backgroundColor: GRADIENTS.cosmic[0] }]}>
-                      <LinearGradient colors={GRADIENTS.badgeAzure} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeAzure[0] }]}>
-                        <Ionicons name="chatbubble-ellipses" size={22} color="#FFFFFF" />
-                      </LinearGradient>
-                      <ThemedText style={[styles.actionCardTitle, { color: COLORS.text }]}>Discuter avec IA</ThemedText>
-                      <View style={styles.actionCardSubtitleRow}>
-                        <ThemedText style={styles.actionCardSubtitle} numberOfLines={2}>
-                          Pose une question, progresse plus vite
-                        </ThemedText>
-                        <IconSymbol name="chevron.right" size={14} color={COLORS.mutedText} />
+                      <View>
+                        <LinearGradient colors={GRADIENTS.badgeAzure} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeAzure[0] }]}>
+                          <Ionicons name="chatbubble-ellipses" size={22} color="#FFFFFF" />
+                        </LinearGradient>
+                        <ThemedText style={[styles.actionCardTitle, { color: COLORS.text }]}>Discuter avec IA</ThemedText>
+                        <View style={styles.actionCardSubtitleRow}>
+                          <ThemedText style={styles.actionCardSubtitle} numberOfLines={2}>
+                            Pose une question, progresse plus vite
+                          </ThemedText>
+                          <IconSymbol name="chevron.right" size={14} color={COLORS.mutedText} />
+                        </View>
                       </View>
+                      <View style={styles.actionPillButton}>
+                        <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
+                        <Ionicons name="chatbubble-ellipses" size={13} color={COLORS.text} />
+                      </View>
+                      <Image source={CHAT_BUBBLES_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                     </LinearGradient>
                   </BouncyPressable>
                 </Link>
@@ -583,6 +730,8 @@ export default function HomeScreen() {
                   );
                 }
 
+                const progress = disciplineProgress(discipline, coursesQuery.data ?? [], completedCourseIds);
+
                 return (
                   <View key={discipline.id} style={styles.subjectGridItem}>
                     <Link href={{ pathname: '/subject/[disciplineId]', params: { disciplineId: discipline.id } }} asChild>
@@ -592,14 +741,28 @@ export default function HomeScreen() {
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                           style={[styles.subjectCard, { backgroundColor: discipline.cardGradient[0] }]}>
-                          <LinearGradient
-                            colors={discipline.badgeGradient}
-                            style={[styles.subjectIconBadge, { backgroundColor: discipline.badgeGradient[0] }]}>
-                            <IconSymbol name={discipline.icon} size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                          <ThemedText style={styles.subjectCardTitle} numberOfLines={2}>
-                            {discipline.label}
-                          </ThemedText>
+                          <View>
+                            <LinearGradient
+                              colors={discipline.badgeGradient}
+                              style={[styles.subjectIconBadge, { backgroundColor: discipline.badgeGradient[0] }]}>
+                              <IconSymbol name={discipline.icon} size={22} color="#FFFFFF" />
+                            </LinearGradient>
+                            <ThemedText
+                              style={styles.subjectCardTitle}
+                              numberOfLines={2}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.85}>
+                              {discipline.label}
+                            </ThemedText>
+                            {progress ? (
+                              <ThemedText style={styles.subjectLessonCount}>{progress.total} leçons</ThemedText>
+                            ) : null}
+                          </View>
+                          {progress ? (
+                            <View style={styles.subjectProgressTrack}>
+                              <View style={[styles.subjectProgressFill, { width: `${progress.percent}%` }]} />
+                            </View>
+                          ) : null}
                         </LinearGradient>
                       </BouncyPressable>
                     </Link>
@@ -610,7 +773,7 @@ export default function HomeScreen() {
 
             <View style={styles.challengeCard}>
               <View style={styles.challengeIconBadge}>
-                <IconSymbol name="trophy.fill" size={26} color={COLORS.accent} />
+                <Image source={TROPHY_3D} style={styles.challengeIconImage} resizeMode="contain" />
               </View>
               <View style={styles.challengeBody}>
                 <ThemedText style={styles.challengeTitle}>Défi de la semaine</ThemedText>
@@ -621,7 +784,7 @@ export default function HomeScreen() {
                   <View style={[styles.progressFill, { width: `${Math.round(quizProgress * 100)}%` }]} />
                 </View>
                 <ThemedText style={styles.challengeCaption}>
-                  {quizChallenge.quizCount}/{quizChallenge.target}
+                  {CHALLENGE_DISPLAY_COUNT}/{quizChallenge.target}
                 </ThemedText>
               </View>
               <Link href="/prepare-homework" asChild>
@@ -630,6 +793,25 @@ export default function HomeScreen() {
                 </BouncyPressable>
               </Link>
             </View>
+
+            <View style={styles.sectionTitleRow}>
+              <IconSymbol name="sparkles" size={20} color={COLORS.text} />
+              <ThemedText style={styles.sectionTitle}>Recommandé pour toi</ThemedText>
+            </View>
+            <Link href="/flashcards" asChild>
+              <BouncyPressable style={styles.recommendedCard}>
+                <View style={styles.recommendedIconBadge}>
+                  <Image source={BRAIN_3D} style={styles.recommendedIconImage} resizeMode="contain" />
+                </View>
+                <View style={styles.recommendedBody}>
+                  <ThemedText style={styles.recommendedTitle}>Réviser intelligemment</ThemedText>
+                  <ThemedText style={styles.recommendedSubtitle}>5 min de lecture</ThemedText>
+                </View>
+                <View style={styles.recommendedPlayButton}>
+                  <Ionicons name="play" size={16} color={COLORS.accentText} />
+                </View>
+              </BouncyPressable>
+            </Link>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
