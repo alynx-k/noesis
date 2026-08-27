@@ -316,10 +316,10 @@ export default function HomeScreen() {
     },
     actionCardDecoration: {
       position: 'absolute',
-      right: -10,
-      bottom: -5,
-      width: 92,
-      height: 92,
+      right: -8,
+      bottom: -6,
+      width: 58,
+      height: 58,
     },
     actionPillButton: {
       alignSelf: 'flex-start',
@@ -354,6 +354,7 @@ export default function HomeScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      paddingRight: 24,
     },
     actionCardSubtitle: {
       ...TYPOGRAPHY.caption,
@@ -634,11 +635,11 @@ export default function HomeScreen() {
                           {focusPhase === 'running' ? 'La fusée vole 🚀' : 'Concentration intense 🚀'}
                         </ThemedText>
                       </View>
+                      <Image source={ROCKET_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                       <View style={styles.actionPillButton}>
                         <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
                         <IconSymbol name="chevron.right" size={13} color={COLORS.text} />
                       </View>
-                      <Image source={ROCKET_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                     </LinearGradient>
                   </BouncyPressable>
                 </Link>
@@ -664,11 +665,11 @@ export default function HomeScreen() {
                           <IconSymbol name="chevron.right" size={14} color={COLORS.mutedText} />
                         </View>
                       </View>
+                      <Image source={CHAT_BUBBLES_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                       <View style={styles.actionPillButton}>
                         <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
                         <Ionicons name="chatbubble-ellipses" size={13} color={COLORS.text} />
                       </View>
-                      <Image source={CHAT_BUBBLES_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                     </LinearGradient>
                   </BouncyPressable>
                 </Link>
