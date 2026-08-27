@@ -410,17 +410,6 @@ export default function HomeScreen() {
       opacity: 0.75,
       marginBottom: 8,
     },
-    subjectProgressTrack: {
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: 'rgba(255,255,255,0.5)',
-      overflow: 'hidden',
-    },
-    subjectProgressFill: {
-      height: '100%',
-      borderRadius: 2,
-      backgroundColor: '#FFFFFF',
-    },
     subjectBadge: {
       alignSelf: 'flex-start',
       backgroundColor: COLORS.surface,
@@ -758,11 +747,6 @@ export default function HomeScreen() {
                               <ThemedText style={styles.subjectLessonCount}>{progress.total} leçons</ThemedText>
                             ) : null}
                           </View>
-                          {progress ? (
-                            <View style={styles.subjectProgressTrack}>
-                              <View style={[styles.subjectProgressFill, { width: `${progress.percent}%` }]} />
-                            </View>
-                          ) : null}
                         </LinearGradient>
                       </BouncyPressable>
                     </Link>
