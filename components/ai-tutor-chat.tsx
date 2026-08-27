@@ -1,6 +1,10 @@
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
 import {
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   NativeScrollEvent,
@@ -22,9 +26,25 @@ import { ThinkingPill } from '@/components/thinking-pill';
 import { IconSymbol, IconSymbolName } from '@/components/ui/icon-symbol';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { cardBorder, ThemeColors, useThemeColors } from '@/hooks/use-theme-colors';
+import { ChatMessage as PersistedChatMessage } from '@/lib/chat';
+import { assetToDataUrl } from '@/lib/image-capture';
 import { supabase } from '@/lib/supabase';
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+// The richer, in-flight message shape used only while a conversation is
+// live in this component — content can carry an image for the model to
+// look at. Persistence (lib/chat.ts, `chat_messages.content` is a plain
+// text column) only ever stores the string form: onMessage always receives
+// a PersistedChatMessage, never one of these with array content.
+type ChatContentPart = { type: 'text'; text: string } | { type: 'image'; image: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string | ChatContentPart[] };
+
+// Staged by the quick-actions row before the next message is sent — cleared
+// once sendMessage picks it up. Text files are inlined into the outgoing
+// text (the tutor reads them as part of the question); images travel as a
+// real image content part so the model can actually look at them.
+type PendingAttachment = { kind: 'image'; dataUrl: string; previewUri: string } | { kind: 'file'; name: string; content: string };
+
+const MAX_TEXT_FILE_CHARS = 6000;
 
 export type TutorContext =
   | { type: 'exercise'; courseId: string; questionNumber: number }
@@ -108,8 +128,8 @@ type AiTutorChatBodyProps = {
   // helper (exercises, flashcard fiches) omits them and stays ephemeral by
   // design: it's scoped to one question/deck, not a conversation worth
   // resuming.
-  initialMessages?: ChatMessage[];
-  onMessage?: (message: ChatMessage) => void;
+  initialMessages?: PersistedChatMessage[];
+  onMessage?: (message: PersistedChatMessage) => void;
 };
 
 function formatClockTime(date: Date): string {
@@ -150,6 +170,8 @@ export function AiTutorChatBody({
   // shows the thinking pill where its text used to be, rather than a new
   // exchange appended at the bottom.
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [attaching, setAttaching] = useState(false);
   const toneStyles = getToneStyles(COLORS, tone);
   const busy = sending || regeneratingIndex !== null;
 
@@ -164,18 +186,40 @@ export function AiTutorChatBody({
     return data.reply as string;
   };
 
-  const sendMessage = async (text: string) => {
-    if (!text || busy) {
+  const sendMessage = async (text: string, attachment: PendingAttachment | null = null) => {
+    if ((!text && !attachment) || busy) {
       return;
     }
 
     setError(null);
-    const userMessage: ChatMessage = { role: 'user', content: text };
+
+    let content: ChatMessage['content'];
+    let persistedContent: string;
+
+    if (attachment?.kind === 'image') {
+      const parts: ChatContentPart[] = [{ type: 'image', image: attachment.dataUrl }];
+      if (text) {
+        parts.push({ type: 'text', text });
+      }
+      content = parts;
+      persistedContent = text ? `${text}\n\n[Image jointe]` : '[Image jointe]';
+    } else if (attachment?.kind === 'file') {
+      content = text
+        ? `${text}\n\n[Fichier joint : ${attachment.name}]\n"""\n${attachment.content}\n"""`
+        : `[Fichier joint : ${attachment.name}]\n"""\n${attachment.content}\n"""`;
+      persistedContent = content;
+    } else {
+      content = text;
+      persistedContent = text;
+    }
+
+    const userMessage: ChatMessage = { role: 'user', content };
     const updatedMessages: ChatMessage[] = [...messages, userMessage];
     setMessages(updatedMessages);
     setSentAt((previous) => ({ ...previous, [updatedMessages.length - 1]: formatClockTime(new Date()) }));
-    onMessage?.(userMessage);
+    onMessage?.({ role: 'user', content: persistedContent });
     setInput('');
+    setPendingAttachment(null);
     setSending(true);
 
     const reply = await requestReply(updatedMessages);
@@ -186,7 +230,7 @@ export function AiTutorChatBody({
       return;
     }
 
-    const assistantMessage: ChatMessage = { role: 'assistant', content: reply };
+    const assistantMessage = { role: 'assistant' as const, content: reply };
     setMessages((previous) => {
       const next = [...previous, assistantMessage];
       setStreamingIndex(next.length - 1);
@@ -220,6 +264,99 @@ export function AiTutorChatBody({
     );
     setSentAt((times) => ({ ...times, [index]: formatClockTime(new Date()) }));
     setStreamingIndex(index);
+  };
+
+  const stageImage = async (asset: ImagePicker.ImagePickerAsset) => {
+    setAttaching(true);
+    const dataUrl = await assetToDataUrl(asset);
+    setAttaching(false);
+    if (!dataUrl) {
+      setError('Impossible de traiter cette image, réessaie.');
+      return;
+    }
+    setPendingAttachment({ kind: 'image', dataUrl, previewUri: asset.uri });
+  };
+
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError("Autorisation caméra refusée.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (!result.canceled && result.assets[0]) {
+      await stageImage(result.assets[0]);
+    }
+  };
+
+  const handlePickImageFromLibrary = async () => {
+    // On web, permission is a meaningless stub that always resolves
+    // granted (there's no real browser permission for "media library") —
+    // awaiting it first burns the click's user-activation window, which is
+    // what the browser requires to let launchImageLibraryAsync open its
+    // hidden file input. Skipping straight to it keeps the picker call in
+    // the same tick as the tap.
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setError('Autorisation galerie refusée.');
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+    if (!result.canceled && result.assets[0]) {
+      await stageImage(result.assets[0]);
+    }
+  };
+
+  const handleSendImagePress = () => {
+    if (busy || attaching) {
+      return;
+    }
+    setError(null);
+    // Alert.alert has no web implementation (silently does nothing there),
+    // so the camera/gallery choice sheet only makes sense on native — web
+    // goes straight to the file/gallery picker instead of doing nothing.
+    if (Platform.OS === 'web') {
+      handlePickImageFromLibrary();
+      return;
+    }
+    Alert.alert('Envoyer une image', undefined, [
+      { text: 'Prendre une photo', onPress: handleTakePhoto },
+      { text: 'Choisir dans la galerie', onPress: handlePickImageFromLibrary },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  };
+
+  const handleAttachFile = async () => {
+    if (busy || attaching) {
+      return;
+    }
+    setError(null);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['text/plain', 'text/markdown', 'text/csv'],
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+    const file = result.assets[0];
+    if (!file.mimeType?.startsWith('text/')) {
+      setError('Seuls les fichiers texte (.txt, .md) sont pris en charge pour le moment.');
+      return;
+    }
+    setAttaching(true);
+    try {
+      const raw = await (await fetch(file.uri)).text();
+      const truncated =
+        raw.length > MAX_TEXT_FILE_CHARS ? `${raw.slice(0, MAX_TEXT_FILE_CHARS)}\n[...tronqué]` : raw;
+      setPendingAttachment({ kind: 'file', name: file.name, content: truncated });
+    } catch (readError) {
+      console.error('Failed to read attached file:', readError);
+      setError('Impossible de lire ce fichier, réessaie.');
+    } finally {
+      setAttaching(false);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -271,6 +408,49 @@ export function AiTutorChatBody({
     bubbleTextUser: {
       ...TYPOGRAPHY.body,
       color: tone === 'light' ? COLORS.text : COLORS.accentText,
+    },
+    attachedImage: {
+      width: 180,
+      height: 180,
+      borderRadius: RADIUS - 4,
+      marginBottom: SPACING.tight,
+    },
+    attachmentPreviewRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.tight,
+      marginHorizontal: SPACING.screen,
+      marginBottom: SPACING.tight,
+      padding: SPACING.tight,
+      borderRadius: RADIUS - 4,
+      backgroundColor: COLORS.surface,
+      ...cardBorder(COLORS),
+    },
+    attachmentPreviewImage: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+    },
+    attachmentPreviewIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: COLORS.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    attachmentPreviewText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: COLORS.text,
+    },
+    attachmentRemoveButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     // Bot replies render straight on the screen background — no card, no
     // border — full-width and left-aligned, Gemini-style. (onGradient tone
@@ -573,9 +753,20 @@ export function AiTutorChatBody({
             const time = sentAt[index];
 
             if (message.role === 'user') {
+              const textContent =
+                typeof message.content === 'string'
+                  ? message.content
+                  : (message.content.find((part) => part.type === 'text') as { text: string } | undefined)?.text;
+              const imagePart = Array.isArray(message.content)
+                ? (message.content.find((part) => part.type === 'image') as { image: string } | undefined)
+                : undefined;
+
               return (
                 <View key={index} style={[styles.bubble, styles.bubbleUser]}>
-                  <ThemedText style={styles.bubbleTextUser}>{message.content}</ThemedText>
+                  {imagePart ? (
+                    <Image source={{ uri: imagePart.image }} style={styles.attachedImage} resizeMode="cover" />
+                  ) : null}
+                  {textContent ? <ThemedText style={styles.bubbleTextUser}>{textContent}</ThemedText> : null}
                   {tone === 'light' && time ? (
                     <View style={styles.timestampRow}>
                       <ThemedText style={styles.timestampText}>{time}</ThemedText>
@@ -604,23 +795,27 @@ export function AiTutorChatBody({
             }
 
             const isStreaming = index === streamingIndex;
+            // Assistant replies are always plain text in practice (only
+            // user turns can carry an image part) — narrowed here so
+            // StreamingText/MessageActions, which take a string, type-check.
+            const assistantText = typeof message.content === 'string' ? message.content : '';
             const body = (
               <>
                 {isStreaming ? (
                   <StreamingText
-                    text={message.content}
+                    text={assistantText}
                     style={styles.bubbleTextAssistant}
                     onComplete={() => setStreamingIndex((current) => (current === index ? null : current))}
                   />
                 ) : (
-                  <ThemedText style={styles.bubbleTextAssistant}>{message.content}</ThemedText>
+                  <ThemedText style={styles.bubbleTextAssistant}>{assistantText}</ThemedText>
                 )}
                 {tone === 'light' && time && !isStreaming ? (
                   <ThemedText style={[styles.timestampText, { marginTop: 8 }]}>{time}</ThemedText>
                 ) : null}
                 {!isStreaming ? (
                   <Animated.View entering={FadeIn.duration(300)}>
-                    <MessageActions text={message.content} onRegenerate={() => handleRegenerate(index)} />
+                    <MessageActions text={assistantText} onRegenerate={() => handleRegenerate(index)} />
                   </Animated.View>
                 ) : null}
               </>
@@ -669,6 +864,24 @@ export function AiTutorChatBody({
         ) : null}
       </View>
 
+      {pendingAttachment ? (
+        <View style={styles.attachmentPreviewRow}>
+          {pendingAttachment.kind === 'image' ? (
+            <Image source={{ uri: pendingAttachment.previewUri }} style={styles.attachmentPreviewImage} />
+          ) : (
+            <View style={styles.attachmentPreviewIcon}>
+              <IconSymbol name="doc.text.fill" size={16} color={COLORS.accent} />
+            </View>
+          )}
+          <ThemedText style={styles.attachmentPreviewText} numberOfLines={1}>
+            {pendingAttachment.kind === 'image' ? 'Image jointe' : pendingAttachment.name}
+          </ThemedText>
+          <BouncyPressable style={styles.attachmentRemoveButton} onPress={() => setPendingAttachment(null)}>
+            <IconSymbol name="xmark" size={14} color={COLORS.mutedText} />
+          </BouncyPressable>
+        </View>
+      ) : null}
+
       <View
         style={[
           styles.inputRow,
@@ -709,20 +922,20 @@ export function AiTutorChatBody({
           />
         )}
         <BouncyPressable
-          style={[styles.sendButton, (!input.trim() || busy) && styles.sendButtonDisabled]}
-          onPress={() => sendMessage(input.trim())}
-          disabled={!input.trim() || busy}>
+          style={[styles.sendButton, (!(input.trim() || pendingAttachment) || busy) && styles.sendButtonDisabled]}
+          onPress={() => sendMessage(input.trim(), pendingAttachment)}
+          disabled={!(input.trim() || pendingAttachment) || busy}>
           <IconSymbol name="paperplane.fill" size={18} color={COLORS.accentText} />
         </BouncyPressable>
       </View>
 
       {tone === 'light' ? (
         <View style={styles.quickActionsRow}>
-          <BouncyPressable style={styles.quickActionButton} onPress={notifyComingSoon}>
+          <BouncyPressable style={styles.quickActionButton} onPress={handleSendImagePress} disabled={busy || attaching}>
             <IconSymbol name="camera.fill" size={18} color={COLORS.mutedText} />
             <ThemedText style={styles.quickActionLabel}>Envoyer{'\n'}une image</ThemedText>
           </BouncyPressable>
-          <BouncyPressable style={styles.quickActionButton} onPress={notifyComingSoon}>
+          <BouncyPressable style={styles.quickActionButton} onPress={handleAttachFile} disabled={busy || attaching}>
             <IconSymbol name="paperclip" size={18} color={COLORS.mutedText} />
             <ThemedText style={styles.quickActionLabel}>Joindre{'\n'}un fichier</ThemedText>
           </BouncyPressable>

@@ -7,10 +7,82 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatContentPart = { type: 'text'; text: string } | { type: 'image'; image: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string | ChatContentPart[] };
 type ExerciseContext = { type: 'exercise'; courseId: string; questionNumber: number };
 type FicheContext = { type: 'fiche'; deckId: string };
 type TutorContext = ExerciseContext | FicheContext;
+
+const MAX_IMAGES_PER_MESSAGE = 1;
+
+function parseImageDataUrl(value: string): { mediaType: string; base64: string } | null {
+  const match = value.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+  return match ? { mediaType: match[1], base64: match[2] } : null;
+}
+
+function isValidContentPart(part: unknown): part is ChatContentPart {
+  if (typeof part !== 'object' || part === null) {
+    return false;
+  }
+  const p = part as Record<string, unknown>;
+  if (p.type === 'text') {
+    return typeof p.text === 'string';
+  }
+  if (p.type === 'image') {
+    return typeof p.image === 'string' && parseImageDataUrl(p.image) !== null;
+  }
+  return false;
+}
+
+function isValidMessage(message: unknown): message is ChatMessage {
+  if (typeof message !== 'object' || message === null) {
+    return false;
+  }
+  const m = message as Record<string, unknown>;
+  if (m.role !== 'user' && m.role !== 'assistant') {
+    return false;
+  }
+  if (typeof m.content === 'string') {
+    return true;
+  }
+  if (Array.isArray(m.content)) {
+    const imageCount = m.content.filter((part) => (part as Record<string, unknown>)?.type === 'image').length;
+    return imageCount <= MAX_IMAGES_PER_MESSAGE && m.content.every(isValidContentPart);
+  }
+  return false;
+}
+
+// Without these, the browser's CORS preflight (OPTIONS) gets no
+// Access-Control-Allow-* headers back and the actual POST never gets sent —
+// supabase-js surfaces that as a generic "Failed to send a request" with no
+// HTTP status, easy to mistake for a real network outage. Native (iOS/
+// Android) callers never hit this since CORS is a browser-only mechanism,
+// which is why this only shows up testing the chat through Expo web.
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  });
+}
+
+function toAnthropicContent(content: string | ChatContentPart[]): string | Record<string, unknown>[] {
+  if (typeof content === 'string') {
+    return content;
+  }
+  return content.map((part) => {
+    if (part.type === 'text') {
+      return { type: 'text', text: part.text };
+    }
+    const parsed = parseImageDataUrl(part.image)!;
+    return { type: 'image', source: { type: 'base64', media_type: parsed.mediaType, data: parsed.base64 } };
+  });
+}
 
 // Kept short on purpose: this is a chat, not an essay — every reply costs
 // tokens, and a wall of text reads as robotic rather than like a tutor
@@ -79,33 +151,19 @@ ${JSON.stringify(fiche)}
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   try {
     const { messages, context } = await req.json();
 
-    if (
-      !Array.isArray(messages) ||
-      messages.length === 0 ||
-      messages.some(
-        (message: unknown) =>
-          typeof message !== 'object' ||
-          message === null ||
-          !('role' in message) ||
-          !('content' in message) ||
-          ((message as ChatMessage).role !== 'user' && (message as ChatMessage).role !== 'assistant') ||
-          typeof (message as ChatMessage).content !== 'string',
-      )
-    ) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!Array.isArray(messages) || messages.length === 0 || messages.some((message) => !isValidMessage(message))) {
+      return jsonResponse({ error: 'Invalid request' }, 400);
     }
 
     const authHeader = req.headers.get('Authorization') ?? '';
@@ -119,10 +177,7 @@ Deno.serve(async (req: Request) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
     const systemPrompt = await buildSystemPrompt(supabaseClient, context as TutorContext | undefined);
@@ -138,17 +193,17 @@ Deno.serve(async (req: Request) => {
         model: 'claude-sonnet-5',
         max_tokens: 300,
         system: systemPrompt,
-        messages: (messages as ChatMessage[]).map((message) => ({ role: message.role, content: message.content })),
+        messages: (messages as ChatMessage[]).map((message) => ({
+          role: message.role,
+          content: toAnthropicContent(message.content),
+        })),
       }),
     });
 
     if (!anthropicResponse.ok) {
       const errorBody = await anthropicResponse.text();
       console.error('Anthropic API error:', anthropicResponse.status, errorBody);
-      return new Response(JSON.stringify({ error: 'Anthropic API error' }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Anthropic API error' }, 502);
     }
 
     const data = await anthropicResponse.json();
@@ -161,20 +216,12 @@ Deno.serve(async (req: Request) => {
 
     if (!reply) {
       console.error('ai-tutor: no text block in Anthropic response', data);
-      return new Response(JSON.stringify({ error: 'Internal error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Internal error' }, 500);
     }
 
-    return new Response(JSON.stringify({ reply }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ reply });
   } catch (error) {
     console.error('ai-tutor error:', error);
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Internal error' }, 500);
   }
 });
