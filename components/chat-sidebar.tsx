@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Pressable, SectionList, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, SlideInLeft, SlideOutLeft } from 'react-native-reanimated';
 
 import { BouncyPressable } from '@/components/bouncy-pressable';
 import { ThemedText } from '@/components/themed-text';
@@ -10,15 +10,15 @@ import { ELEVATION, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { ChatSessionSummary } from '@/lib/chat';
 
-// A plain CSS percentage, not `useWindowDimensions().height * ratio` — that
-// JS-computed pixel value depends on the dimensions hook resolving a real
-// value the instant this component mounts (it's conditionally rendered from
-// scratch every time it opens, via `if (!visible) return null` below), and
-// this exact component has already caused two separate bugs from that
-// timing (invisible-but-blocking on web, and never appearing on native).
-// A percentage string is resolved by RN's own layout engine, with no JS
-// timing dependency at all.
-const SHEET_MAX_HEIGHT = '82%';
+// This used to be a bottom sheet with a blurred backdrop and a height
+// computed from window dimensions — a later redesign that broke in three
+// different ways across several fix attempts (invisible-but-blocking on
+// web, frozen-and-unresponsive on native via the blur workaround, then
+// never appearing at all once the height calc raced on mount). Back to the
+// original left-side drawer: a fixed width and height:'100%' need no
+// dimension math or blur at all, and this shape demonstrably worked before
+// that redesign.
+const SIDEBAR_WIDTH = 300;
 
 type SessionGroup = { title: string; data: ChatSessionSummary[] };
 
@@ -83,7 +83,6 @@ export function ChatSidebar({
   onDeleteSession,
 }: ChatSidebarProps) {
   const COLORS = useThemeColors();
-  const scheme = useColorScheme();
   const [renamingSession, setRenamingSession] = useState<ChatSessionSummary | null>(null);
   const [deletingSession, setDeletingSession] = useState<ChatSessionSummary | null>(null);
 
@@ -95,7 +94,6 @@ export function ChatSidebar({
       right: 0,
       bottom: 0,
       zIndex: Z_INDEX.modal,
-      justifyContent: 'flex-end',
     },
     backdrop: {
       position: 'absolute',
@@ -103,30 +101,17 @@ export function ChatSidebar({
       left: 0,
       right: 0,
       bottom: 0,
-      overflow: 'hidden',
+      backgroundColor: 'rgba(0,0,0,0.35)',
     },
-    backdropTint: {
-      flex: 1,
-      backgroundColor: scheme === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(20,24,27,0.18)',
-    },
-    sheet: {
-      maxHeight: SHEET_MAX_HEIGHT,
+    panel: {
+      width: SIDEBAR_WIDTH,
+      maxWidth: '85%',
+      height: '100%',
       backgroundColor: COLORS.surface,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
       ...ELEVATION.lg,
     },
     flex: {
       flex: 1,
-    },
-    grabber: {
-      alignSelf: 'center',
-      width: 40,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: COLORS.borderStrong,
-      marginTop: 10,
-      marginBottom: 4,
     },
     header: {
       flexDirection: 'row',
@@ -217,14 +202,12 @@ export function ChatSidebar({
 
   return (
     <View style={styles.overlay}>
-      <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={styles.backdrop}>
-        <View style={styles.backdropTint} />
+      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      <Animated.View entering={SlideInDown.duration(300)} exiting={SlideOutDown.duration(240)} style={styles.sheet}>
-        <SafeAreaView style={styles.flex} edges={['bottom']}>
-          <View style={styles.grabber} />
+      <Animated.View entering={SlideInLeft.duration(280)} exiting={SlideOutLeft.duration(220)} style={styles.panel}>
+        <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
           <View style={styles.header}>
             <ThemedText style={styles.headerTitle}>Discussions</ThemedText>
             <BouncyPressable style={styles.closeButton} onPress={onClose} hitSlop={8}>

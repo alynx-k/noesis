@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -86,27 +86,19 @@ function ChatSessionView({
 export default function AiChatScreen() {
   const COLORS = useThemeColors();
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  // undefined = not yet decided (waiting on the session list to resolve
-  // which conversation to resume); null = explicitly a fresh, unsaved
-  // conversation; a string = viewing that session.
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null | undefined>(undefined);
+  // null = a fresh, unsaved conversation; a string = viewing that saved
+  // session. Every visit to this screen starts a new draft rather than
+  // resuming the last conversation — explicitly requested: reopening the
+  // app used to always drop back into the same old thread.
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [draftNonce, setDraftNonce] = useState(0);
 
   const sessionsQuery = useChatSessions();
   const renameMutation = useRenameChatSession();
   const deleteMutation = useDeleteChatSession();
 
-  useEffect(() => {
-    // Resume the most recently active conversation by default — same feel
-    // as the old single-thread screen — rather than always opening blank.
-    if (selectedSessionId === undefined && sessionsQuery.isSuccess) {
-      setSelectedSessionId(sessionsQuery.data[0]?.id ?? null);
-    }
-  }, [selectedSessionId, sessionsQuery.isSuccess, sessionsQuery.data]);
-
   const isNewDraft = selectedSessionId === null;
-  const isResolving = selectedSessionId === undefined || sessionsQuery.isPending;
-  const messagesQuery = useChatMessages(isNewDraft ? null : (selectedSessionId ?? null));
+  const messagesQuery = useChatMessages(isNewDraft ? null : selectedSessionId);
 
   const handleNewChat = () => {
     setSelectedSessionId(null);
@@ -207,23 +199,17 @@ export default function AiChatScreen() {
           </View>
         </View>
 
-        {isResolving ? (
+        {!isNewDraft && messagesQuery.isPending ? (
           <View style={styles.loadingArea}>
             <SkeletonText lines={3} />
           </View>
         ) : null}
 
-        {!isResolving && !isNewDraft && messagesQuery.isPending ? (
-          <View style={styles.loadingArea}>
-            <SkeletonText lines={3} />
-          </View>
-        ) : null}
-
-        {!isResolving && !isNewDraft && messagesQuery.isError ? (
+        {!isNewDraft && messagesQuery.isError ? (
           <ErrorState title="Impossible de charger la conversation" onRetry={() => messagesQuery.refetch()} />
         ) : null}
 
-        {!isResolving && (isNewDraft || messagesQuery.isSuccess) ? (
+        {isNewDraft || messagesQuery.isSuccess ? (
           <ChatSessionView
             key={isNewDraft ? `draft-${draftNonce}` : selectedSessionId}
             initialSessionId={isNewDraft ? null : (selectedSessionId as string)}
@@ -236,7 +222,7 @@ export default function AiChatScreen() {
         visible={sidebarVisible}
         onClose={() => setSidebarVisible(false)}
         sessions={sessionsQuery.data ?? []}
-        activeSessionId={selectedSessionId ?? null}
+        activeSessionId={selectedSessionId}
         onNewChat={handleNewChat}
         onSelectSession={handleSelectSession}
         onRenameSession={handleRenameSession}
