@@ -1,6 +1,5 @@
-import { BlurView } from 'expo-blur';
 import { useState } from 'react';
-import { Platform, Pressable, SectionList, StyleSheet, TextInput, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, TextInput, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
@@ -215,13 +214,7 @@ export function ChatSidebar({
   return (
     <View style={styles.overlay}>
       <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={styles.backdrop}>
-        <BlurView
-          intensity={40}
-          tint={scheme === 'dark' ? 'dark' : 'light'}
-          experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
-          style={StyleSheet.absoluteFill}>
-          <View style={styles.backdropTint} />
-        </BlurView>
+        <View style={styles.backdropTint} />
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 

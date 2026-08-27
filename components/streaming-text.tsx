@@ -40,7 +40,6 @@ export function StreamingText({ text, style, onComplete }: StreamingTextProps) {
         const next = Math.min(current + step, totalWords);
         if (next >= totalWords) {
           clearInterval(interval);
-          onCompleteRef.current?.();
         }
         return next;
       });
@@ -48,6 +47,17 @@ export function StreamingText({ text, style, onComplete }: StreamingTextProps) {
 
     return () => clearInterval(interval);
   }, [totalWords]);
+
+  // Fires onComplete (which updates the parent's state) from an effect
+  // rather than from inside the setRevealedCount updater above — updater
+  // functions must stay pure, and calling a parent setState from inside one
+  // is what produced "Cannot update a component while rendering a different
+  // component" (React can invoke updaters outside the normal render cycle).
+  useEffect(() => {
+    if (totalWords > 0 && revealedCount >= totalWords) {
+      onCompleteRef.current?.();
+    }
+  }, [revealedCount, totalWords]);
 
   const styles = StyleSheet.create({
     paragraph: {
