@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, SectionList, StyleSheet, TextInput, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
@@ -10,10 +10,15 @@ import { ELEVATION, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY, Z_INDEX } from '@/
 import { cardBorder, useThemeColors } from '@/hooks/use-theme-colors';
 import { ChatSessionSummary } from '@/lib/chat';
 
-// Fraction of screen height the sheet grows to at most — a fixed pixel
-// height would either clip on small phones or leave an oddly small sheet
-// on tablets/large screens.
-const SHEET_MAX_HEIGHT_RATIO = 0.82;
+// A plain CSS percentage, not `useWindowDimensions().height * ratio` — that
+// JS-computed pixel value depends on the dimensions hook resolving a real
+// value the instant this component mounts (it's conditionally rendered from
+// scratch every time it opens, via `if (!visible) return null` below), and
+// this exact component has already caused two separate bugs from that
+// timing (invisible-but-blocking on web, and never appearing on native).
+// A percentage string is resolved by RN's own layout engine, with no JS
+// timing dependency at all.
+const SHEET_MAX_HEIGHT = '82%';
 
 type SessionGroup = { title: string; data: ChatSessionSummary[] };
 
@@ -79,7 +84,6 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const COLORS = useThemeColors();
   const scheme = useColorScheme();
-  const { height: windowHeight } = useWindowDimensions();
   const [renamingSession, setRenamingSession] = useState<ChatSessionSummary | null>(null);
   const [deletingSession, setDeletingSession] = useState<ChatSessionSummary | null>(null);
 
@@ -106,7 +110,7 @@ export function ChatSidebar({
       backgroundColor: scheme === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(20,24,27,0.18)',
     },
     sheet: {
-      maxHeight: windowHeight * SHEET_MAX_HEIGHT_RATIO,
+      maxHeight: SHEET_MAX_HEIGHT,
       backgroundColor: COLORS.surface,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
