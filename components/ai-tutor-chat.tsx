@@ -329,26 +329,11 @@ export function AiTutorChatBody({
       lineHeight: 18,
       color: COLORS.mutedText,
     },
-    popularHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: SPACING.tight,
-    },
     popularTitle: {
       ...TYPOGRAPHY.body,
       fontWeight: '700',
       color: COLORS.text,
-    },
-    popularSeeAll: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-    },
-    popularSeeAllText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: COLORS.accent,
+      marginBottom: SPACING.tight,
     },
     popularGrid: {
       flexDirection: 'row',
@@ -536,13 +521,7 @@ export function AiTutorChatBody({
 
           {tone === 'light' && popularSuggestions.length > 0 ? (
             <>
-              <View style={styles.popularHeader}>
-                <ThemedText style={styles.popularTitle}>Suggestions populaires</ThemedText>
-                <View style={styles.popularSeeAll}>
-                  <ThemedText style={styles.popularSeeAllText}>Voir tout</ThemedText>
-                  <IconSymbol name="chevron.right" size={13} color={COLORS.accent} />
-                </View>
-              </View>
+              <ThemedText style={styles.popularTitle}>Suggestions populaires</ThemedText>
               <View style={styles.popularGrid}>
                 {popularSuggestions.map((item) => (
                   <BouncyPressable

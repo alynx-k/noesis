@@ -18,7 +18,7 @@ import { Halo } from '@/components/ui/halo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { DISCIPLINES, Discipline, getDisciplineIdsFor } from '@/constants/disciplines';
-import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { GRADIENTS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
 import { useAuth } from '@/context/auth';
 import { useFocusSession } from '@/context/focus-session';
 import { useProgress } from '@/context/progress';
@@ -199,36 +199,15 @@ export default function HomeScreen() {
       ...TYPOGRAPHY.caption,
       color: COLORS.mutedText,
     },
-    sectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: SPACING.element,
-    },
     sectionTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: SPACING.tight,
+      marginBottom: SPACING.element,
     },
     sectionTitle: {
       ...TYPOGRAPHY.title,
       color: COLORS.text,
-    },
-    seeAllPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-      backgroundColor: COLORS.surface,
-      borderRadius: PILL_RADIUS,
-      borderWidth: 1,
-      borderColor: '#C7D6F5',
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-    },
-    seeAllText: {
-      color: '#3B82F6',
-      fontSize: 13,
-      fontWeight: '700',
     },
     subjectGrid: {
       flexDirection: 'row',
@@ -455,15 +434,9 @@ export default function HomeScreen() {
 
             <PremiumNudgeBanner />
 
-            <View ref={subjectsTarget.ref} onLayout={subjectsTarget.onLayout} style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <IconSymbol name="book.fill" size={20} color={COLORS.text} />
-                <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>
-              </View>
-              <View style={styles.seeAllPill}>
-                <ThemedText style={styles.seeAllText}>Voir tout</ThemedText>
-                <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
-              </View>
+            <View ref={subjectsTarget.ref} onLayout={subjectsTarget.onLayout} style={styles.sectionTitleRow}>
+              <IconSymbol name="book.fill" size={20} color={COLORS.text} />
+              <ThemedText style={styles.sectionTitle}>Mes matières</ThemedText>
             </View>
             <View style={styles.subjectGrid}>
               {visibleDisciplines.map((discipline) => {
