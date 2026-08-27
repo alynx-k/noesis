@@ -26,19 +26,39 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setLoading(true);
-    supabase
-      .from('course_progress')
-      .select('course_id')
-      .eq('completed', true)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('Failed to load course progress from Supabase:', error);
-        } else if (data) {
-          setCompletedCourseIds(data.map((row) => row.course_id));
+    let cancelled = false;
+
+    // Right after sign-in, the just-minted JWT's `iat` can be a hair ahead
+    // of PostgREST's own clock (skew between Supabase's own services, not
+    // the device's) — it rejects with PGRST303 "JWT issued at future" for
+    // what's really just a race, not a real auth failure. Retrying after a
+    // short pause lets PostgREST's clock catch up instead of surfacing a
+    // scary error for something that resolves itself in ~1-2 seconds.
+    async function loadWithRetry(attempt = 0): Promise<void> {
+      const { data, error } = await supabase.from('course_progress').select('course_id').eq('completed', true);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (error) {
+        if (error.code === 'PGRST303' && attempt < 3) {
+          setTimeout(() => loadWithRetry(attempt + 1), 1500);
+          return;
         }
-        setLoading(false);
-      });
+        console.error('Failed to load course progress from Supabase:', error);
+      } else if (data) {
+        setCompletedCourseIds(data.map((row) => row.course_id));
+      }
+      setLoading(false);
+    }
+
+    setLoading(true);
+    loadWithRetry();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const completeCourse = async (id: string) => {
