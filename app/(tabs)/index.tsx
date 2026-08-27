@@ -225,77 +225,74 @@ export default function HomeScreen() {
       flexDirection: 'row',
       backgroundColor: COLORS.surface,
       borderRadius: RADIUS,
-      padding: SPACING.element,
+      paddingVertical: SPACING.tight,
+      paddingHorizontal: SPACING.element,
       marginBottom: SPACING.section,
       ...cardBorder(COLORS),
     },
     todayCol: {
       flex: 1,
+      justifyContent: 'center',
     },
     todayDivider: {
       width: StyleSheet.hairlineWidth,
       backgroundColor: COLORS.border,
       marginHorizontal: SPACING.element,
     },
-    todayIconBadge: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
-      backgroundColor: COLORS.accentSoft,
+    todayLabelRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: SPACING.tight,
+      gap: 5,
+      marginBottom: 3,
     },
     todayIconImage: {
-      width: 26,
-      height: 26,
+      width: 16,
+      height: 16,
     },
     todayLabel: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: COLORS.mutedText,
-      marginBottom: 2,
+    },
+    todayValueRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      gap: 6,
+      marginBottom: 4,
     },
     todayValue: {
-      ...TYPOGRAPHY.body,
+      fontSize: 13,
       fontWeight: '700',
       color: COLORS.text,
-      marginBottom: SPACING.tight,
+      flexShrink: 1,
     },
     progressTrack: {
-      height: 6,
-      borderRadius: 3,
+      height: 4,
+      borderRadius: 2,
       backgroundColor: COLORS.lockedBackground,
       overflow: 'hidden',
     },
     progressFill: {
       height: '100%',
-      borderRadius: 3,
+      borderRadius: 2,
       backgroundColor: COLORS.accent,
     },
     progressCaption: {
-      fontSize: 11,
+      fontSize: 10,
       color: COLORS.mutedText,
-      marginTop: 4,
-      textAlign: 'right',
-    },
-    streakRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
     },
     streakEmoji: {
-      fontSize: 14,
+      fontSize: 13,
     },
     streakValue: {
-      fontSize: 22,
+      fontSize: 16,
       fontWeight: '800',
       color: COLORS.accent,
     },
     streakCaption: {
-      fontSize: 12,
+      fontSize: 10,
       color: COLORS.mutedText,
-      marginTop: 2,
     },
     actionRow: {
       flexDirection: 'row',
@@ -306,6 +303,15 @@ export default function HomeScreen() {
       flex: 1,
       borderRadius: RADIUS,
       ...ELEVATION.sm,
+    },
+    // BouncyPressable/Link render no View of their own with a height, so
+    // without this the card's actual height (LinearGradient's minHeight +
+    // its own content) never inherits the row's stretched cross-axis size —
+    // each card just sized to its own content, and since "Session focus"
+    // has one more subtitle line than "Discuter avec IA", they ended up
+    // visibly different heights despite sharing the same minHeight.
+    actionCardPressable: {
+      flex: 1,
     },
     actionCard: {
       flex: 1,
@@ -589,35 +595,41 @@ export default function HomeScreen() {
 
             <View style={styles.todayCard}>
               <View style={styles.todayCol}>
-                <View style={styles.todayIconBadge}>
+                <View style={styles.todayLabelRow}>
                   <Image source={TARGET_3D} style={styles.todayIconImage} resizeMode="contain" />
+                  <ThemedText style={styles.todayLabel}>Objectif de la semaine</ThemedText>
                 </View>
-                <ThemedText style={styles.todayLabel}>Objectif de la semaine</ThemedText>
-                <ThemedText style={styles.todayValue}>Terminer {WEEKLY_LESSONS_TARGET} leçons</ThemedText>
+                <View style={styles.todayValueRow}>
+                  <ThemedText style={styles.todayValue} numberOfLines={1}>
+                    Terminer {WEEKLY_LESSONS_TARGET} leçons
+                  </ThemedText>
+                  <ThemedText style={styles.progressCaption}>
+                    {lessonsThisWeek}/{WEEKLY_LESSONS_TARGET}
+                  </ThemedText>
+                </View>
                 <View style={styles.progressTrack}>
                   <View style={[styles.progressFill, { width: `${Math.round(lessonsProgress * 100)}%` }]} />
                 </View>
-                <ThemedText style={styles.progressCaption}>
-                  {lessonsThisWeek}/{WEEKLY_LESSONS_TARGET}
-                </ThemedText>
               </View>
 
               <View style={styles.todayDivider} />
 
               <View style={styles.todayCol}>
-                <View style={styles.streakRow}>
+                <View style={styles.todayLabelRow}>
                   <ThemedText style={styles.streakEmoji}>🔥</ThemedText>
                   <ThemedText style={styles.todayLabel}>Série actuelle</ThemedText>
                 </View>
-                <ThemedText style={styles.streakValue}>{streak} jours</ThemedText>
-                <ThemedText style={styles.streakCaption}>Continue comme ça !</ThemedText>
+                <View style={styles.todayValueRow}>
+                  <ThemedText style={styles.streakValue}>{streak} jours</ThemedText>
+                  <ThemedText style={styles.streakCaption}>Continue !</ThemedText>
+                </View>
               </View>
             </View>
 
             <View style={styles.actionRow}>
               <View ref={focusTarget.ref} onLayout={focusTarget.onLayout} style={styles.actionCardWrapper}>
                 <Link href="/focus-session" asChild>
-                  <BouncyPressable>
+                  <BouncyPressable style={styles.actionCardPressable}>
                     <LinearGradient
                       colors={GRADIENTS.hero}
                       start={{ x: 0, y: 0 }}
@@ -647,7 +659,7 @@ export default function HomeScreen() {
 
               <View ref={aiTarget.ref} onLayout={aiTarget.onLayout} style={styles.actionCardWrapper}>
                 <Link href="/ai-chat" asChild>
-                  <BouncyPressable>
+                  <BouncyPressable style={styles.actionCardPressable}>
                     <LinearGradient
                       colors={GRADIENTS.cosmic}
                       start={{ x: 0, y: 0 }}
