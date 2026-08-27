@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { useState } from 'react';
-import { Dimensions, Platform, Pressable, SectionList, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { Platform, Pressable, SectionList, StyleSheet, TextInput, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
@@ -80,6 +80,7 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const COLORS = useThemeColors();
   const scheme = useColorScheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [renamingSession, setRenamingSession] = useState<ChatSessionSummary | null>(null);
   const [deletingSession, setDeletingSession] = useState<ChatSessionSummary | null>(null);
 
@@ -106,7 +107,7 @@ export function ChatSidebar({
       backgroundColor: scheme === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(20,24,27,0.18)',
     },
     sheet: {
-      maxHeight: Dimensions.get('window').height * SHEET_MAX_HEIGHT_RATIO,
+      maxHeight: windowHeight * SHEET_MAX_HEIGHT_RATIO,
       backgroundColor: COLORS.surface,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
