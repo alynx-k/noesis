@@ -468,7 +468,7 @@ export default function SubjectScreen() {
   }
 
   return (
-    <ScreenBackground color="#FAF8FC">
+    <ScreenBackground color={COLORS.background}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Animated.View entering={FadeIn.duration(400)}>

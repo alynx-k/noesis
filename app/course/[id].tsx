@@ -341,7 +341,7 @@ export default function CourseScreen() {
   const isLastStep = activeStep >= partsCount - 1;
 
   return (
-    <ScreenBackground color="#FAF8FC">
+    <ScreenBackground color={COLORS.background}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <LinearGradient colors={headerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.header, { backgroundColor: headerColors[0] }]}>
           <BouncyPressable style={styles.headerButton} onPress={() => router.back()} hitSlop={8}>

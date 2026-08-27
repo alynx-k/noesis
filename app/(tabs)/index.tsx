@@ -35,6 +35,15 @@ import { getDisplayName } from '@/lib/profile';
 import { consumeTourPending } from '@/lib/tour';
 import { WEEKLY_QUIZ_BONUS_XP } from '@/lib/xp';
 
+// Fixed, theme-invariant colors for text/icons sitting on the light pastel
+// gradient cards below (Session focus, Discuter avec IA, subject grid) —
+// those gradients stay light regardless of theme, so COLORS.text/mutedText
+// (which flip to near-white in dark mode, for contrast against the dark
+// page background) must never be used on top of them: light-on-light was
+// exactly the "almost invisible" bug reported from a real dark-mode device.
+const CARD_TEXT_DARK = '#1B2140';
+const CARD_TEXT_MUTED = '#6B7280';
+
 const ROCKET_3D = require('@/assets/images/3d/rocket.png');
 const CHAT_BUBBLES_3D = require('@/assets/images/3d/chat-bubbles.png');
 const TROPHY_3D = require('@/assets/images/3d/trophy.png');
@@ -341,7 +350,7 @@ export default function HomeScreen() {
     actionPillButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: CARD_TEXT_DARK,
     },
     actionIconBadge: {
       width: 48,
@@ -364,7 +373,7 @@ export default function HomeScreen() {
     },
     actionCardSubtitle: {
       ...TYPOGRAPHY.caption,
-      color: COLORS.mutedText,
+      color: CARD_TEXT_MUTED,
     },
     sectionTitleRow: {
       flexDirection: 'row',
@@ -408,12 +417,12 @@ export default function HomeScreen() {
       fontSize: 13,
       lineHeight: 16,
       fontWeight: '700',
-      color: COLORS.text,
+      color: CARD_TEXT_DARK,
       marginBottom: 4,
     },
     subjectLessonCount: {
       fontSize: 11,
-      color: COLORS.text,
+      color: CARD_TEXT_DARK,
       opacity: 0.75,
       marginBottom: 8,
     },
@@ -650,7 +659,7 @@ export default function HomeScreen() {
                       <Image source={ROCKET_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                       <View style={styles.actionPillButton}>
                         <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
-                        <IconSymbol name="chevron.right" size={13} color={COLORS.text} />
+                        <IconSymbol name="chevron.right" size={13} color={CARD_TEXT_DARK} />
                       </View>
                     </LinearGradient>
                   </BouncyPressable>
@@ -669,18 +678,18 @@ export default function HomeScreen() {
                         <LinearGradient colors={GRADIENTS.badgeAzure} style={[styles.actionIconBadge, { backgroundColor: GRADIENTS.badgeAzure[0] }]}>
                           <Ionicons name="chatbubble-ellipses" size={22} color="#FFFFFF" />
                         </LinearGradient>
-                        <ThemedText style={[styles.actionCardTitle, { color: COLORS.text }]}>Discuter avec IA</ThemedText>
+                        <ThemedText style={[styles.actionCardTitle, { color: CARD_TEXT_DARK }]}>Discuter avec IA</ThemedText>
                         <View style={styles.actionCardSubtitleRow}>
                           <ThemedText style={styles.actionCardSubtitle} numberOfLines={2}>
                             Pose une question, progresse plus vite
                           </ThemedText>
-                          <IconSymbol name="chevron.right" size={14} color={COLORS.mutedText} />
+                          <IconSymbol name="chevron.right" size={14} color={CARD_TEXT_MUTED} />
                         </View>
                       </View>
                       <Image source={CHAT_BUBBLES_3D} style={styles.actionCardDecoration} resizeMode="contain" />
                       <View style={styles.actionPillButton}>
                         <ThemedText style={styles.actionPillButtonText}>Commencer</ThemedText>
-                        <Ionicons name="chatbubble-ellipses" size={13} color={COLORS.text} />
+                        <Ionicons name="chatbubble-ellipses" size={13} color={CARD_TEXT_DARK} />
                       </View>
                     </LinearGradient>
                   </BouncyPressable>
