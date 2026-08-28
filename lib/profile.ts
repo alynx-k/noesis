@@ -27,13 +27,20 @@ export type GateProfile = {
   grade: GradeId | null;
   serie: SeriesId | null;
   lv2: Lv2Id | null;
+  niveauWaitlist: 'superieur' | 'autre' | null;
+  dailyTimePreference: string | null;
 };
 
 // Single-row read of everything the onboarding gate needs, so resolving the
 // gate is one round trip instead of the separate grade.ts/lv2.ts calls used
 // elsewhere (settings.tsx, which changes one field at a time and keeps using those).
+// Also carries daily_time_preference — cheap to include here and it saves
+// focus-session.tsx (the one other reader) a second round trip.
 export async function getGateProfile(): Promise<GateProfile | null> {
-  const { data, error } = await supabase.from('profiles').select('grade, serie, lv2').maybeSingle();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('grade, serie, lv2, niveau_waitlist, daily_time_preference')
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -45,5 +52,7 @@ export async function getGateProfile(): Promise<GateProfile | null> {
     grade: (data.grade as GradeId | null) ?? null,
     serie: (data.serie as SeriesId | null) ?? null,
     lv2: (data.lv2 as Lv2Id | null) ?? null,
+    niveauWaitlist: (data.niveau_waitlist as 'superieur' | 'autre' | null) ?? null,
+    dailyTimePreference: (data.daily_time_preference as string | null) ?? null,
   };
 }

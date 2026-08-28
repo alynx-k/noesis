@@ -18,6 +18,8 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.left': 'chevron-left',
+  'hourglass': 'hourglass-empty',
   'lock.fill': 'lock',
   'checkmark.circle.fill': 'check-circle',
   'checkmark': 'check',

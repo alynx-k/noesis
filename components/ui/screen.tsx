@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ScrollView, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenBackground } from '@/components/screen-background';
@@ -32,15 +32,17 @@ export function Screen({
   return (
     <ScreenBackground color={color}>
       <SafeAreaView style={styles.safeArea} edges={edges}>
-        {scroll ? (
-          <ScrollView
-            contentContainerStyle={[{ padding }, contentContainerStyle]}
-            keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-        ) : (
-          <View style={[{ flex: 1, padding }, style]}>{children}</View>
-        )}
+        <KeyboardAvoidingView style={styles.safeArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {scroll ? (
+            <ScrollView
+              contentContainerStyle={[{ padding }, contentContainerStyle]}
+              keyboardShouldPersistTaps="handled">
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={[{ flex: 1, padding }, style]}>{children}</View>
+          )}
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ScreenBackground>
   );

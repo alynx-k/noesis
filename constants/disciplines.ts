@@ -176,3 +176,10 @@ export function getDisciplineIdsFor(grade: GradeId, serie: SeriesId | null): Dis
   const seriesCD: DisciplineId[] = [...core, 'philosophie'];
   return grade === '1ere' ? [...seriesCD, 'tice'] : seriesCD;
 }
+
+// Whether this grade/série studies a second foreign language at all — false
+// for séries C/D from 1ère onward (see getDisciplineIdsFor), meaning
+// select-language.tsx/the onboarding lv2 step has nothing to ask them.
+export function isLv2Applicable(grade: GradeId, serie: SeriesId | null): boolean {
+  return getDisciplineIdsFor(grade, serie).some((id) => id === 'espagnol' || id === 'allemand');
+}

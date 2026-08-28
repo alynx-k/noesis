@@ -113,7 +113,7 @@ function AppNavigator() {
             <Stack.Screen name="login" options={{ headerShown: false, animation: 'none' }} />
           </Stack.Protected>
           <Stack.Protected guard={guards.grade}>
-            <Stack.Screen name="select-grade" options={{ headerShown: false, animation: 'none' }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
           </Stack.Protected>
           <Stack.Protected guard={guards.lv2}>
             <Stack.Screen name="select-language" options={{ headerShown: false, animation: 'none' }} />

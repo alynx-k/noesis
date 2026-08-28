@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { queryKeys } from '@/hooks/queries/query-keys';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useAuth } from '@/context/auth';
+import { isLv2Applicable } from '@/constants/disciplines';
 import { getNextUpCourse } from '@/lib/course-history';
 import { getStreakInfo } from '@/lib/streak';
 
@@ -124,7 +125,7 @@ export function useGateState(): {
   if (!profile || !profile.grade) {
     return { state: 'needs-grade', error: null, retry, loadingMessage: '' };
   }
-  if (!profile.lv2) {
+  if (!profile.lv2 && isLv2Applicable(profile.grade, profile.serie)) {
     return { state: 'needs-lv2', error: null, retry, loadingMessage: '' };
   }
   if (!prefetchDone) {

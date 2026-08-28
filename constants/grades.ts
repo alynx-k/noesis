@@ -27,6 +27,17 @@ export function isLyceeGrade(grade: GradeId): boolean {
   return LYCEE_GRADES.includes(grade);
 }
 
+// "Terminale · Série C" — used anywhere the exact class needs to be shown
+// as read-only text (onboarding's "Parle-nous de toi"/récap screens), so it
+// stays in sync with the picker labels instead of being retyped.
+export function formatGradeLabel(grade: GradeId, serie: SeriesId | null): string {
+  const gradeLabel = GRADES.find((entry) => entry.id === grade)?.label ?? grade;
+  if (!serie) {
+    return gradeLabel;
+  }
+  return `${gradeLabel} · Série ${serie}`;
+}
+
 export const SERIES_BY_GRADE: Partial<Record<GradeId, { id: SeriesId; label: string }[]>> = {
   '2nde': [
     { id: 'A', label: 'Série A (littéraire)' },
