@@ -62,10 +62,20 @@ export const GRADIENTS = {
   // Deep indigo night gradient for the full-screen focus-session view.
   night: ['#0B0A1A', '#1A1740', '#2E2A63'] as const,
   // Achievement tier skins (facile/moyen/difficile), for the profile's
-  // achievements board.
+  // achievements board — also the bottom 3 of the 8-tier league ladder
+  // (see app/(tabs)/communaute.tsx), each tier visibly richer than the last.
   bronze: ['#D9A066', '#8C5A2B'] as const,
   silver: ['#E4E7EC', '#8B94A3'] as const,
   gold: ['#F6D97A', '#C9971F'] as const,
+  // League tiers above gold — platinum/diamond/heroic/master escalate in
+  // saturation and coolness, grandmaster is the one 3-stop, iridescent skin
+  // (gold-pink-violet) so the very top of the ladder reads as genuinely
+  // more special, not just a different flat color.
+  platinum: ['#CFF3EA', '#3FAE93'] as const,
+  diamond: ['#CFE3FF', '#3B6FE0'] as const,
+  heroic: ['#FFD3B0', '#E85D2E'] as const,
+  master: ['#DCC9FF', '#7C3AED'] as const,
+  grandmaster: ['#FFE9A8', '#FF7AD9', '#7C3AED'] as const,
   // Flame gradient for the achievements card background.
   fire: ['#FFCB69', '#FF7A30', '#D6401D'] as const,
   // Soft pastel sky-blue — the "Discuter avec IA" and "Sessions

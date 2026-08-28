@@ -33,8 +33,8 @@ export const queryKeys = {
   focusSessions: {
     all: (userId: string | undefined) => ['focus-sessions', userId] as const,
   },
-  leaderboard: {
-    all: () => ['leaderboard'] as const,
+  league: {
+    mine: () => ['league', 'mine'] as const,
   },
   courseHistory: {
     // Deliberately just the prefix (no grade/serie) — use-spaced-repetition.ts

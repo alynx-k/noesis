@@ -1,30 +1,75 @@
 import { supabase } from '@/lib/supabase';
 
-export type LeaderboardEntry = {
-  rank: number;
+export type LeagueTier =
+  | 'bronze'
+  | 'argent'
+  | 'or'
+  | 'platine'
+  | 'diamant'
+  | 'heroique'
+  | 'maitre'
+  | 'grand_maitre';
+
+export type LeagueEntry = {
+  userId: string;
   pseudonym: string;
-  completedCount: number;
+  lessonsThisWeek: number;
+  rank: number;
   isYou: boolean;
 };
 
-// Backed by the get_leaderboard() security definer function (see
-// supabase/migrations/20260808010000_get_leaderboard.sql) — the client has
-// no RLS-permitted way to read other users' progress directly, so this is
-// the only path to a cross-user ranking.
-export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_leaderboard');
+export type LeagueStanding = {
+  tier: LeagueTier;
+  weekStart: string;
+  groupSize: number;
+  promotionZone: boolean;
+  relegationZone: boolean;
+  entries: LeagueEntry[];
+};
+
+type LeagueRow = {
+  member_user_id: string;
+  pseudonym: string;
+  lessons_this_week: number;
+  rank: number;
+  is_you: boolean;
+  tier: LeagueTier;
+  promotion_zone: boolean;
+  relegation_zone: boolean;
+  group_size: number;
+  week_start: string;
+};
+
+// Backed by the get_my_league() security definer function (see
+// supabase/migrations/20260828110000_leagues.sql) — same trust model as the
+// old get_leaderboard(): RLS blocks any client-side cross-user read, so
+// this RPC is the only path to seeing where you stand against your league.
+// Ranks by lessons completed THIS WEEK (not lifetime totals), within a
+// ~30-person group of the same grade and tier — resets every Monday.
+export async function getMyLeague(): Promise<LeagueStanding | null> {
+  const { data, error } = await supabase.rpc('get_my_league');
 
   if (error) {
     throw new Error(error.message);
   }
-  if (!data) {
-    return [];
+  const rows = (data as LeagueRow[] | null) ?? [];
+  if (rows.length === 0) {
+    return null;
   }
 
-  return (data as { rank: number; pseudonym: string; completed_count: number; is_you: boolean }[]).map((row) => ({
-    rank: row.rank,
-    pseudonym: row.pseudonym,
-    completedCount: row.completed_count,
-    isYou: row.is_you,
-  }));
+  const [first] = rows;
+  return {
+    tier: first.tier,
+    weekStart: first.week_start,
+    groupSize: first.group_size,
+    promotionZone: rows.some((row) => row.is_you && row.promotion_zone),
+    relegationZone: rows.some((row) => row.is_you && row.relegation_zone),
+    entries: rows.map((row) => ({
+      userId: row.member_user_id,
+      pseudonym: row.pseudonym,
+      lessonsThisWeek: row.lessons_this_week,
+      rank: row.rank,
+      isYou: row.is_you,
+    })),
+  };
 }

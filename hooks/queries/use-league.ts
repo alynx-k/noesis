@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/hooks/queries/query-keys';
-import { getLeaderboard } from '@/lib/leaderboard';
+import { getMyLeague } from '@/lib/league';
 
-export function useLeaderboard() {
+export function useMyLeague() {
   return useQuery({
-    queryKey: queryKeys.leaderboard.all(),
-    queryFn: getLeaderboard,
+    queryKey: queryKeys.league.mine(),
+    queryFn: getMyLeague,
   });
 }
