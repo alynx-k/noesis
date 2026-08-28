@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -11,11 +11,15 @@ import { CelebrationBurst } from '@/components/celebration-burst';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { toast } from '@/components/ui/toast';
 import { GRADIENTS, PILL_RADIUS, RADIUS, SPACING, TYPOGRAPHY } from '@/constants/design';
+import { DAILY_TIME_TO_MINUTES, DailyTimeId } from '@/constants/onboarding';
 import { useFocusSession } from '@/context/focus-session';
 import { useCourseHistory } from '@/hooks/queries/use-course-history';
+import { useProfile } from '@/hooks/queries/use-profile';
 import { useStreak } from '@/hooks/queries/use-streak';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { FocusTrackId, getActiveFocusTrack, playFocusTrack, stopFocusTrack } from '@/lib/focus-audio';
 
 const DURATION_PRESETS = [20, 30, 45, 60];
 
@@ -24,8 +28,6 @@ const DAILY_TIPS = [
   "Coupe les notifications avant de commencer — la concentration se construit, elle ne se récupère pas en 3 secondes.",
   "Relis tes erreurs d'hier avant d'attaquer un nouveau chapitre : c'est là que se cache la vraie progression.",
 ];
-
-type ToggleKey = 'notifications' | 'music' | 'nature' | 'dnd';
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -53,17 +55,76 @@ export default function FocusSessionScreen() {
   const { phase, durationMinutes, remainingSeconds, start, reset } = useFocusSession();
   const streakQuery = useStreak();
   const historyQuery = useCourseHistory();
+  const profileQuery = useProfile();
 
   const [selectedDuration, setSelectedDuration] = useState(20);
   const [customMode, setCustomMode] = useState(false);
+  // Prefills the duration picker from the "combien de temps par jour"
+  // onboarding answer, once, the first time it loads — a ref (not state)
+  // so it doesn't re-run and stomp on a duration the student later picks
+  // by hand.
+  const appliedDailyTimeDefault = useRef(false);
+  useEffect(() => {
+    const preference = profileQuery.data?.dailyTimePreference as DailyTimeId | undefined;
+    if (!preference || appliedDailyTimeDefault.current) {
+      return;
+    }
+    appliedDailyTimeDefault.current = true;
+    const minutes = DAILY_TIME_TO_MINUTES[preference];
+    if (!minutes) {
+      return;
+    }
+    const nearestPreset = DURATION_PRESETS.reduce((closest, preset) =>
+      Math.abs(preset - minutes) < Math.abs(closest - minutes) ? preset : closest,
+    );
+    setSelectedDuration(nearestPreset);
+  }, [profileQuery.data?.dailyTimePreference]);
   const [customInput, setCustomInput] = useState('20');
   const [objective, setObjective] = useState('');
-  const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({
-    notifications: false,
-    music: false,
-    nature: false,
-    dnd: false,
-  });
+  // Real, not cosmetic: playFocusTrack actually starts/loops audio (see
+  // lib/focus-audio.ts), stopped automatically when the session ends (see
+  // the phase effect below) so a track never keeps looping in the
+  // background after the timer finishes.
+  const [activeTrack, setActiveTrackState] = useState<FocusTrackId | null>(() => getActiveFocusTrack());
+
+  const toggleTrack = (track: FocusTrackId) => {
+    if (activeTrack === track) {
+      stopFocusTrack();
+      setActiveTrackState(null);
+    } else {
+      playFocusTrack(track);
+      setActiveTrackState(track);
+    }
+  };
+
+  useEffect(() => {
+    if (phase !== 'running') {
+      stopFocusTrack();
+      setActiveTrackState(null);
+    }
+  }, [phase]);
+
+  // No third-party app can toggle the phone's system-wide Do Not Disturb —
+  // Apple simply doesn't expose that to apps, and Android only allows it
+  // through a native module this project doesn't have. The one honest thing
+  // to do is hand the student straight to the OS setting instead of
+  // pretending a button here does it.
+  const handleOpenDnd = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        await Linking.sendIntent('android.settings.ZEN_MODE_PRIORITY_SETTINGS');
+        return;
+      } catch {
+        // Some Android skins don't support this intent — fall through to
+        // the generic settings screen below instead of failing silently.
+      }
+    }
+    if (Platform.OS === 'ios') {
+      toast.show('Active le mode Ne pas déranger depuis le Centre de contrôle de ton iPhone.');
+      return;
+    }
+    Linking.openSettings().catch(() => {});
+  };
 
   const tip = useMemo(() => DAILY_TIPS[new Date().getDate() % DAILY_TIPS.length], []);
 
@@ -98,8 +159,6 @@ export default function FocusSessionScreen() {
   const handleViewObjectives = () => {
     router.push('/course-history');
   };
-
-  const toggleKey = (key: ToggleKey) => setToggles((previous) => ({ ...previous, [key]: !previous[key] }));
 
   // Flattened, most-recent-first slice across every discipline's history —
   // there's no per-attempt timestamp to sort by yet, so "recent" here means
@@ -616,24 +675,47 @@ export default function FocusSessionScreen() {
               <>
                 <View style={styles.card}>
                   <View style={styles.toggleRow}>
-                    {(
-                      [
-                        { key: 'notifications' as const, icon: 'notifications-off-outline' as const, label: 'Bloquer\nnotifications' },
-                        { key: 'music' as const, icon: 'musical-notes-outline' as const, label: 'Musique\nfocus' },
-                        { key: 'nature' as const, icon: 'leaf-outline' as const, label: 'Sons\nnature' },
-                        { key: 'dnd' as const, icon: 'moon-outline' as const, label: 'Mode\nne pas déranger' },
-                      ]
-                    ).map((item, index, array) => (
-                      <View key={item.key} style={{ flexDirection: 'row', flex: 1 }}>
-                        <BouncyPressable style={styles.toggleItem} onPress={() => toggleKey(item.key)}>
-                          <Ionicons name={item.icon} size={22} color={toggles[item.key] ? '#6D5BD0' : COLORS.mutedText} />
-                          <ThemedText style={[styles.toggleLabel, toggles[item.key] && styles.toggleLabelActive]}>
-                            {item.label}
-                          </ThemedText>
-                        </BouncyPressable>
-                        {index < array.length - 1 ? <View style={styles.toggleDivider} /> : null}
+                    <View style={{ flexDirection: 'row', flex: 1 }}>
+                      <View style={styles.toggleItem}>
+                        <Ionicons name="notifications-off" size={22} color="#6D5BD0" />
+                        <ThemedText style={[styles.toggleLabel, styles.toggleLabelActive]}>
+                          Notifs{'\n'}coupées
+                        </ThemedText>
                       </View>
-                    ))}
+                      <View style={styles.toggleDivider} />
+                    </View>
+                    <View style={{ flexDirection: 'row', flex: 1 }}>
+                      <BouncyPressable style={styles.toggleItem} onPress={() => toggleTrack('music')}>
+                        <Ionicons
+                          name="musical-notes-outline"
+                          size={22}
+                          color={activeTrack === 'music' ? '#6D5BD0' : COLORS.mutedText}
+                        />
+                        <ThemedText style={[styles.toggleLabel, activeTrack === 'music' && styles.toggleLabelActive]}>
+                          Musique{'\n'}focus
+                        </ThemedText>
+                      </BouncyPressable>
+                      <View style={styles.toggleDivider} />
+                    </View>
+                    <View style={{ flexDirection: 'row', flex: 1 }}>
+                      <BouncyPressable style={styles.toggleItem} onPress={() => toggleTrack('nature')}>
+                        <Ionicons
+                          name="leaf-outline"
+                          size={22}
+                          color={activeTrack === 'nature' ? '#6D5BD0' : COLORS.mutedText}
+                        />
+                        <ThemedText style={[styles.toggleLabel, activeTrack === 'nature' && styles.toggleLabelActive]}>
+                          Sons{'\n'}nature
+                        </ThemedText>
+                      </BouncyPressable>
+                      <View style={styles.toggleDivider} />
+                    </View>
+                    <View style={{ flexDirection: 'row', flex: 1 }}>
+                      <BouncyPressable style={styles.toggleItem} onPress={handleOpenDnd}>
+                        <Ionicons name="moon-outline" size={22} color={COLORS.mutedText} />
+                        <ThemedText style={styles.toggleLabel}>Ne pas{'\n'}déranger</ThemedText>
+                      </BouncyPressable>
+                    </View>
                   </View>
                 </View>
 

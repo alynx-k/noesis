@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth';
 import { destinationForSequence, newlyUnlockedDestination } from '@/lib/atlas';
 import { finishFocusSession, getSuccessfulSessionCount, startFocusSession } from '@/lib/focus-session';
 import { cancelTodayNotifications } from '@/lib/notification-scheduler';
+import { setFocusSessionActive } from '@/lib/notifications';
 import { recordActivity } from '@/lib/streak';
 
 type Phase = 'idle' | 'running' | 'success' | 'failed';
@@ -48,6 +49,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     finalizedRef.current = true;
+    setFocusSessionActive(false);
     setPhase('failed');
     if (sessionIdRef.current) {
       finishFocusSession(sessionIdRef.current, false);
@@ -59,6 +61,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     finalizedRef.current = true;
+    setFocusSessionActive(false);
     const sequence = priorSessionCountRef.current + 1;
     setDestinationReached(destinationForSequence(sequence));
     setDestinationJustUnlocked(newlyUnlockedDestination(sequence) !== null);
@@ -113,6 +116,11 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
       setDestinationReached(null);
       setDestinationJustUnlocked(false);
       setPhase('running');
+      // Block Noesis's own notifications for real: suppress foreground
+      // banners (see lib/notifications.ts's handler) and cancel whatever's
+      // already scheduled for today so it can't fire mid-session.
+      setFocusSessionActive(true);
+      cancelTodayNotifications(user.id);
       const [sessionId, priorCount] = await Promise.all([
         startFocusSession(user.id, minutes),
         getSuccessfulSessionCount(),
@@ -124,6 +132,7 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
   );
 
   const reset = useCallback(() => {
+    setFocusSessionActive(false);
     sessionIdRef.current = null;
     startedAtRef.current = null;
     finalizedRef.current = false;

@@ -2,7 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 import { formatNotification, getCategoryForHour, getRandomTemplate, NotificationCategory } from '@/lib/notification-templates';
-import { isNotificationsEnabled, setNotificationsEnabled } from '@/lib/notifications';
+import {
+  isFocusSessionActive,
+  isNotificationCategoryEnabled,
+  isNotificationsEnabled,
+  setNotificationsEnabled,
+} from '@/lib/notifications';
 import { getActiveDays, getStreakInfo } from '@/lib/streak';
 import { supabase } from '@/lib/supabase';
 
@@ -301,7 +306,13 @@ async function scheduleAt(
 // means fewer of the three still get scheduled. No-ops entirely if push is
 // off/suppressed — this needs to be re-run daily by the caller.
 export async function scheduleTodayNotifications(userId: string, context: NotificationContext): Promise<void> {
+  if (isFocusSessionActive()) {
+    return;
+  }
   if (!(await isPushNotificationsEnabled()) || (await isPushSuppressed(userId))) {
+    return;
+  }
+  if (!(await isNotificationCategoryEnabled('revision'))) {
     return;
   }
 
@@ -326,7 +337,7 @@ const LAST_KNOWN_STREAK_KEY = 'noesis:last-known-streak';
 // Returns true if a loss was detected (and the abandon notification was
 // fired) this call, so the caller can skip scheduling anything else today.
 export async function checkAndHandleStreakLoss(userId: string, context: NotificationContext): Promise<boolean> {
-  if (!(await isPushNotificationsEnabled())) {
+  if (!(await isPushNotificationsEnabled()) || !(await isNotificationCategoryEnabled('streaks'))) {
     return false;
   }
 
