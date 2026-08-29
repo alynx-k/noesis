@@ -71,11 +71,11 @@ export default function VerifyOtp() {
       footer={<Button label="Valider" loading={loading} onPress={handleVerify} />}
     >
       <Input
-        placeholder="123456"
+        placeholder="12345678"
         keyboardType="number-pad"
         value={code}
         onChangeText={setCode}
-        maxLength={6}
+        maxLength={8}
         errorMessage={error ?? undefined}
       />
       <Text
