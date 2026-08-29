@@ -10,6 +10,10 @@
 - **Auth / autorisation** : Supabase Auth (téléphone OTP ou email). RLS : un élève voit uniquement son propre profil/progression/conversations ; le contenu publié est visible par classe/série correspondante ; le contenu brouillon n'est visible que par le rôle admin.
 - **Frontières services tiers** : Gemini appelé uniquement depuis une edge function (jamais côté client) ; un webhook edge function dédié par moyen de paiement (Wave, MTN Money, Orange Money, IAP) alimentant un statut d'abonnement unifié ; fournisseur SMS OTP pour l'auth téléphone.
 
+![Architecture Noesis : ce qui se construit sur quoi](diagrams/diagram-architecture-phases.png)
+
+Les 12 phases se regroupent en 4 couches de dépendance : Focus session, Ligues et Parrainage ne dépendent que des Fondations (Auth/Onboarding + Cours), pas de l'abonnement Premium — seuls Exercices, Flashcards perso et Tuteur IA sont derrière la Monétisation. Le thème sombre/clair est transverse, réalisable à tout moment.
+
 ---
 
 ## Phase 1 : Auth & Onboarding
@@ -40,6 +44,12 @@ Un nouvel élève peut créer un compte par téléphone (code SMS) ou par email,
 ### Ce qu'on livre
 
 Le pipeline complet de contenu : génération de leçons par IA à partir du programme officiel, file de relecture pour un administrateur, publication. Côté élève : navigation par matière/chapitre, lecture d'une leçon, suivi de progression, gain d'XP et incrémentation de la série quotidienne en terminant une leçon.
+
+![Pipeline de contenu : de l'IA à l'élève](diagrams/diagram-pipeline-contenu.png)
+
+![D'une activité au classement : XP et série](diagrams/diagram-xp-serie-ligue.png)
+
+Toute activité de révision crédite toujours de l'XP, mais n'incrémente la série que si c'est la première activité du jour ; seul l'XP alimente le classement hebdomadaire de ligue (Phase 10), la série reste un compteur affiché sur le profil.
 
 ### Critères d'acceptation
 

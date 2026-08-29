@@ -13,9 +13,11 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts as useGeist, Geist_500Medium, Geist_700Bold } from '@expo-google-fonts/geist';
 import { useFonts as useJetBrainsMono, JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../context/auth';
 import { OnboardingProvider } from '../context/onboarding';
 import { lightTheme, darkTheme } from '../constants/theme';
+import { queryClient } from '../lib/query-client';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -61,11 +63,13 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <OnboardingProvider>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }} />
-      </OnboardingProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <OnboardingProvider>
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }} />
+        </OnboardingProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
