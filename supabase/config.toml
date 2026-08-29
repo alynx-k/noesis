@@ -1,0 +1,17 @@
+project_id = "noesis"
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+enable_signup = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+double_confirm_changes = false

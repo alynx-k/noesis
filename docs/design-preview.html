@@ -1,0 +1,349 @@
+<title>Noesis — Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,900,500&display=swap">
+<style>
+  :root{
+    --primary:#E85D2C;
+    --primary-dark:#C64A1F;
+    --primary-tint:#FDEAE0;
+    --secondary:#17203D;
+    --secondary-tint:#E7E9F0;
+    --neutral-50:#FBF9F6;
+    --neutral-100:#F3EFE9;
+    --neutral-300:#D8D2C7;
+    --neutral-500:#8A8272;
+    --neutral-700:#4A4438;
+    --neutral-900:#221F19;
+    --success:#2F9E5B;
+    --warning:#E0A324;
+    --error:#D64545;
+    --info:#3172C7;
+    --radius-sm:8px;
+    --radius-md:14px;
+    --radius-lg:20px;
+    --radius-full:9999px;
+    --font-display:'Cabinet Grotesk',sans-serif;
+    --font-body:'Plus Jakarta Sans',sans-serif;
+    --font-data:'Geist',sans-serif;
+    --font-code:'JetBrains Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:var(--neutral-900);
+      --bg-card:#2C2820;
+      --text:var(--neutral-50);
+      --text-muted:var(--neutral-300);
+      --border:#3A342A;
+      --primary-tint:#3A2416;
+      --secondary-tint:#1D2438;
+    }
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:var(--neutral-50);
+      --bg-card:#FFFFFF;
+      --text:var(--neutral-900);
+      --text-muted:var(--neutral-700);
+      --border:var(--neutral-300);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    line-height:1.5;
+    padding:0 0 80px;
+  }
+  section{
+    max-width:1040px;
+    margin:0 auto;
+    padding:56px 24px;
+  }
+  h1,h2,h3{font-family:var(--font-display);margin:0 0 8px;}
+  .section-title{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--primary);
+    font-weight:700;
+    margin-bottom:24px;
+  }
+  /* ---- Section 1: Specimen ---- */
+  .hero-specimen{
+    font-family:var(--font-display);
+    font-weight:900;
+    font-size:clamp(40px,7vw,84px);
+    line-height:1.02;
+    color:var(--text);
+    margin:0 0 16px;
+  }
+  .hero-specimen span{color:var(--primary);}
+  .body-specimen{
+    font-size:17px;
+    color:var(--text-muted);
+    max-width:640px;
+    margin-bottom:32px;
+  }
+  table{border-collapse:collapse;width:100%;max-width:520px;font-family:var(--font-data);}
+  table th, table td{
+    text-align:left;
+    padding:10px 14px;
+    border-bottom:1px solid var(--border);
+    font-variant-numeric:tabular-nums;
+  }
+  table th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);font-weight:600;}
+  .code-block{
+    font-family:var(--font-code);
+    background:var(--secondary);
+    color:#DCE3F5;
+    padding:18px 20px;
+    border-radius:var(--radius-md);
+    font-size:13.5px;
+    overflow-x:auto;
+    max-width:560px;
+  }
+  /* ---- Section 2: Palette ---- */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;margin-bottom:40px;}
+  .swatch{border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);}
+  .swatch-color{height:72px;}
+  .swatch-label{padding:10px 12px;background:var(--bg-card);font-size:12.5px;}
+  .swatch-label b{display:block;font-family:var(--font-data);font-size:12px;}
+  .ui-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;align-items:center;}
+  .btn{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:15px;
+    padding:13px 22px;
+    border-radius:var(--radius-full);
+    border:none;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-secondary{background:var(--secondary);color:#fff;}
+  .btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border);}
+  .input{
+    font-family:var(--font-body);
+    font-size:15px;
+    padding:12px 16px;
+    border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);
+    background:var(--bg-card);
+    color:var(--text);
+    min-width:220px;
+  }
+  .input.focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint);}
+  .input.error{border-color:var(--error);}
+  .alert{
+    padding:14px 16px;
+    border-radius:var(--radius-md);
+    font-size:14px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    max-width:480px;
+    margin-bottom:10px;
+  }
+  .alert-success{background:rgba(47,158,91,0.12);color:var(--success);}
+  .alert-warning{background:rgba(224,163,36,0.14);color:#9c7412;}
+  .alert-error{background:rgba(214,69,69,0.12);color:var(--error);}
+  .alert-info{background:rgba(49,114,199,0.12);color:var(--info);}
+  .card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:22px;
+    max-width:360px;
+  }
+  .card h3{font-size:18px;}
+  .card p{color:var(--text-muted);font-size:14px;margin:6px 0 14px;}
+  /* ---- Section 3: Mockup ---- */
+  .phone{
+    width:360px;
+    margin:0 auto;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:36px;
+    padding:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.12);
+  }
+  .phone-screen{
+    background:var(--bg);
+    border-radius:24px;
+    overflow:hidden;
+    min-height:640px;
+    display:flex;
+    flex-direction:column;
+  }
+  .app-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 18px 10px;
+  }
+  .avatar{
+    width:40px;height:40px;border-radius:var(--radius-full);
+    background:var(--secondary);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:15px;
+  }
+  .streak-chip{
+    display:flex;align-items:center;gap:6px;
+    background:var(--primary-tint);color:var(--primary-dark);
+    padding:7px 14px;border-radius:var(--radius-full);
+    font-family:var(--font-data);font-weight:600;font-size:14px;
+  }
+  .app-body{padding:6px 18px 18px;flex:1;}
+  .greeting{font-family:var(--font-display);font-weight:700;font-size:22px;margin:8px 0 18px;}
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-card{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:var(--radius-md);padding:14px;
+  }
+  .stat-card .num{font-family:var(--font-data);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;}
+  .stat-card .label{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .league-card{
+    background:linear-gradient(135deg,var(--secondary),#2A3559);
+    color:#fff;border-radius:var(--radius-lg);padding:18px;margin-bottom:18px;
+  }
+  .league-card .tier{font-size:12px;text-transform:uppercase;letter-spacing:0.06em;opacity:0.75;font-weight:600;}
+  .league-card .rank{font-family:var(--font-display);font-weight:900;font-size:30px;margin:4px 0;}
+  .league-card .sub{font-size:13px;opacity:0.85;}
+  .section-label{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:18px 0 10px;}
+  .course-item{
+    display:flex;align-items:center;gap:12px;
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;
+  }
+  .course-icon{
+    width:38px;height:38px;border-radius:var(--radius-sm);
+    background:var(--primary-tint);color:var(--primary-dark);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;
+  }
+  .course-info{flex:1;}
+  .course-info .name{font-weight:600;font-size:14.5px;}
+  .course-info .meta{font-size:12.5px;color:var(--text-muted);}
+  .progress-bar{
+    height:5px;background:var(--border);border-radius:var(--radius-full);
+    margin-top:6px;overflow:hidden;
+  }
+  .progress-bar span{display:block;height:100%;background:var(--primary);}
+  .tabbar{
+    display:flex;justify-content:space-around;align-items:center;
+    padding:12px 8px;border-top:1px solid var(--border);background:var(--bg-card);
+  }
+  .tab{font-size:11px;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;}
+  .tab.active{color:var(--primary);}
+  .tab-dot{width:22px;height:22px;border-radius:6px;background:var(--border);}
+  .tab.active .tab-dot{background:var(--primary);}
+</style>
+
+<section>
+  <div class="section-title">01 · Spécimen typographique</div>
+  <h1 class="hero-specimen">Noesis<span>.</span></h1>
+  <p class="body-specimen">Cabinet Grotesk en display porte les moments forts — série à 30 jours, montée de palier, écran de bienvenue. Plus Jakarta Sans en corps de texte reste chaleureux et très lisible même sur un écran Android d'entrée de gamme, à faible luminosité, dans le bus du retour de classe.</p>
+  <table>
+    <thead><tr><th>Matière</th><th>Chapitres</th><th>Progression</th><th>XP</th></tr></thead>
+    <tbody>
+      <tr><td>Mathématiques — 3ème</td><td>14</td><td>62%</td><td>1 240</td></tr>
+      <tr><td>Physique-Chimie — 3ème</td><td>11</td><td>38%</td><td>860</td></tr>
+      <tr><td>Anglais LV1 — 3ème</td><td>9</td><td>81%</td><td>1 510</td></tr>
+    </tbody>
+  </table>
+  <br>
+  <div class="code-block">// exemple : file de relecture de contenu (admin)
+{ "lesson_id": "3e-maths-calcul-litteral-04",
+  "status": "pending_review",
+  "generated_by": "gemini",
+  "reviewer": null }</div>
+</section>
+
+<section>
+  <div class="section-title">02 · Palette & composants</div>
+  <div class="swatches">
+    <div class="swatch"><div class="swatch-color" style="background:#E85D2C"></div><div class="swatch-label"><b>#E85D2C</b>Primary — Orange</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#17203D"></div><div class="swatch-label" style="color:#fff;background:#17203D"><b>#17203D</b>Secondary — Navy</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#F3EFE9"></div><div class="swatch-label"><b>#F3EFE9</b>Neutral 100</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#8A8272"></div><div class="swatch-label"><b>#8A8272</b>Neutral 500</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#221F19"></div><div class="swatch-label" style="color:#fff;background:#221F19"><b>#221F19</b>Neutral 900</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#2F9E5B"></div><div class="swatch-label"><b>#2F9E5B</b>Success</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#E0A324"></div><div class="swatch-label"><b>#E0A324</b>Warning</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#D64545"></div><div class="swatch-label"><b>#D64545</b>Error</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#3172C7"></div><div class="swatch-label"><b>#3172C7</b>Info</div></div>
+  </div>
+
+  <div class="ui-row">
+    <button class="btn btn-primary">Commencer la leçon</button>
+    <button class="btn btn-secondary">Passer Premium</button>
+    <button class="btn btn-ghost">Plus tard</button>
+  </div>
+  <div class="ui-row">
+    <input class="input" placeholder="Numéro de téléphone">
+    <input class="input focus" placeholder="Focus state" value="07 XX XX XX XX">
+    <input class="input error" placeholder="Code invalide" value="0000">
+  </div>
+  <div style="max-width:480px;">
+    <div class="alert alert-success">✓ Exercice corrigé — 8/10, bien joué !</div>
+    <div class="alert alert-warning">⚠ Ta série se termine dans 2h, ouvre une leçon aujourd'hui.</div>
+    <div class="alert alert-error">✕ Paiement Wave refusé — réessaie ou change de moyen.</div>
+    <div class="alert alert-info">ℹ Ta classe (3ème C) passe en Ligue Or cette semaine.</div>
+  </div>
+  <br>
+  <div class="card">
+    <h3>Fiche du jour</h3>
+    <p>12 cartes à revoir aujourd'hui en Physique-Chimie, selon ta répétition espacée.</p>
+    <button class="btn btn-primary">Réviser maintenant</button>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">03 · Écran d'accueil (mobile)</div>
+  <div class="phone">
+    <div class="phone-screen">
+      <div class="app-header">
+        <div class="avatar">KA</div>
+        <div class="streak-chip">🔥 14 jours</div>
+      </div>
+      <div class="app-body">
+        <div class="greeting">Salut Kadi 👋</div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="num">1 240</div><div class="label">XP cette semaine</div></div>
+          <div class="stat-card"><div class="num">62%</div><div class="label">Programme 3ème</div></div>
+        </div>
+        <div class="league-card">
+          <div class="tier">Ligue Or · Classe 3ème C</div>
+          <div class="rank">3ᵉ place</div>
+          <div class="sub">Encore 180 XP pour monter en Platine</div>
+        </div>
+        <div class="section-label">Reprendre</div>
+        <div class="course-item">
+          <div class="course-icon">M</div>
+          <div class="course-info">
+            <div class="name">Calcul littéral — Chap. 4</div>
+            <div class="meta">Mathématiques · 3ème</div>
+            <div class="progress-bar"><span style="width:62%"></span></div>
+          </div>
+        </div>
+        <div class="course-item">
+          <div class="course-icon">PC</div>
+          <div class="course-info">
+            <div class="name">Mouvement et vitesse</div>
+            <div class="meta">Physique-Chimie · 3ème</div>
+            <div class="progress-bar"><span style="width:38%"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active"><div class="tab-dot"></div>Accueil</div>
+        <div class="tab"><div class="tab-dot"></div>Cours</div>
+        <div class="tab"><div class="tab-dot"></div>Fiches</div>
+        <div class="tab"><div class="tab-dot"></div>Ligue</div>
+        <div class="tab"><div class="tab-dot"></div>Profil</div>
+      </div>
+    </div>
+  </div>
+</section>
