@@ -110,14 +110,6 @@ export async function joinNiveauWaitlist(userId: string, tier: NiveauWaitlistId)
   return { error: null };
 }
 
-export async function getNiveauWaitlistStatus(): Promise<NiveauWaitlistId | null> {
-  const { data, error } = await supabase.from('profiles').select('niveau_waitlist').maybeSingle();
-  if (error || !data) {
-    return null;
-  }
-  return (data.niveau_waitlist as NiveauWaitlistId | null) ?? null;
-}
-
 export async function uploadAvatar(userId: string, localUri: string): Promise<string | null> {
   try {
     const response = await fetch(localUri);

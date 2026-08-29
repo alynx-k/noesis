@@ -108,7 +108,7 @@ export default function CommunauteScreen() {
       fontWeight: '700',
       flex: 1,
     },
-    leaderboardRow: {
+    leagueRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: SPACING.tight,
@@ -118,7 +118,7 @@ export default function CommunauteScreen() {
       marginBottom: SPACING.tight,
       ...cardBorder(COLORS),
     },
-    leaderboardRowYou: {
+    leagueRowYou: {
       borderColor: COLORS.accent,
       borderWidth: 1.5,
     },
@@ -146,7 +146,7 @@ export default function CommunauteScreen() {
       fontWeight: '700',
       color: COLORS.mutedText,
     },
-    leaderboardEmpty: {
+    leagueEmpty: {
       ...TYPOGRAPHY.body,
       color: COLORS.mutedText,
     },
@@ -168,7 +168,7 @@ export default function CommunauteScreen() {
           ) : null}
 
           {leagueQuery.isSuccess && !league ? (
-            <ThemedText style={styles.leaderboardEmpty}>
+            <ThemedText style={styles.leagueEmpty}>
               Termine ta classe pour rejoindre une ligue et apparaître ici !
             </ThemedText>
           ) : null}
@@ -209,7 +209,7 @@ export default function CommunauteScreen() {
               ) : null}
 
               {league.entries.map((entry) => (
-                <View key={entry.userId} style={[styles.leaderboardRow, entry.isYou && styles.leaderboardRowYou]}>
+                <View key={entry.userId} style={[styles.leagueRow, entry.isYou && styles.leagueRowYou]}>
                   <View style={styles.rankBadge}>
                     <ThemedText style={styles.rankText}>{entry.rank}</ThemedText>
                   </View>

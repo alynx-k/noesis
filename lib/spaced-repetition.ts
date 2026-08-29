@@ -92,8 +92,7 @@ export async function scheduleNextReview(
   return nextCard.due;
 }
 
-// Batched variant of getNextReviewDate for a subject's whole course list —
-// one round trip instead of one per course.
+// One round trip for a subject's whole course list instead of one per course.
 export async function getNextReviewDates(courseIds: string[]): Promise<Record<string, Date | null>> {
   if (courseIds.length === 0) {
     return {};
@@ -115,19 +114,3 @@ export async function getNextReviewDates(courseIds: string[]): Promise<Record<st
   return map;
 }
 
-export async function getNextReviewDate(courseId: string): Promise<Date | null> {
-  const { data, error } = await supabase
-    .from('spaced_repetition_state')
-    .select('due')
-    .eq('course_id', courseId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Failed to load next review date:', error);
-    return null;
-  }
-  if (!data) {
-    return null;
-  }
-  return new Date(data.due);
-}

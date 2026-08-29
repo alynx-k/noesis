@@ -37,22 +37,10 @@ export async function isSmartSchedulingEnabled(): Promise<boolean> {
   return value === null ? true : value === 'true';
 }
 
-export async function setSmartSchedulingEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(SMART_SCHEDULING_KEY, enabled ? 'true' : 'false');
-}
-
 // Stored as "HH:MM" (24h). null means "no override" — smart scheduling (or
 // the default fallback time) decides instead.
 export async function getCustomNotificationTime(): Promise<string | null> {
   return AsyncStorage.getItem(CUSTOM_TIME_KEY);
-}
-
-export async function setCustomNotificationTime(time: string | null): Promise<void> {
-  if (time === null) {
-    await AsyncStorage.removeItem(CUSTOM_TIME_KEY);
-  } else {
-    await AsyncStorage.setItem(CUSTOM_TIME_KEY, time);
-  }
 }
 
 // Re-exported under this module's naming so callers only need one import

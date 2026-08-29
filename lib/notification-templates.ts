@@ -1,8 +1,8 @@
 // Copy bank for local/push notifications — Duolingo-style passive-aggressive,
 // theatrical guilt trips rather than neutral reminders. Pure data + string
 // formatting: scheduling (lib/notifications.ts) picks a category based on
-// the trigger (time of day, streak loss, a personalized moment) and calls
-// getRandomFormattedNotification to get the actual body text.
+// the trigger (time of day, streak loss, a personalized moment), calls
+// getRandomTemplate, then formatNotification to get the actual body text.
 
 export type NotificationCategory = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
@@ -21,17 +21,9 @@ export type NotificationVariables = {
 
 // Reference only — A (dramatic/personalized) and F (streak loss) are
 // triggered by events, not a clock, so they have no hour range.
-export const CATEGORY_INFO: Record<NotificationCategory, { label: string; hours: [number, number] | null }> = {
-  A: { label: 'Dramatique & Personnalisé', hours: null },
-  B: { label: 'Matin', hours: [8, 12] },
-  C: { label: 'Après-midi', hours: [12, 18] },
-  D: { label: 'Début de soirée', hours: [18, 21] },
-  E: { label: 'Urgence', hours: [21, 24] },
-  F: { label: 'Perte de série / abandon 48h', hours: null },
-};
-
 // Picks the time-of-day category for an hour (0-23). B/C/D/E only — A and F
-// are event-triggered (see CATEGORY_INFO), never picked by the clock alone.
+// are event-triggered (dramatic/personalized and streak-loss respectively),
+// never picked by the clock alone.
 export function getCategoryForHour(hour: number): NotificationCategory {
   if (hour >= 8 && hour < 12) return 'B';
   if (hour >= 12 && hour < 18) return 'C';
@@ -226,11 +218,4 @@ export function getRandomTemplate(category: NotificationCategory): NotificationT
   }
   lastShownIdByCategory.set(category, pick.id);
   return pick;
-}
-
-// Convenience wrapper for the common case: pick a random template for the
-// category, then format it in one call.
-export function getRandomFormattedNotification(category: NotificationCategory, data: NotificationVariables = {}): string {
-  const template = getRandomTemplate(category);
-  return formatNotification(template.id, data);
 }
