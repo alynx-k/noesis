@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/auth';
 import { useOnboarding } from '../../context/onboarding';
+import { useSubscription } from '../../hooks/queries/use-subscription';
 import { Button } from '../../components/ui/Button';
 import { useAppTheme } from '../../hooks/use-app-theme';
 import { GRADE_LABELS, SERIE_LABELS } from '../../constants/grades';
@@ -12,6 +13,7 @@ export default function Profil() {
   const theme = useAppTheme();
   const { profile, signOut } = useAuth();
   const { reset } = useOnboarding();
+  const { isPremium } = useSubscription();
 
   async function handleSignOut() {
     await signOut();
@@ -27,8 +29,12 @@ export default function Profil() {
         <InfoRow label="Contact" value={profile?.email ?? profile?.phone ?? '—'} />
         <InfoRow label="Classe" value={profile?.grade ? GRADE_LABELS[profile.grade] : '—'} />
         {profile?.serie ? <InfoRow label="Série" value={SERIE_LABELS[profile.serie]} /> : null}
+        <InfoRow label="Premium" value={isPremium ? 'Actif' : 'Inactif'} />
 
-        <View style={{ marginTop: spacing.lg }}>
+        <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+          {!isPremium ? (
+            <Button label="Passer Premium" onPress={() => router.push('/subscription')} />
+          ) : null}
           <Button label="Se déconnecter" variant="ghost" onPress={handleSignOut} />
         </View>
       </View>

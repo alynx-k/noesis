@@ -4,4 +4,5 @@ export const queryKeys = {
   lesson: (lessonId: string) => ['lesson', lessonId] as const,
   progress: (userId: string) => ['lesson-progress', userId] as const,
   streak: (userId: string) => ['streak', userId] as const,
+  subscription: (userId: string) => ['subscription', userId] as const,
 };

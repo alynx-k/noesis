@@ -81,6 +81,45 @@ npm run dev
 
 Ouvre `http://localhost:3000`, connecte-toi avec le compte admin créé ci-dessus.
 
+## Setup — Phase 3 (Abonnement Premium)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260829180000_subscriptions.sql` (table `subscriptions`, fonction `is_premium()`).
+
+### 2. Comptes marchands à créer
+
+Aucun de ces comptes ne peut être créé pour toi (KYC/entreprise requis) :
+
+1. **Wave Business** — [wave.com/business](https://wave.com/en/business/) → créer un compte marchand, récupérer une clé API.
+2. **MTN MoMo Developer** — [momodeveloper.mtn.com](https://momodeveloper.mtn.com) → créer une app "Collections", récupérer `Subscription Key`, `API User`, `API Key`.
+3. **Orange Money Web Payment** — portail développeur Orange CI → créer une app, récupérer `Client ID`, `Client Secret`, `Merchant Key`.
+
+### 3. Secrets Supabase
+
+```
+supabase secrets set WAVE_API_KEY=...
+supabase secrets set MTN_SUBSCRIPTION_KEY=... MTN_API_USER=... MTN_API_KEY=...
+supabase secrets set ORANGE_CLIENT_ID=... ORANGE_CLIENT_SECRET=... ORANGE_MERCHANT_KEY=...
+```
+
+### 4. Déployer les fonctions
+
+```
+supabase functions deploy create-checkout-session
+supabase functions deploy wave-webhook
+supabase functions deploy mtn-webhook
+supabase functions deploy orange-webhook
+```
+
+Configure l'URL de chaque webhook (`https://<projet>.supabase.co/functions/v1/<nom>-webhook`) dans le dashboard de chaque fournisseur.
+
+⚠️ Les appels aux API Wave/MTN/Orange sont écrits à partir de leur documentation publique mais n'ont pas pu être testés faute de comptes réels — à vérifier/ajuster une fois les identifiants obtenus.
+
+### 5. IAP (App Store / Google Play) — reporté
+
+Volontairement pas implémenté dans cette phase : nécessite `react-native-iap` (module natif absent d'Expo Go, donc un dev client EAS) ainsi que des comptes développeur Apple (99$/an) et Google (25$ unique) que je ne peux pas créer. Le schéma `subscriptions` prévoit déjà les providers `iap_ios`/`iap_android` pour l'ajouter plus tard sans migration.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -92,4 +131,6 @@ Ouvre `http://localhost:3000`, connecte-toi avec le compte admin créé ci-dessu
 - `components/markdown-lite.tsx` — rendu Markdown minimal pour le contenu de cours (pas de dépendance markdown-it/linkify-it, vulnérable et incompatible avec le bundling Metro)
 - `supabase/migrations/` — schéma de base de données
 - `supabase/functions/generate-course/` — génération de leçons par IA (Gemini)
+- `app/subscription.tsx` — paywall Premium, choix Wave/MTN/Orange
+- `supabase/functions/create-checkout-session/`, `*-webhook/` — paiement Premium (mobile money)
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu
