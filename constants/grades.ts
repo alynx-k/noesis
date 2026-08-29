@@ -13,8 +13,8 @@ export const GRADE_LABELS: Record<Grade, string> = {
   terminale: 'Terminale',
 };
 
-// Séries provisoires du lycée général ivoirien — la 2nde reste en tronc commun.
-// À affiner par l'équipe de contenu si des séries supplémentaires doivent être couvertes.
+// Séries du lycée général ivoirien. Dès la 2nde, l'élève choisit une orientation
+// (A ou C) ; le D n'apparaît qu'à partir de la 1ère (scission de la voie scientifique).
 export type Serie = 'A' | 'C' | 'D';
 
 export const SERIE_LABELS: Record<Serie, string> = {
@@ -24,7 +24,13 @@ export const SERIE_LABELS: Record<Serie, string> = {
 };
 
 export function gradeRequiresSerie(grade: Grade): boolean {
-  return grade === '1ere' || grade === 'terminale';
+  return grade === '2nde' || grade === '1ere' || grade === 'terminale';
+}
+
+export function seriesForGrade(grade: Grade): Serie[] {
+  if (grade === '2nde') return ['A', 'C'];
+  if (grade === '1ere' || grade === 'terminale') return ['A', 'C', 'D'];
+  return [];
 }
 
 export function isLyceeGrade(grade: Grade): boolean {

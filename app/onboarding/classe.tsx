@@ -11,17 +11,16 @@ import {
   GRADE_LABELS,
   SERIE_LABELS,
   gradeRequiresSerie,
-  type Serie,
+  seriesForGrade,
 } from '../../constants/grades';
 import { fonts, spacing } from '../../constants/theme';
-
-const SERIES: Serie[] = ['A', 'C', 'D'];
 
 export default function Classe() {
   const theme = useAppTheme();
   const { grade, serie, setGrade, setSerie } = useOnboarding();
   const needsSerie = grade !== null && gradeRequiresSerie(grade);
   const canContinue = grade !== null && (!needsSerie || serie !== null);
+  const availableSeries = grade ? seriesForGrade(grade) : [];
 
   return (
     <OnboardingScaffold
@@ -61,7 +60,7 @@ export default function Classe() {
             Ta série
           </Text>
           <View style={styles.column}>
-            {SERIES.map((s) => (
+            {availableSeries.map((s) => (
               <SelectableCard
                 key={s}
                 label={SERIE_LABELS[s]}
