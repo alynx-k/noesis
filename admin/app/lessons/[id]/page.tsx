@@ -14,6 +14,260 @@ type LessonDetail = {
   serie: string | null;
 };
 
+const OPTION_IDS = ['a', 'b', 'c', 'd'] as const;
+
+type ExerciseRow = {
+  id: string;
+  question_md: string;
+  options: { id: string; text: string }[];
+  sort_order: number;
+  status: 'draft' | 'published';
+  correct_option_id: string;
+  explanation_md: string;
+};
+
+type ExerciseForm = {
+  question_md: string;
+  optionTexts: Record<string, string>;
+  correct_option_id: string;
+  explanation_md: string;
+};
+
+const emptyForm: ExerciseForm = {
+  question_md: '',
+  optionTexts: { a: '', b: '', c: '', d: '' },
+  correct_option_id: 'a',
+  explanation_md: '',
+};
+
+function ExercisesSection({ lessonId }: { lessonId: string }) {
+  const [exercises, setExercises] = useState<ExerciseRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<ExerciseForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function loadExercises() {
+    const { data: exerciseRows, error: exError } = await supabase
+      .from('exercises')
+      .select('id, question_md, options, sort_order, status')
+      .eq('lesson_id', lessonId)
+      .order('sort_order');
+    if (exError) {
+      setError(exError.message);
+      return;
+    }
+    const ids = (exerciseRows ?? []).map((row) => row.id);
+    const { data: answerRows, error: ansError } = await supabase
+      .from('exercise_answers')
+      .select('exercise_id, correct_option_id, explanation_md')
+      .in('exercise_id', ids.length > 0 ? ids : ['00000000-0000-0000-0000-000000000000']);
+    if (ansError) {
+      setError(ansError.message);
+      return;
+    }
+    const answerByExercise = new Map(answerRows?.map((a) => [a.exercise_id, a]));
+    setExercises(
+      (exerciseRows ?? []).map((row) => ({
+        ...row,
+        options: row.options as { id: string; text: string }[],
+        correct_option_id: answerByExercise.get(row.id)?.correct_option_id ?? 'a',
+        explanation_md: answerByExercise.get(row.id)?.explanation_md ?? '',
+      })),
+    );
+  }
+
+  useEffect(() => {
+    loadExercises();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  function startEdit(exercise: ExerciseRow) {
+    setEditingId(exercise.id);
+    setForm({
+      question_md: exercise.question_md,
+      optionTexts: Object.fromEntries(OPTION_IDS.map((id) => [id, exercise.options.find((o) => o.id === id)?.text ?? ''])),
+      correct_option_id: exercise.correct_option_id,
+      explanation_md: exercise.explanation_md,
+    });
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
+  async function handleSubmit() {
+    setSaving(true);
+    setError(null);
+    const options = OPTION_IDS.map((id) => ({ id, text: form.optionTexts[id] }));
+
+    if (editingId) {
+      const { error: updateError } = await supabase
+        .from('exercises')
+        .update({ question_md: form.question_md, options })
+        .eq('id', editingId);
+      const { error: answerError } = updateError
+        ? { error: updateError }
+        : await supabase
+            .from('exercise_answers')
+            .update({ correct_option_id: form.correct_option_id, explanation_md: form.explanation_md })
+            .eq('exercise_id', editingId);
+      setSaving(false);
+      if (updateError || answerError) {
+        setError((updateError ?? answerError)!.message);
+        return;
+      }
+    } else {
+      const sortOrder = exercises?.length ?? 0;
+      const { data: inserted, error: insertError } = await supabase
+        .from('exercises')
+        .insert({ lesson_id: lessonId, question_md: form.question_md, options, sort_order: sortOrder })
+        .select('id')
+        .single();
+      if (insertError || !inserted) {
+        setSaving(false);
+        setError(insertError?.message ?? 'Échec de la création.');
+        return;
+      }
+      const { error: answerError } = await supabase.from('exercise_answers').insert({
+        exercise_id: inserted.id,
+        correct_option_id: form.correct_option_id,
+        explanation_md: form.explanation_md,
+      });
+      setSaving(false);
+      if (answerError) {
+        setError(answerError.message);
+        return;
+      }
+    }
+
+    resetForm();
+    await loadExercises();
+  }
+
+  async function togglePublish(exercise: ExerciseRow) {
+    const nextStatus = exercise.status === 'draft' ? 'published' : 'draft';
+    const { error: toggleError } = await supabase.from('exercises').update({ status: nextStatus }).eq('id', exercise.id);
+    if (toggleError) {
+      setError(toggleError.message);
+      return;
+    }
+    await loadExercises();
+  }
+
+  async function handleDelete(exerciseId: string) {
+    const { error: deleteError } = await supabase.from('exercises').delete().eq('id', exerciseId);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    if (editingId === exerciseId) resetForm();
+    await loadExercises();
+  }
+
+  return (
+    <div style={{ marginTop: 40 }}>
+      <h2>Exercices</h2>
+      {error ? <p className="error">{error}</p> : null}
+
+      {exercises === null ? (
+        <p className="muted">Chargement…</p>
+      ) : exercises.length === 0 ? (
+        <p className="muted">Aucun exercice pour cette leçon.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Question</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {exercises.map((exercise) => (
+              <tr key={exercise.id} onClick={() => startEdit(exercise)}>
+                <td>{exercise.question_md.slice(0, 60)}</td>
+                <td>
+                  <span className={`badge ${exercise.status}`}>
+                    {exercise.status === 'draft' ? 'Brouillon' : 'Publié'}
+                  </span>
+                </td>
+                <td style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePublish(exercise);
+                    }}
+                  >
+                    {exercise.status === 'draft' ? 'Publier' : 'Dépublier'}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(exercise.id);
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="editor" style={{ marginTop: 20 }}>
+        <h3 style={{ margin: 0 }}>{editingId ? 'Modifier l’exercice' : 'Nouvel exercice'}</h3>
+        <textarea
+          value={form.question_md}
+          onChange={(e) => setForm((f) => ({ ...f, question_md: e.target.value }))}
+          placeholder="Question (Markdown)"
+          style={{ minHeight: 100 }}
+        />
+        {OPTION_IDS.map((id) => (
+          <div key={id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="radio"
+              name="correct_option"
+              checked={form.correct_option_id === id}
+              onChange={() => setForm((f) => ({ ...f, correct_option_id: id }))}
+            />
+            <input
+              value={form.optionTexts[id]}
+              onChange={(e) => setForm((f) => ({ ...f, optionTexts: { ...f.optionTexts, [id]: e.target.value } }))}
+              placeholder={`Option ${id.toUpperCase()}`}
+              style={{ flex: 1 }}
+            />
+          </div>
+        ))}
+        <p className="muted" style={{ margin: 0 }}>Le bouton radio sélectionne la bonne réponse.</p>
+        <textarea
+          value={form.explanation_md}
+          onChange={(e) => setForm((f) => ({ ...f, explanation_md: e.target.value }))}
+          placeholder="Explication de la correction (Markdown)"
+          style={{ minHeight: 80 }}
+        />
+        <div className="editor-actions">
+          <button
+            disabled={saving || !form.question_md || OPTION_IDS.some((id) => !form.optionTexts[id])}
+            onClick={handleSubmit}
+          >
+            {editingId ? 'Enregistrer' : 'Ajouter'}
+          </button>
+          {editingId ? (
+            <button className="secondary" onClick={resetForm}>
+              Annuler
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LessonEditor() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -95,6 +349,8 @@ export default function LessonEditor() {
           )}
         </div>
       </div>
+
+      <ExercisesSection lessonId={lesson.id} />
     </div>
   );
 }

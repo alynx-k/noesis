@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useLesson } from '../../hooks/queries/use-lessons';
 import { useCompletedLessonIds, useCompleteLesson } from '../../hooks/queries/use-lesson-progress';
 import { MarkdownLite } from '../../components/markdown-lite';
@@ -73,6 +73,12 @@ export default function CourseDetail() {
           disabled={isDone}
           loading={completeLesson.isPending}
           onPress={handleComplete}
+        />
+        <View style={{ height: spacing.sm }} />
+        <Button
+          label="Voir les exercices"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/exercise/[lessonId]', params: { lessonId: id } })}
         />
       </View>
     </SafeAreaView>

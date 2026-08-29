@@ -120,6 +120,22 @@ Configure l'URL de chaque webhook (`https://<projet>.supabase.co/functions/v1/<n
 
 Volontairement pas implémenté dans cette phase : nécessite `react-native-iap` (module natif absent d'Expo Go, donc un dev client EAS) ainsi que des comptes développeur Apple (99$/an) et Google (25$ unique) que je ne peux pas créer. Le schéma `subscriptions` prévoit déjà les providers `iap_ios`/`iap_android` pour l'ajouter plus tard sans migration.
 
+## Setup — Phase 4 (Exercices corrigés)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260829200000_exercises.sql` (tables `exercises`/`exercise_answers`/`exercise_progress`, fonction `submit_exercise_attempt()`).
+
+### 2. Créer des exercices
+
+Depuis l'admin web (`/lessons/[id]`), en dessous de l'éditeur de leçon : ajoute une question, 4 options, sélectionne la bonne réponse et une explication, puis publie l'exercice. Aucune génération IA pour l'instant — création manuelle uniquement.
+
+### 3. Comportement
+
+- Un élève Premium peut valider une réponse et voit immédiatement la correction (bonne réponse + explication), avec 10 XP crédités à la première tentative.
+- Un élève gratuit voit la question mais ne peut pas valider ; un bandeau invite à passer Premium.
+- La bonne réponse et l'explication ne sont jamais renvoyées au client avant soumission (table `exercise_answers` séparée, sans policy de lecture élève — uniquement lisible par la fonction `submit_exercise_attempt()`).
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -133,4 +149,5 @@ Volontairement pas implémenté dans cette phase : nécessite `react-native-iap`
 - `supabase/functions/generate-course/` — génération de leçons par IA (Gemini)
 - `app/subscription.tsx` — paywall Premium, choix Wave/MTN/Orange
 - `supabase/functions/create-checkout-session/`, `*-webhook/` — paiement Premium (mobile money)
-- `admin/` — app web Next.js séparée pour la relecture/publication du contenu
+- `app/exercise/[lessonId].tsx` — QCM corrigés d'une leçon, verrouillés hors Premium
+- `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons et exercices)
