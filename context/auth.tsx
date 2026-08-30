@@ -13,6 +13,7 @@ export type Profile = {
   objective_ids: ObjectiveId[];
   onboarding_completed_at: string | null;
   ai_trials_used: number;
+  referral_code: string;
 };
 
 type AuthContextValue = {

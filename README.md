@@ -242,6 +242,19 @@ Applique `supabase/migrations/20260830010000_leagues.sql` (tables `leagues`/`lea
 - Aucune donnée personnelle affichée sur le classement partagé : `get_my_league_board()` ne renvoie ni email ni identifiant des autres membres, seulement leur rang et leur XP ("Toi" vs "Élève N").
 - État vide explicite si l'élève n'a pas encore de classe renseignée (onboarding incomplet) — US-34.
 
+## Setup — Phase 11 (Parrainage)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260830020000_referrals.sql` (colonne `profiles.referral_code`, table `referrals`, fonctions `generate_referral_code()`/`redeem_referral_code()`, `subscriptions.provider` étendu à `'referral'`).
+
+### 2. Comportement
+
+- Chaque élève reçoit un code de parrainage unique à 6 caractères (généré à la création du compte, y compris en backfill pour les comptes déjà existants) — US-28.
+- Un élève saisit un code depuis l'onglet Profil (à tout moment après l'inscription, pas seulement pendant l'onboarding — le PRD autorise les deux et un seul suffit) ; validation immédiate crédite 7 jours de Premium au parrain **et** au filleul (nombre de jours non fixé par le PRD, choisi ici).
+- Un élève ne peut être filleul qu'une seule fois (contrainte `unique(referee_id)`) et ne peut pas utiliser son propre code.
+- Si le filleul ou le parrain a déjà un abonnement Premium actif (payant), les jours offerts prolongent la date d'expiration existante au lieu de l'écraser.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -264,4 +277,5 @@ Applique `supabase/migrations/20260830010000_leagues.sql` (tables `leagues`/`lea
 - `supabase/functions/homework-photo/`, `supabase/functions/_shared/ai-trials.ts` — tuteur IA sur photo (Gemini vision), quota partagé avec le chat
 - `app/focus-session.tsx` — session de concentration chronométrée, guidage Ne pas déranger/Focus, résumé XP
 - `app/(tabs)/ligue.tsx` — classement hebdomadaire par classe/série, 8 paliers
+- `hooks/queries/use-referral.ts` — partage/validation du code de parrainage (section dédiée dans `app/(tabs)/profil.tsx`)
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)
