@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,8 +17,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../context/auth';
 import { OnboardingProvider } from '../context/onboarding';
 import { FocusSessionProvider } from '../context/focus-session';
+import { AppThemeProvider, useThemeSettings } from '../context/theme';
 import { FocusSessionBanner } from '../components/focus-session-banner';
-import { lightTheme, darkTheme } from '../constants/theme';
 import { queryClient } from '../lib/query-client';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -37,8 +37,15 @@ function useCabinetGrotesk() {
 }
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'dark' ? darkTheme : lightTheme;
+  return (
+    <AppThemeProvider>
+      <RootLayoutInner />
+    </AppThemeProvider>
+  );
+}
+
+function RootLayoutInner() {
+  const { theme, colorScheme, isLoaded: themeLoaded } = useThemeSettings();
 
   const [jakartaLoaded] = usePlusJakartaSans({
     PlusJakartaSans_400Regular,
@@ -50,13 +57,13 @@ export default function RootLayout() {
   const [monoLoaded] = useJetBrainsMono({ JetBrainsMono_400Regular });
   const cabinetLoaded = useCabinetGrotesk();
 
-  const fontsReady = jakartaLoaded && geistLoaded && monoLoaded && cabinetLoaded;
+  const appReady = jakartaLoaded && geistLoaded && monoLoaded && cabinetLoaded && themeLoaded;
 
   useEffect(() => {
-    if (fontsReady) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsReady]);
+    if (appReady) SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
 
-  if (!fontsReady) {
+  if (!appReady) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator color={theme.primary} />
@@ -69,7 +76,7 @@ export default function RootLayout() {
       <AuthProvider>
         <OnboardingProvider>
           <FocusSessionProvider>
-            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }} />
             <FocusSessionBanner />
           </FocusSessionProvider>

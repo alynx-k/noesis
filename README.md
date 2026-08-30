@@ -255,6 +255,16 @@ Applique `supabase/migrations/20260830020000_referrals.sql` (colonne `profiles.r
 - Un élève ne peut être filleul qu'une seule fois (contrainte `unique(referee_id)`) et ne peut pas utiliser son propre code.
 - Si le filleul ou le parrain a déjà un abonnement Premium actif (payant), les jours offerts prolongent la date d'expiration existante au lieu de l'écraser.
 
+## Setup — Phase 12 (Thème sombre/clair)
+
+Aucune migration ni configuration : c'est un changement purement client. Aucune des 12 phases ne devait attendre celle-ci (transverse, cf. `docs/PLAN.md`).
+
+### Comportement
+
+- Réglage accessible depuis Profil → Réglages : Système / Clair / Sombre, changement immédiat — US-30.
+- Persisté via `@react-native-async-storage/async-storage` (déjà une dépendance du projet), relu au démarrage avant que l'app affiche du contenu (pas de flash du mauvais thème).
+- `useAppTheme()` est désormais la seule source du thème actif dans toute l'app (auparavant un simple wrapper autour de `useColorScheme()`) : chaque écran qui l'utilisait déjà respecte donc automatiquement le réglage sans avoir été modifié individuellement — vérifié qu'aucun écran n'appelle `useColorScheme()` ou n'importe `lightTheme`/`darkTheme` directement en dehors de `context/theme.tsx`.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -278,4 +288,5 @@ Applique `supabase/migrations/20260830020000_referrals.sql` (colonne `profiles.r
 - `app/focus-session.tsx` — session de concentration chronométrée, guidage Ne pas déranger/Focus, résumé XP
 - `app/(tabs)/ligue.tsx` — classement hebdomadaire par classe/série, 8 paliers
 - `hooks/queries/use-referral.ts` — partage/validation du code de parrainage (section dédiée dans `app/(tabs)/profil.tsx`)
+- `context/theme.tsx`, `app/settings.tsx` — préférence de thème (Système/Clair/Sombre), persistée, source unique de `useAppTheme()`
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)

@@ -109,6 +109,7 @@ export default function Profil() {
           {!isPremium ? (
             <Button label="Passer Premium" onPress={() => router.push('/subscription')} />
           ) : null}
+          <Button label="Réglages" variant="secondary" onPress={() => router.push('/settings')} />
           <Button label="Se déconnecter" variant="ghost" onPress={handleSignOut} />
         </View>
       </View>
