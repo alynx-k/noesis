@@ -10,4 +10,6 @@ export const queryKeys = {
   flashcardDecks: ['flashcard-decks'] as const,
   flashcards: (deckId: string) => ['flashcards', deckId] as const,
   srsReviews: (userId: string) => ['srs-reviews', userId] as const,
+  aiConversations: (userId: string) => ['ai-conversations', userId] as const,
+  aiMessages: (conversationId: string) => ['ai-messages', conversationId] as const,
 };

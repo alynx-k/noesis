@@ -12,6 +12,7 @@ export type Profile = {
   serie: Serie | null;
   objective_ids: ObjectiveId[];
   onboarding_completed_at: string | null;
+  ai_trials_used: number;
 };
 
 type AuthContextValue = {

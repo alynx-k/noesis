@@ -166,6 +166,35 @@ Applique `supabase/migrations/20260829220000_personal_flashcards.sql` (colonne `
 - Un deck personnalisé entre dans le même moteur de répétition espacée que les decks pré-faits (`review_flashcard()` inchangé côté SRS/XP) ; il reste révisable même si l'abonnement expire ensuite — seules création/édition/suppression sont gatées Premium (appliqué à la fois par RLS et par l'UI).
 - Un deck est soit pré-fait (`lesson_id`, géré par l'admin) soit personnel (`user_id`, géré par son propriétaire), jamais les deux (contrainte `flashcard_decks_owner_xor_lesson_check`).
 
+## Setup — Phase 7 (Tuteur IA — chat)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260829230000_ai_tutor.sql` (colonne `profiles.ai_trials_used`, tables `ai_conversations`/`ai_messages`).
+
+### 2. Déployer la fonction
+
+```
+supabase functions deploy ai-tutor-chat
+```
+
+### 3. Secret Gemini
+
+Réutilise le même secret que `generate-course` (Phase 2) :
+
+```
+supabase secrets set GEMINI_API_KEY=...
+```
+
+⚠️ Si ce secret n'a jamais été configuré (il ne l'était pas encore au moment d'écrire ceci), ni `generate-course` ni `ai-tutor-chat` ne fonctionneront tant qu'il n'est pas défini — récupère une clé sur [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+### 4. Comportement
+
+- Un élève Premium peut discuter sans limite avec le tuteur IA (`app/ai-chat.tsx`, historique des conversations) et reprendre une conversation précédente.
+- Un élève gratuit dispose de 3 messages à vie (`AI_FREE_TRIAL_LIMIT`, compteur affiché) puis est bloqué avec une invitation Premium ; le compteur (`profiles.ai_trials_used`) n'est incrémenté qu'après une réponse réussie du tuteur.
+- Le prompt système adapte le niveau de réponse à la classe (et série) de l'élève, et encourage la pédagogie plutôt que la réponse brute à un exercice.
+- Conversations/messages ne sont jamais écrits par le client : uniquement par la fonction `ai-tutor-chat` (service role), comme les paiements en Phase 3.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -182,4 +211,6 @@ Applique `supabase/migrations/20260829220000_personal_flashcards.sql` (colonne `
 - `app/exercise/[lessonId].tsx` — QCM corrigés d'une leçon, verrouillés hors Premium
 - `app/(tabs)/fiches.tsx`, `app/lesson-flashcards/[lessonId].tsx`, `app/flashcard-deck/[id].tsx` — decks de flashcards par matière, sélection du deck d'une leçon, session de révision
 - `app/personal-deck/new.tsx`, `app/personal-deck/[id].tsx` — création et gestion (CRUD) des decks personnalisés, réservé Premium
+- `app/ai-chat.tsx`, `app/ai-chat/[id].tsx` — historique des conversations et chat avec le tuteur IA (Gemini), essais limités hors Premium
+- `supabase/functions/ai-tutor-chat/` — chat multi-tour avec le tuteur IA (Gemini), quota d'essais gratuits
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)

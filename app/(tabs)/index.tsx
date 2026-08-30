@@ -46,6 +46,16 @@ export default function Accueil() {
               : "Termine une leçon aujourd'hui pour démarrer ta série."}
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/ai-chat')}
+          style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <Text style={[styles.cardTitle, { color: theme.text }]}>Demander au tuteur IA</Text>
+          <Text style={[styles.cardBody, { color: theme.textMuted }]}>
+            Une question sur une leçon ou un exercice ? Discute avec le tuteur IA.
+          </Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
