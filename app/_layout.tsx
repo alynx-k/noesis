@@ -16,6 +16,8 @@ import { useFonts as useJetBrainsMono, JetBrainsMono_400Regular } from '@expo-go
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../context/auth';
 import { OnboardingProvider } from '../context/onboarding';
+import { FocusSessionProvider } from '../context/focus-session';
+import { FocusSessionBanner } from '../components/focus-session-banner';
 import { lightTheme, darkTheme } from '../constants/theme';
 import { queryClient } from '../lib/query-client';
 
@@ -66,8 +68,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <OnboardingProvider>
-          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }} />
+          <FocusSessionProvider>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }} />
+            <FocusSessionBanner />
+          </FocusSessionProvider>
         </OnboardingProvider>
       </AuthProvider>
     </QueryClientProvider>

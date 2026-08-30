@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
-import { useCompleteFocusSession, FOCUS_SESSION_DURATIONS } from '../hooks/queries/use-focus-session';
+import { router, Stack } from 'expo-router';
+import { useFocusSession } from '../context/focus-session';
+import { FOCUS_SESSION_DURATIONS } from '../hooks/queries/use-focus-session';
 import { SelectableCard } from '../components/ui/SelectableCard';
 import { Button } from '../components/ui/Button';
 import { useAppTheme } from '../hooks/use-app-theme';
 import { fonts, radius, spacing } from '../constants/theme';
-
-type Phase = 'select' | 'running' | 'summary';
 
 async function openNotificationSettings() {
   if (Platform.OS === 'android') {
@@ -24,59 +23,15 @@ async function openNotificationSettings() {
 
 export default function FocusSession() {
   const theme = useAppTheme();
-  const completeSession = useCompleteFocusSession();
-
-  const [phase, setPhase] = useState<Phase>('select');
-  const [durationMinutes, setDurationMinutes] = useState<number>(FOCUS_SESSION_DURATIONS[1]);
-  const [endAt, setEndAt] = useState<number | null>(null);
-  const [remainingMs, setRemainingMs] = useState(0);
-  const [xpAwarded, setXpAwarded] = useState<number | null>(null);
-  const completingRef = useRef(false);
-
-  useEffect(() => {
-    if (phase !== 'running' || endAt === null) return;
-
-    const tick = () => {
-      const remaining = Math.max(0, endAt - Date.now());
-      setRemainingMs(remaining);
-      if (remaining === 0 && !completingRef.current) {
-        completingRef.current = true;
-        completeSession.mutateAsync(durationMinutes).then((result) => {
-          setXpAwarded(result.xp_awarded);
-          setPhase('summary');
-        });
-      }
-    };
-
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, endAt]);
-
-  function handleStart() {
-    completingRef.current = false;
-    setEndAt(Date.now() + durationMinutes * 60_000);
-    setPhase('running');
-  }
+  const { phase, durationMinutes, remainingMs, xpAwarded, startSession, abandonSession, dismissSummary } =
+    useFocusSession();
+  const [selectedDuration, setSelectedDuration] = useState<number>(FOCUS_SESSION_DURATIONS[1]);
 
   function handleAbandon() {
     Alert.alert('Abandonner la session ?', "Tu ne gagneras pas d'XP pour cette session.", [
       { text: 'Continuer la session', style: 'cancel' },
-      {
-        text: 'Abandonner',
-        style: 'destructive',
-        onPress: () => {
-          setEndAt(null);
-          setPhase('select');
-        },
-      },
+      { text: 'Abandonner', style: 'destructive', onPress: abandonSession },
     ]);
-  }
-
-  function handleFinishSummary() {
-    setPhase('select');
-    setXpAwarded(null);
   }
 
   const headerOptions = {
@@ -92,14 +47,17 @@ export default function FocusSession() {
     const ss = String(totalSeconds % 60).padStart(2, '0');
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-        <Stack.Screen options={{ ...headerOptions, headerBackVisible: false, gestureEnabled: false }} />
+        <Stack.Screen options={headerOptions} />
         <View style={styles.center}>
           <Text style={[styles.timer, { color: theme.text, fontFamily: fonts.display }]}>
             {mm}:{ss}
           </Text>
-          <Text style={[styles.timerHint, { color: theme.textMuted }]}>Reste concentré, tu y es presque.</Text>
-          <View style={{ marginTop: spacing.xl }}>
-            <Button label="Abandonner" variant="ghost" onPress={handleAbandon} />
+          <Text style={[styles.timerHint, { color: theme.textMuted }]}>
+            Tu peux naviguer dans l'app (leçons, exercices...) sans interrompre la session.
+          </Text>
+          <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
+            <Button label="Continuer dans l'app" onPress={() => router.push('/cours')} />
+            <Button label="Abandonner la session" variant="ghost" onPress={handleAbandon} />
           </View>
         </View>
       </SafeAreaView>
@@ -121,7 +79,7 @@ export default function FocusSession() {
             <Text style={{ color: theme.primary, fontFamily: fonts.bodySemiBold }}>+{xpAwarded} XP gagné !</Text>
           </View>
           <View style={{ marginTop: spacing.lg }}>
-            <Button label="Terminer" onPress={handleFinishSummary} />
+            <Button label="Terminer" onPress={dismissSummary} />
           </View>
         </View>
       </SafeAreaView>
@@ -150,13 +108,13 @@ export default function FocusSession() {
         <View style={styles.durationGrid}>
           {FOCUS_SESSION_DURATIONS.map((d) => (
             <View key={d} style={styles.durationItem}>
-              <SelectableCard label={`${d} min`} selected={durationMinutes === d} onPress={() => setDurationMinutes(d)} />
+              <SelectableCard label={`${d} min`} selected={selectedDuration === d} onPress={() => setSelectedDuration(d)} />
             </View>
           ))}
         </View>
 
         <View style={{ marginTop: spacing.md }}>
-          <Button label="Commencer" onPress={handleStart} />
+          <Button label="Commencer" onPress={() => startSession(selectedDuration)} />
         </View>
       </View>
     </SafeAreaView>
@@ -180,7 +138,7 @@ const styles = StyleSheet.create({
   durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   durationItem: { width: '47%' },
   timer: { fontSize: 64 },
-  timerHint: { fontFamily: fonts.body, fontSize: 14, marginTop: spacing.sm },
+  timerHint: { fontFamily: fonts.body, fontSize: 14, marginTop: spacing.sm, textAlign: 'center' },
   summaryTitle: { fontSize: 24 },
   xpBanner: { borderRadius: 12, padding: spacing.md, marginTop: spacing.lg },
 });

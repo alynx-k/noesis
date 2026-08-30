@@ -224,6 +224,7 @@ Applique `supabase/migrations/20260830000000_focus_session.sql` (fonction `compl
 - **Blocage des notifications géré manuellement des deux côtés**, pas automatiquement sur Android : un bandeau explique comment activer Ne pas déranger (Android) ou un Focus dédié (iOS), avec un bouton qui ouvre directement les réglages système concernés (`Linking.sendIntent('android.settings.ZEN_MODE_SETTINGS')` sur Android, réglages de l'app sur iOS faute de lien profond public vers Focus) — US-18, US-19.
 - ⚠️ Écart assumé par rapport au critère d'acceptation strict ("les notifications sont *effectivement* bloquées" sur Android) : l'activation automatique du mode Ne pas déranger nécessite une permission système privilégiée (`ACCESS_NOTIFICATION_POLICY`) inaccessible depuis Expo Go — il faudrait un dev client EAS custom, comme pour l'IAP (Phase 3). Choix fait pour garder l'app testable dans Expo Go ; à revisiter si le projet passe un jour à un dev client.
 - La durée créditée est limitée aux paliers fixes (15/25/45/60) côté serveur : un client ne peut pas déclarer une durée arbitraire non réellement chronométrée.
+- L'état de la session (en cours ou terminée) vit dans `context/focus-session.tsx`, monté au-dessus du `Stack` racine — l'élève peut donc quitter l'écran Focus session pour faire une leçon/exercice sans interrompre le minuteur ni perdre l'XP. Un bandeau flottant (`components/focus-session-banner.tsx`) reste visible sur le reste de l'app pour montrer le temps restant et ramener à l'écran Focus session en un tap.
 
 ## Structure
 
