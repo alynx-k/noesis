@@ -153,6 +153,19 @@ Depuis l'admin web (`/lessons/[id]`), section "Decks de flashcards" : crée un d
 - Chaque révision crédite 3 XP ; la fonction `review_flashcard()` refuse de créditer une carte qui n'est pas encore due (anti-abus).
 - Onglet "Fiches" : liste des decks groupés par matière avec un badge du nombre de cartes dues aujourd'hui.
 
+## Setup — Phase 6 (Flashcards personnalisées)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260829220000_personal_flashcards.sql` (colonne `flashcard_decks.user_id`, policies RLS pour les decks perso, `review_flashcard()` mis à jour pour gérer les deux types de deck).
+
+### 2. Comportement
+
+- Un élève Premium peut créer, éditer et supprimer ses propres decks/cartes depuis l'onglet "Fiches" ("Mes decks" → "+ Nouveau deck").
+- Un élève gratuit voit l'option de création verrouillée (redirection vers `/subscription`).
+- Un deck personnalisé entre dans le même moteur de répétition espacée que les decks pré-faits (`review_flashcard()` inchangé côté SRS/XP) ; il reste révisable même si l'abonnement expire ensuite — seules création/édition/suppression sont gatées Premium (appliqué à la fois par RLS et par l'UI).
+- Un deck est soit pré-fait (`lesson_id`, géré par l'admin) soit personnel (`user_id`, géré par son propriétaire), jamais les deux (contrainte `flashcard_decks_owner_xor_lesson_check`).
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -168,4 +181,5 @@ Depuis l'admin web (`/lessons/[id]`), section "Decks de flashcards" : crée un d
 - `supabase/functions/create-checkout-session/`, `*-webhook/` — paiement Premium (mobile money)
 - `app/exercise/[lessonId].tsx` — QCM corrigés d'une leçon, verrouillés hors Premium
 - `app/(tabs)/fiches.tsx`, `app/lesson-flashcards/[lessonId].tsx`, `app/flashcard-deck/[id].tsx` — decks de flashcards par matière, sélection du deck d'une leçon, session de révision
-- `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards)
+- `app/personal-deck/new.tsx`, `app/personal-deck/[id].tsx` — création et gestion (CRUD) des decks personnalisés, réservé Premium
+- `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)
