@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { router, Stack } from 'expo-router';
 import { useSubmitHomeworkPhoto } from '../hooks/queries/use-homework-photo';
 import { useAiQuota } from '../hooks/use-ai-quota';
@@ -47,15 +48,25 @@ export function HomeworkPhotoScreen({ mode, title, instructions }: Props) {
       return;
     }
 
-    const options: ImagePicker.ImagePickerOptions = { base64: true, quality: 0.6, mediaTypes: 'images' };
+    const options: ImagePicker.ImagePickerOptions = { quality: 1, mediaTypes: 'images' };
     const pickerResult =
       source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
     if (pickerResult.canceled) return;
 
     const asset = pickerResult.assets[0];
-    setImageUri(asset.uri);
-    setImageBase64(asset.base64 ?? null);
-    setMimeType(asset.mimeType ?? 'image/jpeg');
+
+    // Redimensionne et recompresse à une taille prévisible : une photo prise
+    // à l'appareil peut peser plusieurs Mo selon le réglage `quality`, ce qui
+    // rend le payload envoyé à Gemini inutilement lourd et variable.
+    const manipulated = await manipulateAsync(asset.uri, [{ resize: { width: 1600 } }], {
+      compress: 0.8,
+      format: SaveFormat.JPEG,
+      base64: true,
+    });
+
+    setImageUri(manipulated.uri);
+    setImageBase64(manipulated.base64 ?? null);
+    setMimeType('image/jpeg');
     setResult(null);
     setIllegible(false);
     setError(null);

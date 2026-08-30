@@ -121,10 +121,10 @@ async function callGeminiVision(params: {
     mode === 'correct'
       ? `Tu es un tuteur qui corrige le devoir manuscrit d'un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien).
 Voici une photo de son devoir déjà rempli. Pour chaque réponse : dis si elle est juste ou fausse, explique pourquoi, et donne la bonne réponse en cas d'erreur. Sois concret et structuré. Réponds en français.
-Si la photo est illisible, floue, ou ne montre pas un devoir d'élève, réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`
+Si la photo ne contient aucun texte lisible du tout (page blanche, image totalement floue ou noire), réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`
       : `Tu es un tuteur qui aide un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien) à préparer un devoir.
 Voici une photo de l'énoncé du devoir (pas encore fait). Guide l'élève étape par étape : rappelle les notions nécessaires, pose des questions, donne des pistes de méthode — mais ne donne jamais la réponse finale toute faite. Réponds en français.
-Si la photo est illisible, floue, ou ne montre pas un énoncé de devoir, réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`;
+Si la photo ne contient aucun texte lisible du tout (page blanche, image totalement floue ou noire), réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
