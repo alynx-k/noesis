@@ -207,10 +207,23 @@ Réutilise les mêmes secrets `GEMINI_API_KEY`/`GEMINI_MODEL` que la Phase 7 —
 ### 2. Comportement
 
 - Deux modes depuis l'écran "Tuteur IA" : "Corriger un devoir" (photo d'un devoir déjà fait → correction détaillée réponse par réponse) et "Préparer un devoir" (photo d'un énoncé → accompagnement guidé, jamais la réponse finale directe) — US-10, US-11.
-- Photo illisible ou hors-sujet : le prompt demande à Gemini de répondre par un marqueur `ILLISIBLE` plutôt que d'improviser ; l'app affiche alors un message clair invitant à reprendre la photo, sans consommer d'essai (US-35).
+- Photo vraiment illisible (page blanche, floue, noire) : le prompt demande à Gemini de répondre par un marqueur `ILLISIBLE` plutôt que d'improviser ; l'app affiche alors un message clair invitant à reprendre la photo, sans consommer d'essai (US-35). ⚠️ Cette condition a été volontairement resserrée après un bug où une clause trop large ("ou ne montre pas un devoir d'élève") faisait déclencher `ILLISIBLE` même sur des photos parfaitement nettes dès qu'elles ne ressemblaient pas à un cahier manuscrit — voir l'historique Git pour le détail de l'investigation.
 - Partage le même quota Premium/essais gratuits que le chat (`profiles.ai_trials_used`, logique commune dans `supabase/functions/_shared/ai-trials.ts`).
 - Aucun historique persisté (contrairement au chat) : chaque photo est un aller-retour ponctuel, conformément aux critères d'acceptation de cette phase.
-- Nécessite `expo-image-picker` (permissions caméra/galerie déclarées dans `app.json`).
+- Nécessite `expo-image-picker` (permissions caméra/galerie déclarées dans `app.json`) et `expo-image-manipulator` (normalise la taille/compression de la photo avant l'envoi à Gemini).
+
+## Setup — Phase 9 (Focus session)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260830000000_focus_session.sql` (fonction `complete_focus_session()`).
+
+### 2. Comportement
+
+- Un élève choisit une durée (15/25/45/60 min) et lance une session chronométrée ; à la fin, un résumé affiche la durée et l'XP gagné (1 XP par minute) — US-17, US-20.
+- **Blocage des notifications géré manuellement des deux côtés**, pas automatiquement sur Android : un bandeau explique comment activer Ne pas déranger (Android) ou un Focus dédié (iOS), avec un bouton qui ouvre directement les réglages système concernés (`Linking.sendIntent('android.settings.ZEN_MODE_SETTINGS')` sur Android, réglages de l'app sur iOS faute de lien profond public vers Focus) — US-18, US-19.
+- ⚠️ Écart assumé par rapport au critère d'acceptation strict ("les notifications sont *effectivement* bloquées" sur Android) : l'activation automatique du mode Ne pas déranger nécessite une permission système privilégiée (`ACCESS_NOTIFICATION_POLICY`) inaccessible depuis Expo Go — il faudrait un dev client EAS custom, comme pour l'IAP (Phase 3). Choix fait pour garder l'app testable dans Expo Go ; à revisiter si le projet passe un jour à un dev client.
+- La durée créditée est limitée aux paliers fixes (15/25/45/60) côté serveur : un client ne peut pas déclarer une durée arbitraire non réellement chronométrée.
 
 ## Structure
 
@@ -232,4 +245,5 @@ Réutilise les mêmes secrets `GEMINI_API_KEY`/`GEMINI_MODEL` que la Phase 7 —
 - `supabase/functions/ai-tutor-chat/` — chat multi-tour avec le tuteur IA (Gemini), quota d'essais gratuits
 - `app/correct-homework.tsx`, `app/prepare-homework.tsx`, `components/homework-photo-screen.tsx` — devoir corrigé ou préparé à partir d'une photo
 - `supabase/functions/homework-photo/`, `supabase/functions/_shared/ai-trials.ts` — tuteur IA sur photo (Gemini vision), quota partagé avec le chat
+- `app/focus-session.tsx` — session de concentration chronométrée, guidage Ne pas déranger/Focus, résumé XP
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)

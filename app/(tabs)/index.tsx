@@ -56,6 +56,16 @@ export default function Accueil() {
             Une question sur une leçon ou un exercice ? Discute avec le tuteur IA.
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/focus-session')}
+          style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <Text style={[styles.cardTitle, { color: theme.text }]}>Lancer une session de concentration</Text>
+          <Text style={[styles.cardBody, { color: theme.textMuted }]}>
+            Révise sans interruption et gagne de l'XP à la fin.
+          </Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
