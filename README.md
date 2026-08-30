@@ -226,6 +226,22 @@ Applique `supabase/migrations/20260830000000_focus_session.sql` (fonction `compl
 - La durée créditée est limitée aux paliers fixes (15/25/45/60) côté serveur : un client ne peut pas déclarer une durée arbitraire non réellement chronométrée.
 - L'état de la session (en cours ou terminée) vit dans `context/focus-session.tsx`, monté au-dessus du `Stack` racine — l'élève peut donc quitter l'écran Focus session pour faire une leçon/exercice sans interrompre le minuteur ni perdre l'XP. Un bandeau flottant (`components/focus-session-banner.tsx`) reste visible sur le reste de l'app pour montrer le temps restant et ramener à l'écran Focus session en un tap.
 
+## Setup — Phase 10 (Ligues hebdomadaires)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260830010000_leagues.sql` (tables `leagues`/`league_memberships`, fonctions `ensure_active_league()`/`get_my_league_board()`/`run_league_rollover()`, tâche `pg_cron` hebdomadaire).
+
+⚠️ Cette migration active l'extension `pg_cron` et planifie une tâche (`weekly-league-rollover`, tous les lundis 00h00 UTC). Si `pg_cron` n'est pas disponible sur ton projet Supabase, la migration échouera sur cette dernière étape — dans ce cas, applique tout sauf le bloc `pg_cron` en bas du fichier et déclenche `select public.run_league_rollover();` manuellement chaque semaine en attendant.
+
+### 2. Comportement
+
+- Classement hebdomadaire par XP, groupé par classe+série ; 8 paliers (Bois → Diamant), promotion/relégation automatique chaque lundi (~10% du groupe, min 1 élève) — US-24, US-25, US-34.
+- Un groupe classe+série de moins de 5 élèves actifs est fusionné avec le groupe voisin suivant dans l'ordre du programme (même classe d'abord via les séries, puis classe adjacente) lors du rollover.
+- Un élève rejoint automatiquement la ligue de la semaine dès sa première activité créditant de l'XP (`ensure_active_league()`, appelée depuis `record_xp_event()`) — pas besoin d'ouvrir l'onglet Ligue pour être compté.
+- Aucune donnée personnelle affichée sur le classement partagé : `get_my_league_board()` ne renvoie ni email ni identifiant des autres membres, seulement leur rang et leur XP ("Toi" vs "Élève N").
+- État vide explicite si l'élève n'a pas encore de classe renseignée (onboarding incomplet) — US-34.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -247,4 +263,5 @@ Applique `supabase/migrations/20260830000000_focus_session.sql` (fonction `compl
 - `app/correct-homework.tsx`, `app/prepare-homework.tsx`, `components/homework-photo-screen.tsx` — devoir corrigé ou préparé à partir d'une photo
 - `supabase/functions/homework-photo/`, `supabase/functions/_shared/ai-trials.ts` — tuteur IA sur photo (Gemini vision), quota partagé avec le chat
 - `app/focus-session.tsx` — session de concentration chronométrée, guidage Ne pas déranger/Focus, résumé XP
+- `app/(tabs)/ligue.tsx` — classement hebdomadaire par classe/série, 8 paliers
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)

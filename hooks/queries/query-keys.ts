@@ -12,4 +12,5 @@ export const queryKeys = {
   srsReviews: (userId: string) => ['srs-reviews', userId] as const,
   aiConversations: (userId: string) => ['ai-conversations', userId] as const,
   aiMessages: (conversationId: string) => ['ai-messages', conversationId] as const,
+  leagueBoard: (userId: string) => ['league-board', userId] as const,
 };
