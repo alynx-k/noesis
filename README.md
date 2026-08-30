@@ -180,20 +180,37 @@ supabase functions deploy ai-tutor-chat
 
 ### 3. Secret Gemini
 
-Réutilise le même secret que `generate-course` (Phase 2) :
+Réutilise le même secret que `generate-course` (Phase 2), déjà configuré sur le projet live :
 
 ```
 supabase secrets set GEMINI_API_KEY=...
+supabase secrets set GEMINI_MODEL=gemini-3.6-flash   # gemini-2.5-flash n'est plus disponible
 ```
-
-⚠️ Si ce secret n'a jamais été configuré (il ne l'était pas encore au moment d'écrire ceci), ni `generate-course` ni `ai-tutor-chat` ne fonctionneront tant qu'il n'est pas défini — récupère une clé sur [Google AI Studio](https://aistudio.google.com/app/apikey).
 
 ### 4. Comportement
 
 - Un élève Premium peut discuter sans limite avec le tuteur IA (`app/ai-chat.tsx`, historique des conversations) et reprendre une conversation précédente.
-- Un élève gratuit dispose de 3 messages à vie (`AI_FREE_TRIAL_LIMIT`, compteur affiché) puis est bloqué avec une invitation Premium ; le compteur (`profiles.ai_trials_used`) n'est incrémenté qu'après une réponse réussie du tuteur.
+- Un élève gratuit dispose de 3 essais à vie (`AI_FREE_TRIAL_LIMIT`, compteur affiché) partagés avec la Phase 8 (devoirs par photo) puis est bloqué avec une invitation Premium ; le compteur (`profiles.ai_trials_used`) n'est incrémenté qu'après une réponse réussie du tuteur.
 - Le prompt système adapte le niveau de réponse à la classe (et série) de l'élève, et encourage la pédagogie plutôt que la réponse brute à un exercice.
 - Conversations/messages ne sont jamais écrits par le client : uniquement par la fonction `ai-tutor-chat` (service role), comme les paiements en Phase 3.
+
+## Setup — Phase 8 (Tuteur IA — devoirs par photo)
+
+### 1. Déployer la fonction
+
+```
+supabase functions deploy homework-photo
+```
+
+Réutilise les mêmes secrets `GEMINI_API_KEY`/`GEMINI_MODEL` que la Phase 7 — rien à configurer en plus.
+
+### 2. Comportement
+
+- Deux modes depuis l'écran "Tuteur IA" : "Corriger un devoir" (photo d'un devoir déjà fait → correction détaillée réponse par réponse) et "Préparer un devoir" (photo d'un énoncé → accompagnement guidé, jamais la réponse finale directe) — US-10, US-11.
+- Photo illisible ou hors-sujet : le prompt demande à Gemini de répondre par un marqueur `ILLISIBLE` plutôt que d'improviser ; l'app affiche alors un message clair invitant à reprendre la photo, sans consommer d'essai (US-35).
+- Partage le même quota Premium/essais gratuits que le chat (`profiles.ai_trials_used`, logique commune dans `supabase/functions/_shared/ai-trials.ts`).
+- Aucun historique persisté (contrairement au chat) : chaque photo est un aller-retour ponctuel, conformément aux critères d'acceptation de cette phase.
+- Nécessite `expo-image-picker` (permissions caméra/galerie déclarées dans `app.json`).
 
 ## Structure
 
@@ -213,4 +230,6 @@ supabase secrets set GEMINI_API_KEY=...
 - `app/personal-deck/new.tsx`, `app/personal-deck/[id].tsx` — création et gestion (CRUD) des decks personnalisés, réservé Premium
 - `app/ai-chat.tsx`, `app/ai-chat/[id].tsx` — historique des conversations et chat avec le tuteur IA (Gemini), essais limités hors Premium
 - `supabase/functions/ai-tutor-chat/` — chat multi-tour avec le tuteur IA (Gemini), quota d'essais gratuits
+- `app/correct-homework.tsx`, `app/prepare-homework.tsx`, `components/homework-photo-screen.tsx` — devoir corrigé ou préparé à partir d'une photo
+- `supabase/functions/homework-photo/`, `supabase/functions/_shared/ai-trials.ts` — tuteur IA sur photo (Gemini vision), quota partagé avec le chat
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)

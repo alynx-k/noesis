@@ -27,7 +27,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Noesis a besoin d'accéder à tes photos pour envoyer une photo de devoir au tuteur IA.",
+          "cameraPermission": "Noesis a besoin de l'appareil photo pour prendre en photo ton devoir."
+        }
+      ]
     ]
   }
 }

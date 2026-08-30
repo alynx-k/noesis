@@ -2,9 +2,8 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { useAiConversations } from '../hooks/queries/use-ai-tutor';
-import { useSubscription } from '../hooks/queries/use-subscription';
-import { useAuth } from '../context/auth';
-import { AI_FREE_TRIAL_LIMIT } from '../constants/ai-tutor';
+import { useAiQuota } from '../hooks/use-ai-quota';
+import { AiTrialBanner } from '../components/ai-trial-banner';
 import { Button } from '../components/ui/Button';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -14,11 +13,7 @@ import { fonts, radius, spacing } from '../constants/theme';
 export default function AiChatHistory() {
   const theme = useAppTheme();
   const conversations = useAiConversations();
-  const { isPremium } = useSubscription();
-  const { profile } = useAuth();
-
-  const trialsRemaining = isPremium ? null : Math.max(0, AI_FREE_TRIAL_LIMIT - (profile?.ai_trials_used ?? 0));
-  const isLocked = !isPremium && trialsRemaining === 0;
+  const { isPremium, trialsRemaining, isLocked } = useAiQuota();
 
   function handleNewConversation() {
     router.push(isLocked ? '/subscription' : { pathname: '/ai-chat/[id]', params: { id: 'new' } });
@@ -35,26 +30,24 @@ export default function AiChatHistory() {
         }}
       />
       <View style={styles.content}>
-        {!isPremium ? (
-          <View style={[styles.banner, { backgroundColor: theme.primaryTint }]}>
-            {isLocked ? (
-              <>
-                <Text style={{ color: theme.primary, fontFamily: fonts.bodySemiBold, marginBottom: spacing.xs }}>
-                  Essais gratuits épuisés
-                </Text>
-                <Text style={{ color: theme.text, fontFamily: fonts.body, fontSize: 13.5, marginBottom: spacing.sm }}>
-                  Passe Premium pour continuer à discuter avec le tuteur IA sans limite.
-                </Text>
-                <Button label="Passer Premium" onPress={() => router.push('/subscription')} />
-              </>
-            ) : (
-              <Text style={{ color: theme.primary, fontFamily: fonts.bodySemiBold }}>
-                {trialsRemaining} essai{trialsRemaining! > 1 ? 's' : ''} gratuit{trialsRemaining! > 1 ? 's' : ''} restant
-                {trialsRemaining! > 1 ? 's' : ''}
-              </Text>
-            )}
-          </View>
-        ) : null}
+        <AiTrialBanner isPremium={isPremium} trialsRemaining={trialsRemaining} isLocked={isLocked} />
+
+        <View style={styles.quickActions}>
+          <Pressable
+            onPress={() => router.push(isLocked ? '/subscription' : '/correct-homework')}
+            style={[styles.actionCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+          >
+            <Text style={[styles.actionTitle, { color: theme.text }]}>Corriger un devoir</Text>
+            <Text style={[styles.actionBody, { color: theme.textMuted }]}>Photo d'un devoir déjà fait</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push(isLocked ? '/subscription' : '/prepare-homework')}
+            style={[styles.actionCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+          >
+            <Text style={[styles.actionTitle, { color: theme.text }]}>Préparer un devoir</Text>
+            <Text style={[styles.actionBody, { color: theme.textMuted }]}>Photo d'un énoncé à faire</Text>
+          </Pressable>
+        </View>
 
         <Button label="+ Nouvelle conversation" onPress={handleNewConversation} />
 
@@ -95,7 +88,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { flex: 1, padding: spacing.lg, gap: spacing.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  banner: { borderRadius: radius.md, padding: spacing.md },
+  quickActions: { flexDirection: 'row', gap: spacing.sm },
+  actionCard: { flex: 1, borderWidth: 1, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },
+  actionTitle: { fontFamily: fonts.bodySemiBold, fontSize: 14 },
+  actionBody: { fontFamily: fonts.body, fontSize: 12.5 },
   list: { gap: spacing.sm, paddingBottom: spacing.xl },
   row: { borderWidth: 1, borderRadius: radius.md, padding: spacing.md },
   rowTitle: { fontFamily: fonts.bodySemiBold, fontSize: 14.5 },

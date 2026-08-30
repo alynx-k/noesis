@@ -1,24 +1,28 @@
-// Edge function : chat avec le tuteur IA (Gemini), historique multi-tour.
+// Edge function : tuteur IA sur photo de devoir — deux modes :
+//   - correct  : corrige un devoir manuscrit déjà fait par l'élève
+//   - prepare  : guide la préparation d'un énoncé de devoir (pas la réponse directe)
+// Photo illisible ou hors-sujet -> { illegible: true }, sans coûter d'essai.
 // Premium = illimité ; gratuit = AI_FREE_TRIAL_LIMIT essais partagés avec
-// homework-photo (profiles.ai_trials_used), puis erreur 403 invitant à
-// passer Premium.
+// ai-tutor-chat (profiles.ai_trials_used).
 //
 // Requiert les secrets Supabase :
 //   GEMINI_API_KEY   — clé API Google AI Studio / Gemini
 //   GEMINI_MODEL     — optionnel, défaut "gemini-3.6-flash"
 //
 // Appel : POST avec un JWT élève en Authorization, body JSON :
-//   { conversationId?: string, message: string }
+//   { mode: 'correct' | 'prepare', imageBase64: string, mimeType?: string }
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AI_FREE_TRIAL_LIMIT, checkAiQuota, consumeTrial } from '../_shared/ai-trials.ts';
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
+const ILLEGIBLE_MARKER = 'ILLISIBLE';
 
 type RequestBody = {
-  conversationId?: string;
-  message: string;
+  mode: 'correct' | 'prepare';
+  imageBase64: string;
+  mimeType?: string;
 };
 
 Deno.serve(async (req) => {
@@ -41,7 +45,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'GEMINI_API_KEY non configurée côté Supabase.' }, 500);
     }
 
-    // Client scopé à l'appelant : vérifie son identité/statut Premium sans élever ses privilèges.
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -55,11 +58,13 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as RequestBody;
-    if (!body.message || !body.message.trim()) {
-      return jsonResponse({ error: 'message est requis.' }, 400);
+    if (body.mode !== 'correct' && body.mode !== 'prepare') {
+      return jsonResponse({ error: 'mode doit être "correct" ou "prepare".' }, 400);
+    }
+    if (!body.imageBase64) {
+      return jsonResponse({ error: 'imageBase64 est requis.' }, 400);
     }
 
-    // Client service_role : lit/écrit les conversations indépendamment des policies RLS élève.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { isPremium, trialsUsed } = await checkAiQuota(callerClient, adminClient, user.id);
@@ -79,85 +84,47 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Profil introuvable.' }, 400);
     }
 
-    // Résout ou crée la conversation.
-    let conversationId = body.conversationId;
-    if (conversationId) {
-      const { data: existing, error: convError } = await adminClient
-        .from('ai_conversations')
-        .select('id, user_id')
-        .eq('id', conversationId)
-        .single();
-      if (convError || !existing || existing.user_id !== user.id) {
-        return jsonResponse({ error: 'Conversation introuvable.' }, 404);
-      }
-    } else {
-      const title = body.message.trim().slice(0, 40) + (body.message.trim().length > 40 ? '…' : '');
-      const { data: created, error: createError } = await adminClient
-        .from('ai_conversations')
-        .insert({ user_id: user.id, title })
-        .select('id')
-        .single();
-      if (createError || !created) {
-        return jsonResponse({ error: createError?.message ?? 'Impossible de créer la conversation.' }, 500);
-      }
-      conversationId = created.id;
-    }
-
-    const { error: userMsgError } = await adminClient
-      .from('ai_messages')
-      .insert({ conversation_id: conversationId, role: 'user', content: body.message.trim() });
-    if (userMsgError) {
-      return jsonResponse({ error: userMsgError.message }, 500);
-    }
-
-    const { data: history, error: historyError } = await adminClient
-      .from('ai_messages')
-      .select('role, content')
-      .eq('conversation_id', conversationId)
-      .order('created_at');
-    if (historyError || !history) {
-      return jsonResponse({ error: historyError?.message ?? 'Historique introuvable.' }, 500);
-    }
-
-    const reply = await callGemini({
+    const reply = await callGeminiVision({
       apiKey: geminiApiKey,
+      mode: body.mode,
       grade: profile.grade,
       serie: profile.serie,
-      history,
+      imageBase64: body.imageBase64,
+      mimeType: body.mimeType ?? 'image/jpeg',
     });
 
-    const { error: replyError } = await adminClient
-      .from('ai_messages')
-      .insert({ conversation_id: conversationId, role: 'assistant', content: reply });
-    if (replyError) {
-      return jsonResponse({ error: replyError.message }, 500);
+    if (reply.trim().toUpperCase().startsWith(ILLEGIBLE_MARKER)) {
+      // Ne coûte pas d'essai : ce n'est pas une aide réellement délivrée (US-35).
+      return jsonResponse({ illegible: true, trialsRemaining: isPremium ? null : Math.max(0, AI_FREE_TRIAL_LIMIT - trialsUsed) }, 200);
     }
-
-    await adminClient.from('ai_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
 
     const trialsRemaining = isPremium ? null : await consumeTrial(adminClient, user.id, trialsUsed);
 
-    return jsonResponse({ conversationId, reply, trialsRemaining }, 200);
+    return jsonResponse({ illegible: false, result: reply, trialsRemaining }, 200);
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : 'Erreur inconnue' }, 500);
   }
 });
 
-async function callGemini(params: {
+async function callGeminiVision(params: {
   apiKey: string;
+  mode: 'correct' | 'prepare';
   grade: string;
   serie: string | null;
-  history: { role: string; content: string }[];
+  imageBase64: string;
+  mimeType: string;
 }): Promise<string> {
-  const { apiKey, grade, serie, history } = params;
+  const { apiKey, mode, grade, serie, imageBase64, mimeType } = params;
 
-  const systemInstruction = `Tu es un tuteur pédagogique pour un(e) élève de ${grade}${serie ? ` (série ${serie})` : ''} en Côte d'Ivoire, qui suit le programme officiel ivoirien.
-Explique clairement et adapte ton niveau de langage à cette classe. Encourage la compréhension : guide l'élève vers la réponse plutôt que de la donner brute quand c'est un exercice ou un devoir. Réponds en français, de façon concise et structurée.`;
-
-  const contents = history.map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const classeDesc = `${grade}${serie ? ` (série ${serie})` : ''}`;
+  const prompt =
+    mode === 'correct'
+      ? `Tu es un tuteur qui corrige le devoir manuscrit d'un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien).
+Voici une photo de son devoir déjà rempli. Pour chaque réponse : dis si elle est juste ou fausse, explique pourquoi, et donne la bonne réponse en cas d'erreur. Sois concret et structuré. Réponds en français.
+Si la photo est illisible, floue, ou ne montre pas un devoir d'élève, réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`
+      : `Tu es un tuteur qui aide un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien) à préparer un devoir.
+Voici une photo de l'énoncé du devoir (pas encore fait). Guide l'élève étape par étape : rappelle les notions nécessaires, pose des questions, donne des pistes de méthode — mais ne donne jamais la réponse finale toute faite. Réponds en français.
+Si la photo est illisible, floue, ou ne montre pas un énoncé de devoir, réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -165,8 +132,12 @@ Explique clairement et adapte ton niveau de langage à cette classe. Encourage l
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }],
+          },
+        ],
       }),
     }
   );
