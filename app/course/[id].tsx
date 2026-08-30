@@ -80,6 +80,12 @@ export default function CourseDetail() {
           variant="secondary"
           onPress={() => router.push({ pathname: '/exercise/[lessonId]', params: { lessonId: id } })}
         />
+        <View style={{ height: spacing.sm }} />
+        <Button
+          label="Réviser les flashcards"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/lesson-flashcards/[lessonId]', params: { lessonId: id } })}
+        />
       </View>
     </SafeAreaView>
   );

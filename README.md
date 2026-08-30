@@ -136,6 +136,23 @@ Depuis l'admin web (`/lessons/[id]`), en dessous de l'éditeur de leçon : ajout
 - Un élève gratuit voit la question mais ne peut pas valider ; un bandeau invite à passer Premium.
 - La bonne réponse et l'explication ne sont jamais renvoyées au client avant soumission (table `exercise_answers` séparée, sans policy de lecture élève — uniquement lisible par la fonction `submit_exercise_attempt()`).
 
+## Setup — Phase 5 (Flashcards gratuites)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260829210000_flashcards.sql` (tables `flashcard_decks`/`flashcards`/`srs_reviews`, fonction `review_flashcard()`).
+
+### 2. Créer des decks
+
+Depuis l'admin web (`/lessons/[id]`), section "Decks de flashcards" : crée un deck, publie-le, puis ouvre `/decks/[id]` pour ajouter des cartes (recto/verso). Aucune génération IA pour l'instant — création manuelle uniquement.
+
+### 3. Comportement
+
+- Gratuit pour tout élève, sans gating Premium (contrairement aux exercices).
+- Répétition espacée simplifiée (SM-2) : une carte "Je savais" repousse son échéance (1 jour → 6 jours → intervalle × ease) ; "Encore" la remet à J+1. Seules les cartes dues sont proposées dans une session de révision.
+- Chaque révision crédite 3 XP ; la fonction `review_flashcard()` refuse de créditer une carte qui n'est pas encore due (anti-abus).
+- Onglet "Fiches" : liste des decks groupés par matière avec un badge du nombre de cartes dues aujourd'hui.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -150,4 +167,5 @@ Depuis l'admin web (`/lessons/[id]`), en dessous de l'éditeur de leçon : ajout
 - `app/subscription.tsx` — paywall Premium, choix Wave/MTN/Orange
 - `supabase/functions/create-checkout-session/`, `*-webhook/` — paiement Premium (mobile money)
 - `app/exercise/[lessonId].tsx` — QCM corrigés d'une leçon, verrouillés hors Premium
-- `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons et exercices)
+- `app/(tabs)/fiches.tsx`, `app/lesson-flashcards/[lessonId].tsx`, `app/flashcard-deck/[id].tsx` — decks de flashcards par matière, sélection du deck d'une leçon, session de révision
+- `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards)

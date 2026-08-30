@@ -7,4 +7,7 @@ export const queryKeys = {
   subscription: (userId: string) => ['subscription', userId] as const,
   exercises: (lessonId: string) => ['exercises', lessonId] as const,
   exerciseProgress: (userId: string) => ['exercise-progress', userId] as const,
+  flashcardDecks: ['flashcard-decks'] as const,
+  flashcards: (deckId: string) => ['flashcards', deckId] as const,
+  srsReviews: (userId: string) => ['srs-reviews', userId] as const,
 };

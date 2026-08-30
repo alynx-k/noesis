@@ -268,6 +268,138 @@ function ExercisesSection({ lessonId }: { lessonId: string }) {
   );
 }
 
+type DeckRow = {
+  id: string;
+  title: string;
+  status: 'draft' | 'published';
+  flashcards: { id: string }[];
+};
+
+function DecksSection({ lessonId }: { lessonId: string }) {
+  const router = useRouter();
+  const [decks, setDecks] = useState<DeckRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function loadDecks() {
+    const { data, error: loadError } = await supabase
+      .from('flashcard_decks')
+      .select('id, title, status, flashcards(id)')
+      .eq('lesson_id', lessonId)
+      .order('created_at');
+    if (loadError) {
+      setError(loadError.message);
+      return;
+    }
+    setDecks(data as unknown as DeckRow[]);
+  }
+
+  useEffect(() => {
+    loadDecks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  async function handleCreate() {
+    setSaving(true);
+    setError(null);
+    const { error: insertError } = await supabase.from('flashcard_decks').insert({ lesson_id: lessonId, title: newTitle });
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setNewTitle('');
+    await loadDecks();
+  }
+
+  async function togglePublish(deck: DeckRow) {
+    const nextStatus = deck.status === 'draft' ? 'published' : 'draft';
+    const { error: toggleError } = await supabase.from('flashcard_decks').update({ status: nextStatus }).eq('id', deck.id);
+    if (toggleError) {
+      setError(toggleError.message);
+      return;
+    }
+    await loadDecks();
+  }
+
+  async function handleDelete(deckId: string) {
+    const { error: deleteError } = await supabase.from('flashcard_decks').delete().eq('id', deckId);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    await loadDecks();
+  }
+
+  return (
+    <div style={{ marginTop: 40 }}>
+      <h2>Decks de flashcards</h2>
+      {error ? <p className="error">{error}</p> : null}
+
+      {decks === null ? (
+        <p className="muted">Chargement…</p>
+      ) : decks.length === 0 ? (
+        <p className="muted">Aucun deck pour cette leçon.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Cartes</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {decks.map((deck) => (
+              <tr key={deck.id} onClick={() => router.push(`/decks/${deck.id}`)}>
+                <td>{deck.title}</td>
+                <td>{deck.flashcards.length}</td>
+                <td>
+                  <span className={`badge ${deck.status}`}>{deck.status === 'draft' ? 'Brouillon' : 'Publié'}</span>
+                </td>
+                <td style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePublish(deck);
+                    }}
+                  >
+                    {deck.status === 'draft' ? 'Publier' : 'Dépublier'}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(deck.id);
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="editor" style={{ marginTop: 20, flexDirection: 'row' }}>
+        <input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Titre du nouveau deck"
+          style={{ flex: 1 }}
+        />
+        <button disabled={saving || !newTitle} onClick={handleCreate}>
+          Créer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function LessonEditor() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -351,6 +483,7 @@ export default function LessonEditor() {
       </div>
 
       <ExercisesSection lessonId={lesson.id} />
+      <DecksSection lessonId={lesson.id} />
     </div>
   );
 }
