@@ -7,6 +7,7 @@ export type Streak = {
   current_streak: number;
   longest_streak: number;
   last_active_date: string | null;
+  freezes_available: number;
 };
 
 export function useStreak() {
@@ -19,11 +20,11 @@ export function useStreak() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('streaks')
-        .select('current_streak, longest_streak, last_active_date')
+        .select('current_streak, longest_streak, last_active_date, freezes_available')
         .eq('user_id', userId)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? { current_streak: 0, longest_streak: 0, last_active_date: null }) as Streak;
+      return (data ?? { current_streak: 0, longest_streak: 0, last_active_date: null, freezes_available: 2 }) as Streak;
     },
   });
 }

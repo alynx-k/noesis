@@ -42,10 +42,17 @@ export default function Accueil() {
               {gradeLabel ? `${gradeLabel}${serieLabel ? ` · ${serieLabel}` : ''}` : 'Profil en cours de configuration'}
             </Text>
           </View>
-          <View style={[styles.streakChip, { backgroundColor: theme.primaryTint }]}>
-            <Text style={{ color: theme.primary, fontFamily: fonts.dataBold, fontSize: 14 }}>
-              🔥 {currentStreak}
-            </Text>
+          <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
+            <View style={[styles.streakChip, { backgroundColor: theme.primaryTint }]}>
+              <Text style={{ color: theme.primary, fontFamily: fonts.dataBold, fontSize: 14 }}>
+                🔥 {currentStreak}
+              </Text>
+            </View>
+            {streak.data ? (
+              <Text style={{ color: theme.textMuted, fontFamily: fonts.body, fontSize: 11.5 }}>
+                🧊 {streak.data.freezes_available} gel{streak.data.freezes_available > 1 ? 's' : ''}
+              </Text>
+            ) : null}
           </View>
         </View>
 

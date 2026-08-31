@@ -299,6 +299,19 @@ Applique `supabase/migrations/20260830030000_celebrations.sql` (table `seen_cele
 - Chaque événement n'est montré qu'une seule fois : fermer l'écran appelle `mark_celebration_seen()`, qui enregistre l'événement de façon idempotente (`on conflict do nothing`).
 - Les couleurs de palier viennent de `constants/leagues.ts` (`TIER_COLORS`), formes géométriques plates sans mascotte, conformément à `docs/DESIGN.md`.
 
+## Setup — Phase 15 (Gel de série)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260830040000_streak_freeze.sql` (colonne `streaks.freezes_reset_month`, `record_xp_event()` mis à jour).
+
+### 2. Comportement
+
+- Chaque élève dispose de 2 gels de série, renouvelés automatiquement au changement de mois calendaire (pas de cumul d'un mois sur l'autre) — US-23.
+- Rater un jour avec un gel disponible : la série n'est ni incrémentée ni cassée, un gel est consommé automatiquement (aucune action de l'élève requise).
+- Rater un jour sans gel disponible : la série repart à 1, comme avant cette phase.
+- Le nombre de gels restants est affiché à côté de la série (🧊) sur l'écran d'accueil.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -326,3 +339,4 @@ Applique `supabase/migrations/20260830030000_celebrations.sql` (table `seen_cele
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)
 - `constants/support.ts`, `app/settings.tsx` — lien de support WhatsApp pré-rempli
 - `hooks/queries/use-celebrations.ts`, `components/celebration-modal.tsx`, `app/(tabs)/index.tsx` — écran de célébration (palier de ligue, jalon de série), montré une seule fois par événement
+- `hooks/queries/use-streak.ts` — série + gels disponibles, affiché sur l'accueil

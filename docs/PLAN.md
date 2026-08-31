@@ -307,3 +307,24 @@ Un élève voit un écran de célébration dédié quand il monte de palier de l
 ## Bloquée par
 
 - Aucune — démarrable immédiatement
+
+---
+
+## Phase 15 : Gel de série
+
+**User stories** : US-23
+
+### Ce qu'on livre
+
+Un élève qui rate un jour ne perd pas sa série s'il lui reste un gel disponible ce mois-ci : la série est préservée automatiquement (pas d'action manuelle requise) plutôt que réinitialisée à zéro. Le nombre de gels disponibles est visible à côté de la série sur l'accueil.
+
+### Critères d'acceptation
+
+- [ ] Un élève dispose d'un nombre limité de gels de série (2), renouvelé chaque mois
+- [ ] Quand un élève rate un jour et dispose d'un gel, sa série n'est pas réinitialisée et un gel est consommé automatiquement
+- [ ] Quand un élève rate un jour sans gel disponible, sa série est réinitialisée comme avant
+- [ ] Le nombre de gels restants est visible sur l'écran d'accueil
+
+## Bloquée par
+
+- Aucune — démarrable immédiatement (le mécanisme XP/série existe depuis la Phase 2)
