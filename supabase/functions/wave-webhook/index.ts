@@ -1,17 +1,26 @@
 // Webhook Wave : confirmation asynchrone d'un paiement de checkout session.
-// ⚠️ Vérification de signature à adapter une fois la doc/le secret Wave obtenus
-// (voir https://docs.wave.com/business — en-tête Wave-Signature en HMAC).
+// Vérifié par secret partagé (voir _shared/webhook-auth.ts) en attendant de
+// pouvoir implémenter la vérification HMAC Wave-Signature réelle une fois le
+// compte marchand actif (https://docs.wave.com/business).
+// Requiert le secret Supabase WAVE_WEBHOOK_SECRET, à ajouter en paramètre
+// ?secret=... de l'URL de callback enregistrée dans le tableau de bord Wave.
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { activateSubscription } from '../_shared/subscriptions.ts';
+import { verifyWebhookSecret } from '../_shared/webhook-auth.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  if (!verifyWebhookSecret(req, 'WAVE_WEBHOOK_SECRET')) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const payload = await req.json();
-
-    // TODO: vérifier la signature Wave-Signature avec WAVE_WEBHOOK_SECRET avant de faire confiance au payload.
 
     const eventType = payload?.type;
     const session = payload?.data;

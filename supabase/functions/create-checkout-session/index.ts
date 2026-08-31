@@ -13,6 +13,10 @@
 //   WAVE_API_KEY, WAVE_SUCCESS_URL, WAVE_ERROR_URL
 //   MTN_SUBSCRIPTION_KEY, MTN_API_USER, MTN_API_KEY, MTN_TARGET_ENVIRONMENT
 //   ORANGE_CLIENT_ID, ORANGE_CLIENT_SECRET, ORANGE_MERCHANT_KEY, ORANGE_RETURN_URL
+//   ORANGE_WEBHOOK_SECRET (voir _shared/webhook-auth.ts — WAVE_WEBHOOK_SECRET et
+//   MTN_WEBHOOK_SECRET sont lus directement par leurs webhooks respectifs, à
+//   ajouter manuellement à l'URL de callback enregistrée dans chaque tableau
+//   de bord fournisseur puisque ce fichier ne la construit pas pour eux)
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -107,7 +111,7 @@ async function createOrangeSession(userId: string) {
       amount: PREMIUM_AMOUNT_XOF,
       return_url: Deno.env.get('ORANGE_RETURN_URL') ?? 'noesis://subscription/success',
       cancel_url: 'noesis://subscription/error',
-      notif_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/orange-webhook`,
+      notif_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/orange-webhook?secret=${Deno.env.get('ORANGE_WEBHOOK_SECRET') ?? ''}`,
       reference: userId,
     }),
   });

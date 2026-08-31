@@ -2,12 +2,23 @@
 // (voir create-checkout-session). ⚠️ MTN peut aussi nécessiter un polling actif
 // de GET /collection/v1_0/requesttopay/{referenceId} selon la configuration du
 // compte marchand — à confirmer une fois les identifiants réels obtenus.
+// Vérifié par secret partagé (voir _shared/webhook-auth.ts). Requiert le
+// secret Supabase MTN_WEBHOOK_SECRET, à ajouter en paramètre ?secret=... de
+// l'URL de callback enregistrée dans le portail développeur MTN MoMo.
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { activateSubscription } from '../_shared/subscriptions.ts';
+import { verifyWebhookSecret } from '../_shared/webhook-auth.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  if (!verifyWebhookSecret(req, 'MTN_WEBHOOK_SECRET')) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
     const payload = await req.json();
