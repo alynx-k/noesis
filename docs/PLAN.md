@@ -267,3 +267,43 @@ Un élève peut basculer entre mode sombre et mode clair depuis les réglages, e
 ## Bloquée par
 
 - Aucune — transverse, réalisable en parallèle de n'importe quelle phase
+
+---
+
+## Phase 13 : Support via WhatsApp
+
+**User stories** : US-37
+
+### Ce qu'on livre
+
+Un élève peut signaler un problème ou donner un avis en un tap, via un lien qui ouvre WhatsApp avec un message pré-rempli vers le contact support de l'app.
+
+### Critères d'acceptation
+
+- [ ] Un lien "Signaler un problème / donner un avis" est accessible depuis l'app (Profil ou Réglages)
+- [ ] Le lien ouvre WhatsApp avec le numéro de support et un message pré-rempli identifiant l'élève
+- [ ] Si WhatsApp n'est pas installé sur l'appareil, l'élève voit un message clair plutôt qu'un échec silencieux
+
+## Bloquée par
+
+- Aucune — démarrable immédiatement
+
+---
+
+## Phase 14 : Célébrations (palier de ligue, jalon de série)
+
+**User stories** : US-38
+
+### Ce qu'on livre
+
+Un élève voit un écran de célébration dédié quand il monte de palier de ligue en fin de semaine, ou quand sa série atteint un jalon (7, 30 ou 100 jours consécutifs), plutôt que de simplement constater le changement dans l'interface habituelle.
+
+### Critères d'acceptation
+
+- [ ] Une promotion de palier de ligue déclenche un écran de célébration dédié à la prochaine ouverture de l'app suivant le rollover hebdomadaire
+- [ ] Un jalon de série (7, 30 ou 100 jours) déclenche un écran de célébration dédié la première fois qu'il est atteint
+- [ ] L'écran de célébration ne réapparaît pas pour un même événement déjà vu
+
+## Bloquée par
+
+- Aucune — démarrable immédiatement

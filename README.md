@@ -116,6 +116,19 @@ Configure l'URL de chaque webhook (`https://<projet>.supabase.co/functions/v1/<n
 
 ⚠️ Les appels aux API Wave/MTN/Orange sont écrits à partir de leur documentation publique mais n'ont pas pu être testés faute de comptes réels — à vérifier/ajuster une fois les identifiants obtenus.
 
+### Sécurité des webhooks
+
+Sans vérification, n'importe qui devinant l'URL d'un webhook pourrait s'attribuer Premium gratuitement. En attendant de pouvoir implémenter la vérification de signature HMAC propre à chaque fournisseur (comptes marchands pas encore actifs), un secret partagé protège chaque webhook (`supabase/functions/_shared/webhook-auth.ts`) :
+
+```
+supabase secrets set WAVE_WEBHOOK_SECRET=... MTN_WEBHOOK_SECRET=... ORANGE_WEBHOOK_SECRET=...
+```
+
+- Wave/MTN : ajoute `?secret=<valeur>` à l'URL de callback enregistrée manuellement dans leur dashboard respectif.
+- Orange : `create-checkout-session` ajoute déjà `?secret=ORANGE_WEBHOOK_SECRET` à `notif_url` automatiquement.
+
+Sans ces secrets configurés, les webhooks refusent toute requête (401) plutôt que de faire confiance par défaut.
+
 ### 5. IAP (App Store / Google Play) — reporté
 
 Volontairement pas implémenté dans cette phase : nécessite `react-native-iap` (module natif absent d'Expo Go, donc un dev client EAS) ainsi que des comptes développeur Apple (99$/an) et Google (25$ unique) que je ne peux pas créer. Le schéma `subscriptions` prévoit déjà les providers `iap_ios`/`iap_android` pour l'ajouter plus tard sans migration.
@@ -265,6 +278,27 @@ Aucune migration ni configuration : c'est un changement purement client. Aucune 
 - Persisté via `@react-native-async-storage/async-storage` (déjà une dépendance du projet), relu au démarrage avant que l'app affiche du contenu (pas de flash du mauvais thème).
 - `useAppTheme()` est désormais la seule source du thème actif dans toute l'app (auparavant un simple wrapper autour de `useColorScheme()`) : chaque écran qui l'utilisait déjà respecte donc automatiquement le réglage sans avoir été modifié individuellement — vérifié qu'aucun écran n'appelle `useColorScheme()` ou n'importe `lightTheme`/`darkTheme` directement en dehors de `context/theme.tsx`.
 
+## Setup — Phase 13 (Support via WhatsApp)
+
+Aucune migration : changement purement client. Le numéro de support est en dur dans `constants/support.ts` — à changer si besoin.
+
+### Comportement
+
+- Bouton "Signaler un problème / donner un avis" dans Profil → Réglages, ouvre WhatsApp avec un message pré-rempli identifiant l'élève (email ou téléphone) — US-37.
+- Si WhatsApp n'est pas installé, un message clair s'affiche plutôt qu'un échec silencieux.
+
+## Setup — Phase 14 (Célébrations)
+
+### 1. Migration
+
+Applique `supabase/migrations/20260830030000_celebrations.sql` (table `seen_celebrations`, fonctions `get_pending_celebrations()`/`mark_celebration_seen()`).
+
+### 2. Comportement
+
+- À l'ouverture de l'Accueil, un écran de célébration plein écran apparaît si l'élève vient d'être promu de palier de ligue (rollover hebdomadaire) ou vient d'atteindre un jalon de série (7, 30 ou 100 jours) — US-38.
+- Chaque événement n'est montré qu'une seule fois : fermer l'écran appelle `mark_celebration_seen()`, qui enregistre l'événement de façon idempotente (`on conflict do nothing`).
+- Les couleurs de palier viennent de `constants/leagues.ts` (`TIER_COLORS`), formes géométriques plates sans mascotte, conformément à `docs/DESIGN.md`.
+
 ## Structure
 
 - `app/onboarding/*` — création de compte (téléphone ou email, OTP), classe/série, objectifs
@@ -290,3 +324,5 @@ Aucune migration ni configuration : c'est un changement purement client. Aucune 
 - `hooks/queries/use-referral.ts` — partage/validation du code de parrainage (section dédiée dans `app/(tabs)/profil.tsx`)
 - `context/theme.tsx`, `app/settings.tsx` — préférence de thème (Système/Clair/Sombre), persistée, source unique de `useAppTheme()`
 - `admin/` — app web Next.js séparée pour la relecture/publication du contenu (leçons, exercices, flashcards pré-faites)
+- `constants/support.ts`, `app/settings.tsx` — lien de support WhatsApp pré-rempli
+- `hooks/queries/use-celebrations.ts`, `components/celebration-modal.tsx`, `app/(tabs)/index.tsx` — écran de célébration (palier de ligue, jalon de série), montré une seule fois par événement

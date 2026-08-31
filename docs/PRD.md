@@ -64,6 +64,10 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 31. En tant qu'administrateur, je veux consulter une file de contenu généré par IA en attente de validation, afin de le relire avant publication.
 32. En tant qu'administrateur, je veux corriger et publier une leçon/un exercice généré, afin que seul du contenu validé soit visible par les élèves.
 
+**Support & célébrations**
+37. En tant qu'élève, je veux signaler un problème ou donner un avis via un lien WhatsApp direct depuis l'app, afin d'obtenir de l'aide sans quitter mon flux habituel de messagerie.
+38. En tant qu'élève, je veux voir un écran de célébration dédié quand je monte de palier de ligue ou atteins un jalon de série, afin que l'effort accompli soit reconnu visuellement, pas juste par un chiffre qui change.
+
 **États vides / erreurs**
 33. En tant qu'élève sans connexion, je veux voir un message clair m'indiquant qu'une connexion est nécessaire, afin de comprendre pourquoi le contenu ne charge pas.
 34. En tant qu'élève, je veux voir un état vide explicite si ma classe/série n'a pas encore de ligue active, afin de comprendre pourquoi le classement est vide plutôt que de croire à un bug.
@@ -107,3 +111,6 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - **Dépendance externe** : disponibilité et fiabilité des API Wave, MTN Mobile Money et Orange Money, et de l'API Gemini pour le tuteur IA.
 - **Limite structurelle iOS** : Apple ne permet pas à une app tierce de bloquer les notifications directement ; la promesse "bloque vraiment les notifications" n'est pleinement tenue que sur Android.
 - **Hypothèse** : une version précédente de cette app (archivée, non réutilisée comme code) avait déjà démontré la faisabilité technique de la plupart de ces fonctionnalités, ce qui réduit le risque d'inconnu technique même si ce PRD n'en dépend pas.
+- **Identité de marque** : logo et éléments graphiques au-delà de la palette/typographie déjà tranchées (voir `docs/DESIGN.md`) sont un chantier de production séparé, pas traité comme une user story de ce PRD.
+- **Calibrage comportemental** : les mécaniques de gamification (gels de série, paliers de ligue, fréquence de récompense) mériteront une revue sous l'angle psychologie/science du produit une fois un usage réel observé — pas une fonctionnalité nouvelle, une révision de l'existant.
+- **Support** : géré manuellement par un seul développeur, pas d'équipe support ; le lien WhatsApp (US-37) est un point de contact simple, pas un système de ticketing.

@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/auth';
 import { useStreak } from '../../hooks/queries/use-streak';
+import { usePendingCelebrations, useMarkCelebrationSeen } from '../../hooks/queries/use-celebrations';
+import { CelebrationModal } from '../../components/celebration-modal';
 import { useAppTheme } from '../../hooks/use-app-theme';
 import { GRADE_LABELS, SERIE_LABELS } from '../../constants/grades';
 import { fonts, radius, spacing } from '../../constants/theme';
@@ -11,13 +13,25 @@ export default function Accueil() {
   const theme = useAppTheme();
   const { profile } = useAuth();
   const streak = useStreak();
+  const pendingCelebrations = usePendingCelebrations();
+  const markSeen = useMarkCelebrationSeen();
 
   const gradeLabel = profile?.grade ? GRADE_LABELS[profile.grade] : null;
   const serieLabel = profile?.serie ? SERIE_LABELS[profile.serie] : null;
   const currentStreak = streak.data?.current_streak ?? 0;
+  const currentCelebration = pendingCelebrations.data?.[0] ?? null;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <CelebrationModal
+        celebration={currentCelebration}
+        dismissing={markSeen.isPending}
+        onDismiss={() => {
+          if (currentCelebration) {
+            markSeen.mutate({ event_type: currentCelebration.event_type, event_key: currentCelebration.event_key });
+          }
+        }}
+      />
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <View>

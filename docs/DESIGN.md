@@ -29,6 +29,32 @@
 - **Semantic** : success `#2F9E5B`, warning `#E0A324`, error `#D64545`, info `#3172C7`.
 - **Dark mode** : Fond `#221F19` / cartes `#2C2820` / texte `#FBF9F6` ; primary/secondary inchangés, tints ajustés pour le contraste (`primaryTint` `#3A2416`, `secondaryTint` `#1D2438`). Bascule automatique via `userInterfaceStyle: "automatic"` (`useColorScheme`), pas de sélecteur manuel en Phase 1 — prévu Phase 12.
 
+## League Tier Colors
+- **Approche** : 8 paliers, du plus bas (Bois) au plus haut (Diamant). 4 réutilisent les couleurs sémantiques déjà tranchées (Or = Warning, Rubis = Error, Émeraude = Success, Diamant ≈ Info éclairci) ; seuls Fer, Bronze et Argent sont des teintes nouvelles — pas d'explosion de palette pour un système de statut secondaire.
+- **Bois** `#8A8272` (= Neutral 500)
+- **Fer** `#6B7280`
+- **Bronze** `#C77B3E`
+- **Argent** `#9CA3AF`
+- **Or** `#E0A324` (= Warning)
+- **Rubis** `#D64545` (= Error)
+- **Émeraude** `#2F9E5B` (= Success)
+- **Diamant** `#5EC9E8`
+
+## Iconography
+- **Librairie** : Ionicons via `@expo/vector-icons` — déjà inclus avec Expo, zéro dépendance ajoutée.
+- **Style** : variante `-outline` pour l'état inactif/par défaut, pleine (filled) pour l'état actif/sélectionné — même logique que la sélection d'onglet déjà en place dans la nav.
+- **Usage** : navigation (onglets), actions (partage, réglages, support), retours d'état (succès/erreur).
+- **Alternative envisagée, non retenue** : Phosphor (`phosphor-react-native`) — traits plus arrondis et distinctifs, mais dépendance supplémentaire à maintenir pour un gain marginal à ce stade.
+
+## Brand Mark
+- **Approche** : wordmark typographique — "Noesis" en Cabinet Grotesk Black, pas de mark pictural séparé à produire/maintenir.
+- **Icône d'app** : un "N" recadré du wordmark, sur fond secondaire (navy `#17203D`).
+- **Rationale** : cohérent avec "la typo porte les moments forts" déjà tranché en Typography ; bon marché à produire sans illustrateur dédié, se recadre proprement à toutes les tailles d'icône.
+
+## Illustration
+- **Approche** : formes géométriques plates dans la palette existante (blocs de couleur, éclats façon confettis anguleux) — pas de personnage/mascotte, cohérent avec la Décoration "intentionnelle" déjà tranchée en Aesthetic Direction.
+- **Usage** : réservé aux moments de célébration (montée de palier de ligue, jalon de série 7/30/100 jours) — pas de décor permanent ailleurs dans l'app.
+
 ## Spacing
 - **Base** : 8px.
 - **Densité** : Confortable — zones de tap généreuses pour un usage à une main sur écran milieu de gamme.

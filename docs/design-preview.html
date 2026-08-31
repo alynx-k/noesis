@@ -3,6 +3,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,900,500&display=swap">
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 <style>
   :root{
     --primary:#E85D2C;
@@ -20,6 +22,14 @@
     --warning:#E0A324;
     --error:#D64545;
     --info:#3172C7;
+    --tier-bois:#8A8272;
+    --tier-fer:#6B7280;
+    --tier-bronze:#C77B3E;
+    --tier-argent:#9CA3AF;
+    --tier-or:#E0A324;
+    --tier-rubis:#D64545;
+    --tier-emeraude:#2F9E5B;
+    --tier-diamant:#5EC9E8;
     --radius-sm:8px;
     --radius-md:14px;
     --radius-lg:20px;
@@ -240,6 +250,37 @@
   .tab.active{color:var(--primary);}
   .tab-dot{width:22px;height:22px;border-radius:6px;background:var(--border);}
   .tab.active .tab-dot{background:var(--primary);}
+  /* ---- Section 4: Icônes ---- */
+  .icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px;margin-bottom:12px;}
+  .icon-tile{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);
+    padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .icon-tile ion-icon{font-size:26px;color:var(--primary);}
+  .icon-tile span{font-size:11.5px;color:var(--text-muted);text-align:center;}
+  /* ---- Section 5: Paliers de ligue ---- */
+  .tier-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:14px;margin-bottom:28px;}
+  .tier-badge{border-radius:var(--radius-md);padding:16px 10px;text-align:center;color:#fff;}
+  .tier-badge .name{font-family:var(--font-display);font-weight:700;font-size:15px;}
+  .tier-badge .hex{font-family:var(--font-data);font-size:11px;opacity:0.85;margin-top:2px;}
+  .league-card.tiered{background:linear-gradient(135deg,var(--tier-or),#B9860F);}
+  /* ---- Section 6: Logo ---- */
+  .logo-row{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-bottom:8px;}
+  .wordmark{font-family:var(--font-display);font-weight:900;font-size:40px;}
+  .wordmark span{color:var(--primary);}
+  .app-icon-tile{
+    width:88px;height:88px;border-radius:22px;background:var(--secondary);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .app-icon-tile span{font-family:var(--font-display);font-weight:900;font-size:44px;color:var(--primary);}
+  /* ---- Section 7: Illustration / célébration ---- */
+  .celebrate{
+    position:relative;overflow:hidden;border-radius:var(--radius-lg);
+    background:var(--secondary);padding:48px 24px;text-align:center;max-width:380px;margin:0 auto;
+  }
+  .celebrate .shape{position:absolute;border-radius:6px;opacity:0.85;}
+  .celebrate h3{color:#fff;font-size:24px;position:relative;margin:0 0 6px;}
+  .celebrate p{color:#C9CEDD;font-size:14px;position:relative;margin:0;}
 </style>
 
 <section>
@@ -345,5 +386,66 @@
         <div class="tab"><div class="tab-dot"></div>Profil</div>
       </div>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">04 · Icônes — Ionicons</div>
+  <p class="body-specimen" style="margin-bottom:20px;">Bundlées dans <code>@expo/vector-icons</code> (déjà inclus avec Expo, zéro dépendance ajoutée). Variante <code>-outline</code> pour l'état inactif, pleine pour l'état actif/sélectionné — même logique que les onglets déjà en place.</p>
+  <div class="icon-grid">
+    <div class="icon-tile"><ion-icon name="home-outline"></ion-icon><span>Accueil</span></div>
+    <div class="icon-tile"><ion-icon name="book-outline"></ion-icon><span>Cours</span></div>
+    <div class="icon-tile"><ion-icon name="albums-outline"></ion-icon><span>Fiches</span></div>
+    <div class="icon-tile"><ion-icon name="trophy-outline"></ion-icon><span>Ligue</span></div>
+    <div class="icon-tile"><ion-icon name="person-outline"></ion-icon><span>Profil</span></div>
+    <div class="icon-tile"><ion-icon name="flame"></ion-icon><span>Série (actif)</span></div>
+    <div class="icon-tile"><ion-icon name="chatbubbles-outline"></ion-icon><span>Tuteur IA</span></div>
+    <div class="icon-tile"><ion-icon name="camera-outline"></ion-icon><span>Devoir photo</span></div>
+    <div class="icon-tile"><ion-icon name="timer-outline"></ion-icon><span>Focus session</span></div>
+    <div class="icon-tile"><ion-icon name="settings-outline"></ion-icon><span>Réglages</span></div>
+    <div class="icon-tile"><ion-icon name="logo-whatsapp"></ion-icon><span>Support</span></div>
+    <div class="icon-tile"><ion-icon name="checkmark-circle" style="color:var(--success)"></ion-icon><span>Succès</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">05 · Couleurs de palier — Ligue</div>
+  <p class="body-specimen" style="margin-bottom:20px;">4 des 8 paliers réutilisent les couleurs sémantiques déjà en place (Or = warning, Rubis = error, Émeraude = success, Diamant ≈ info éclairci) — seuls Fer, Bronze et Argent sont de nouvelles teintes.</p>
+  <div class="tier-row">
+    <div class="tier-badge" style="background:var(--tier-bois)"><div class="name">Bois</div><div class="hex">#8A8272</div></div>
+    <div class="tier-badge" style="background:var(--tier-fer)"><div class="name">Fer</div><div class="hex">#6B7280</div></div>
+    <div class="tier-badge" style="background:var(--tier-bronze)"><div class="name">Bronze</div><div class="hex">#C77B3E</div></div>
+    <div class="tier-badge" style="background:var(--tier-argent);color:#221F19"><div class="name">Argent</div><div class="hex" style="opacity:0.7">#9CA3AF</div></div>
+    <div class="tier-badge" style="background:var(--tier-or)"><div class="name">Or</div><div class="hex">#E0A324</div></div>
+    <div class="tier-badge" style="background:var(--tier-rubis)"><div class="name">Rubis</div><div class="hex">#D64545</div></div>
+    <div class="tier-badge" style="background:var(--tier-emeraude)"><div class="name">Émeraude</div><div class="hex">#2F9E5B</div></div>
+    <div class="tier-badge" style="background:var(--tier-diamant);color:#0B3A4A"><div class="name">Diamant</div><div class="hex" style="opacity:0.75">#5EC9E8</div></div>
+  </div>
+  <div class="league-card tiered" style="max-width:360px;">
+    <div class="tier">Ligue Or · Classe 3ème C</div>
+    <div class="rank">3ᵉ place</div>
+    <div class="sub">Encore 180 XP pour monter en Rubis</div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">06 · Logo — wordmark typographique</div>
+  <p class="body-specimen" style="margin-bottom:20px;">La typo fait le travail : pas de mark pictural à produire/maintenir, cohérent avec "Cabinet Grotesk porte les moments forts" déjà tranché. L'icône d'app est un "N" recadré du wordmark, sur le navy secondaire.</p>
+  <div class="logo-row">
+    <div class="wordmark">Noesis<span>.</span></div>
+    <div class="app-icon-tile"><span>N</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">07 · Illustration — célébration de palier</div>
+  <p class="body-specimen" style="margin-bottom:20px;">Formes géométriques plates dans la palette existante, pas de mascotte (déjà écarté). Utilisé pour la montée de palier de ligue et les jalons de série (7/30/100 jours).</p>
+  <div class="celebrate">
+    <div class="shape" style="width:70px;height:70px;background:var(--tier-or);top:-20px;left:-15px;transform:rotate(18deg);"></div>
+    <div class="shape" style="width:40px;height:40px;background:var(--primary);top:20px;right:10px;transform:rotate(-12deg);border-radius:50%;"></div>
+    <div class="shape" style="width:30px;height:30px;background:var(--tier-emeraude);bottom:-10px;left:40%;transform:rotate(25deg);"></div>
+    <div class="shape" style="width:50px;height:50px;background:var(--tier-diamant);bottom:10px;right:-15px;transform:rotate(8deg);"></div>
+    <h3>Palier Or atteint !</h3>
+    <p>Tu passes devant 12 élèves de ta classe cette semaine.</p>
   </div>
 </section>
