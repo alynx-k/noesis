@@ -14,4 +14,5 @@ export const queryKeys = {
   aiMessages: (conversationId: string) => ['ai-messages', conversationId] as const,
   leagueBoard: (userId: string) => ['league-board', userId] as const,
   pendingCelebrations: (userId: string) => ['pending-celebrations', userId] as const,
+  courseSummaries: (userId: string) => ['course-summaries', userId] as const,
 };

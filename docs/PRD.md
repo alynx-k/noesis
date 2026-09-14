@@ -31,6 +31,8 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 12. En tant qu'élève gratuit, je veux disposer d'un nombre limité d'essais du tuteur IA, afin de juger de sa valeur avant de m'abonner.
 13. En tant qu'élève, je veux retrouver l'historique de mes conversations avec le tuteur IA, afin de reprendre une discussion précédente.
 39. En tant qu'élève, je veux que les réponses du tuteur IA (chat et correction/préparation de devoir) s'appuient sur le contenu de mes cours et suivent la même méthode qu'en classe, afin de recevoir une aide cohérente avec ce qu'on m'enseigne plutôt qu'une réponse générique.
+40. En tant qu'élève, je veux générer une synthèse de mon cours à partir d'une ou plusieurs photos de mes notes, afin d'obtenir une fiche de révision claire et condensée à relire avant un contrôle.
+41. En tant qu'élève, je veux retrouver et supprimer mes synthèses précédemment générées, afin de garder seulement celles qui me sont utiles.
 
 **Flashcards**
 14. En tant qu'élève, je veux réviser des decks de flashcards pré-faits par chapitre, afin de mémoriser les points clés d'une leçon.
@@ -100,6 +102,11 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - Le tuteur IA (chat, correction et préparation de devoir) s'appuie sur le contenu des leçons de l'élève pour répondre, en suivant autant que possible la méthode et la structure utilisées dans le cours correspondant, plutôt que sur des connaissances générales non alignées avec le programme
 - Pour une photo de devoir, l'élève ne sélectionne pas manuellement la matière : le tuteur IA identifie lui-même le sujet à partir de la photo avant de s'appuyer sur le cours correspondant
 - Les réponses du tuteur IA sont mises en forme (titres, emphases, listes) pour rester lisibles
+- La synthèse de cours reste fidèle au contenu des photos fournies par l'élève, sans y ajouter de contenu issu du programme officiel de l'app
+- Une synthèse peut être générée à partir de plusieurs photos (plusieurs pages d'un même cours)
+- Seul le texte de la synthèse générée est conservé ; les photos sources ne sont pas sauvegardées
+- La génération de synthèse fait partie du même quota Premium que le reste du tuteur IA (chat, correction/préparation de devoir)
+- Accessible via un raccourci depuis l'écran d'accueil, avec un écran dédié pour retrouver ses synthèses sauvegardées
 - Focus session : sur Android, active automatiquement le mode Ne Pas Déranger pendant la durée choisie ; sur iOS, guide l'élève pour activer un Focus Filter dédié dans les réglages du téléphone
 - XP attribué à chaque leçon terminée, exercice corrigé, session de flashcards et session de concentration complétée
 - Série quotidienne affichée en évidence, avec un nombre limité de gels de série utilisables par mois
@@ -120,3 +127,4 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - **Calibrage comportemental** : les mécaniques de gamification (gels de série, paliers de ligue, fréquence de récompense) mériteront une revue sous l'angle psychologie/science du produit une fois un usage réel observé — pas une fonctionnalité nouvelle, une révision de l'existant.
 - **Support** : géré manuellement par un seul développeur, pas d'équipe support ; le lien WhatsApp (US-37) est un point de contact simple, pas un système de ticketing.
 - **Risque** : l'identification automatique du sujet à partir d'une photo de devoir peut occasionnellement se tromper ; une correction basée sur le mauvais repère de cours reste préférable à une réponse sans aucun ancrage, mais n'est pas garantie à 100%.
+- **Risque** : la lecture de notes manuscrites par photo peut occasionnellement mal interpréter un mot ou une formule ; la synthèse générée doit être relue par l'élève avant de s'y fier entièrement.

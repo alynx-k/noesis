@@ -226,6 +226,15 @@ export default function Accueil() {
           <Text style={[styles.quickLabel, { color: theme.text }]}>Lancer une session de concentration</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/summaries')}
+          style={[styles.quickRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <Ionicons name="document-text-outline" size={19} color={theme.primary} />
+          <Text style={[styles.quickLabel, { color: theme.text }]}>Créer une synthèse de cours</Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

@@ -4,9 +4,9 @@
 
 ## Décisions architecturales
 
-- **Routes** (app mobile, Expo Router) : `/onboarding/*` → `/login` → `/(tabs)/{accueil,flashcards,ligue,profil}`, avec écrans détail `/course/[id]`, `/subject/[disciplineId]`, `/flashcard-deck/[id]`, `/ai-chat`, `/correct-homework`, `/prepare-homework`, `/focus-session`, `/subscription`, `/settings`. L'outil de relecture de contenu est une webapp d'admin séparée.
-- **Schema** (Supabase/Postgres) : `profiles` (classe, série, contact) ; `lessons`/`exercises` (matière, classe, série, statut brouillon/publié) ; `flashcard_decks`/`flashcards`/`srs_reviews` ; `xp_events` ; `streaks` ; `leagues`/`league_memberships` (semaine, palier, classe+série) ; `subscriptions` (provider : iap/wave/mtn/orange) ; `referrals` ; `ai_conversations`/`ai_messages` ; `content_review_queue` ; `lesson_sections` (contenu de leçon découpé par section, avec embedding vectoriel pour la recherche par similarité)
-- **Modèles clés** : Profile, Lesson, Exercise, FlashcardDeck, Flashcard, XpEvent, Streak, League, LeagueMembership, Subscription, Referral, AiConversation, ContentReviewItem
+- **Routes** (app mobile, Expo Router) : `/onboarding/*` → `/login` → `/(tabs)/{accueil,flashcards,ligue,profil}`, avec écrans détail `/course/[id]`, `/subject/[disciplineId]`, `/flashcard-deck/[id]`, `/ai-chat`, `/correct-homework`, `/prepare-homework`, `/focus-session`, `/subscription`, `/settings`, `/summaries`, `/create-summary`. L'outil de relecture de contenu est une webapp d'admin séparée.
+- **Schema** (Supabase/Postgres) : `profiles` (classe, série, contact) ; `lessons`/`exercises` (matière, classe, série, statut brouillon/publié) ; `flashcard_decks`/`flashcards`/`srs_reviews` ; `xp_events` ; `streaks` ; `leagues`/`league_memberships` (semaine, palier, classe+série) ; `subscriptions` (provider : iap/wave/mtn/orange) ; `referrals` ; `ai_conversations`/`ai_messages` ; `content_review_queue` ; `lesson_sections` (contenu de leçon découpé par section, avec embedding vectoriel pour la recherche par similarité) ; `course_summaries` (synthèse générée par photo, propriété de l'élève, titre + contenu texte)
+- **Modèles clés** : Profile, Lesson, Exercise, FlashcardDeck, Flashcard, XpEvent, Streak, League, LeagueMembership, Subscription, Referral, AiConversation, ContentReviewItem, CourseSummary
 - **Auth / autorisation** : Supabase Auth (téléphone OTP ou email). RLS : un élève voit uniquement son propre profil/progression/conversations ; le contenu publié est visible par classe/série correspondante ; le contenu brouillon n'est visible que par le rôle admin.
 - **Frontières services tiers** : Gemini appelé uniquement depuis une edge function (jamais côté client), pour la génération de texte/vision et pour le calcul d'embeddings de recherche ; un webhook edge function dédié par moyen de paiement (Wave, MTN Money, Orange Money, IAP) alimentant un statut d'abonnement unifié ; fournisseur SMS OTP pour l'auth téléphone.
 
@@ -368,3 +368,24 @@ Avant de corriger ou de guider un devoir pris en photo, le tuteur IA identifie l
 ## Bloquée par
 
 - Phase 16 (réutilise l'infrastructure de recherche par contenu de cours)
+
+---
+
+## Phase 18 : Synthèse de cours par photo
+
+**User stories** : US-40, US-41
+
+### Ce qu'on livre
+
+L'élève prend une ou plusieurs photos de ses notes de cours ; le tuteur IA en extrait une synthèse structurée (points clés, définitions, formules, exemples), fidèle uniquement au contenu photographié, sans y mélanger le contenu officiel de l'app. La synthèse est sauvegardée et consultable/supprimable depuis un écran dédié, accessible via un raccourci sur l'écran d'accueil. La génération consomme le même quota Premium que le reste du tuteur IA.
+
+### Critères d'acceptation
+
+- [ ] Une ou plusieurs photos de notes de cours produisent une synthèse structurée fidèle à leur contenu, sans ajout issu du programme officiel de l'app
+- [ ] La synthèse générée est sauvegardée et visible dans un écran listant les synthèses de l'élève
+- [ ] L'élève peut supprimer une synthèse sauvegardée
+- [ ] La génération d'une synthèse consomme le même quota hebdomadaire que le chat et la correction de devoir
+
+## Bloquée par
+
+- Aucune — démarrable immédiatement (réutilise le quota et le pattern photo déjà en place depuis les Phases 8/17)

@@ -13,6 +13,7 @@ export type Profile = {
   objective_ids: ObjectiveId[];
   onboarding_completed_at: string | null;
   ai_trials_used: number;
+  ai_trials_reset_week: string | null;
   referral_code: string;
 };
 
