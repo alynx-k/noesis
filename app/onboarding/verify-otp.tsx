@@ -40,7 +40,14 @@ export default function VerifyOtp() {
     }
 
     try {
-      if (grade) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed_at')
+        .eq('id', data.session.user.id)
+        .single();
+      const alreadyOnboarded = existingProfile?.onboarding_completed_at != null;
+
+      if (grade && !alreadyOnboarded) {
         await completeOnboarding({ userId: data.session.user.id, grade, serie, objectiveIds });
       }
       await refreshProfile();

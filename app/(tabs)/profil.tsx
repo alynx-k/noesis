@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { Share, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/auth';
@@ -51,7 +51,7 @@ export default function Profil() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: theme.text, fontFamily: fonts.display }]}>Profil</Text>
 
         <InfoRow label="Contact" value={profile?.email ?? profile?.phone ?? '—'} />
@@ -112,7 +112,7 @@ export default function Profil() {
           <Button label="Réglages" variant="secondary" icon="settings-outline" onPress={() => router.push('/settings')} />
           <Button label="Se déconnecter" variant="ghost" icon="log-out-outline" onPress={handleSignOut} />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -129,7 +129,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.md },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   title: { fontSize: 24, marginBottom: spacing.sm },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   rowLabel: { fontFamily: fonts.body, fontSize: 14 },
