@@ -32,10 +32,18 @@ export function useRedeemReferralCode() {
 
   return useMutation({
     mutationFn: async (code: string) => {
-      const { data, error } = await supabase.rpc('redeem_referral_code', { p_code: code });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      return row as { granted_days: number };
+      const referral = await supabase.rpc('redeem_referral_code', { p_code: code });
+      if (!referral.error) {
+        const row = Array.isArray(referral.data) ? referral.data[0] : referral.data;
+        return row as { granted_days: number };
+      }
+
+      // Pas un code de parrainage valide : peut-être un code promo (usage
+      // unique, sans parrain associé) — même champ de saisie pour les deux.
+      const promo = await supabase.rpc('redeem_promo_code', { p_code: code });
+      if (promo.error) throw referral.error;
+      const row = Array.isArray(promo.data) ? promo.data[0] : promo.data;
+      return { granted_days: row.granted_days } as { granted_days: number };
     },
     onSuccess: () => {
       if (!userId) return;
