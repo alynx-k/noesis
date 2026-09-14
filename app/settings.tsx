@@ -59,7 +59,12 @@ export default function Settings() {
         </View>
 
         <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>Support</Text>
-        <Button label="Signaler un problème / donner un avis" variant="secondary" onPress={handleContactSupport} />
+        <Button
+          label="Signaler un problème / donner un avis"
+          variant="secondary"
+          icon="logo-whatsapp"
+          onPress={handleContactSupport}
+        />
       </View>
     </SafeAreaView>
   );

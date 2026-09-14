@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type PressableProps } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/use-app-theme';
 import { fonts, radius, spacing } from '../../constants/theme';
 
@@ -8,9 +9,10 @@ type Props = PressableProps & {
   label: string;
   variant?: Variant;
   loading?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
 };
 
-export function Button({ label, variant = 'primary', loading = false, disabled, style, ...rest }: Props) {
+export function Button({ label, variant = 'primary', loading = false, icon, disabled, style, ...rest }: Props) {
   const theme = useAppTheme();
   const isDisabled = disabled || loading;
 
@@ -34,7 +36,10 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={[styles.label, { color: textColor }]}>{label}</Text>
+        <View style={styles.content}>
+          {icon ? <Ionicons name={icon} size={18} color={textColor} /> : null}
+          <Text style={[styles.label, { color: textColor }]}>{label}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -48,6 +53,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   label: {
     fontFamily: fonts.bodySemiBold,

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSubmitHomeworkPhoto } from '../hooks/queries/use-homework-photo';
 import { useAiQuota } from '../hooks/use-ai-quota';
 import { AiTrialBanner } from './ai-trial-banner';
@@ -108,10 +109,16 @@ export function HomeworkPhotoScreen({ mode, title, instructions }: Props) {
 
             {!imageUri ? (
               <View style={styles.pickerActions}>
-                <Button label="Prendre une photo" onPress={() => pickImage('camera')} style={{ flex: 1 }} />
+                <Button
+                  label="Prendre une photo"
+                  icon="camera-outline"
+                  onPress={() => pickImage('camera')}
+                  style={{ flex: 1 }}
+                />
                 <Button
                   label="Choisir depuis la galerie"
                   variant="secondary"
+                  icon="images-outline"
                   onPress={() => pickImage('library')}
                   style={{ flex: 1 }}
                 />
@@ -136,9 +143,10 @@ export function HomeworkPhotoScreen({ mode, title, instructions }: Props) {
 
             {illegible ? (
               <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <Text style={{ color: theme.error, fontFamily: fonts.bodySemiBold, marginBottom: spacing.xs }}>
-                  Photo illisible
-                </Text>
+                <View style={styles.stateHeader}>
+                  <Ionicons name="alert-circle-outline" size={18} color={theme.error} />
+                  <Text style={{ color: theme.error, fontFamily: fonts.bodySemiBold }}>Photo illisible</Text>
+                </View>
                 <Text style={{ color: theme.textMuted, fontFamily: fonts.body, fontSize: 13.5, marginBottom: spacing.sm }}>
                   Le tuteur IA n'a pas pu lire cette photo. Reprends-la avec plus de lumière et bien cadrée.
                 </Text>
@@ -179,4 +187,5 @@ const styles = StyleSheet.create({
   pickerActions: { flexDirection: 'row', gap: spacing.sm },
   preview: { width: '100%', height: 260, borderRadius: radius.md },
   card: { borderWidth: 1, borderRadius: radius.md, padding: spacing.md },
+  stateHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
 });

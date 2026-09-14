@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusSession } from '../context/focus-session';
 import { FOCUS_SESSION_DURATIONS } from '../hooks/queries/use-focus-session';
 import { SelectableCard } from '../components/ui/SelectableCard';
@@ -69,7 +70,10 @@ export default function FocusSession() {
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <Stack.Screen options={headerOptions} />
         <View style={styles.center}>
-          <Text style={[styles.summaryTitle, { color: theme.text, fontFamily: fonts.display }]}>
+          <Ionicons name="checkmark-circle" size={56} color={theme.primary} />
+          <Text
+            style={[styles.summaryTitle, { color: theme.text, fontFamily: fonts.display, marginTop: spacing.sm }]}
+          >
             Session terminée !
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: fonts.body, fontSize: 15, marginTop: spacing.xs }}>
@@ -100,7 +104,12 @@ export default function FocusSession() {
               : "Pour ne recevoir aucune notification pendant ta session, active le mode Ne pas déranger avant de commencer."}
           </Text>
           <View style={{ marginTop: spacing.sm }}>
-            <Button label="Ouvrir les réglages" variant="secondary" onPress={openNotificationSettings} />
+            <Button
+              label="Ouvrir les réglages"
+              variant="secondary"
+              icon="settings-outline"
+              onPress={openNotificationSettings}
+            />
           </View>
         </View>
 
@@ -114,7 +123,7 @@ export default function FocusSession() {
         </View>
 
         <View style={{ marginTop: spacing.md }}>
-          <Button label="Commencer" onPress={() => startSession(selectedDuration)} />
+          <Button label="Commencer" icon="timer-outline" onPress={() => startSession(selectedDuration)} />
         </View>
       </View>
     </SafeAreaView>
