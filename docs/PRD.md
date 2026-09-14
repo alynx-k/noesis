@@ -30,6 +30,7 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 11. En tant qu'élève Premium, je veux prendre en photo un énoncé de devoir pour que le tuteur IA m'aide à le préparer, afin d'être guidé sans avoir la réponse toute faite.
 12. En tant qu'élève gratuit, je veux disposer d'un nombre limité d'essais du tuteur IA, afin de juger de sa valeur avant de m'abonner.
 13. En tant qu'élève, je veux retrouver l'historique de mes conversations avec le tuteur IA, afin de reprendre une discussion précédente.
+39. En tant qu'élève, je veux que les réponses du tuteur IA (chat et correction/préparation de devoir) s'appuient sur le contenu de mes cours et suivent la même méthode qu'en classe, afin de recevoir une aide cohérente avec ce qu'on m'enseigne plutôt qu'une réponse générique.
 
 **Flashcards**
 14. En tant qu'élève, je veux réviser des decks de flashcards pré-faits par chapitre, afin de mémoriser les points clés d'une leçon.
@@ -85,6 +86,7 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - Mode hors-ligne (toute fonctionnalité nécessite une connexion en v1)
 - Contenu pédagogique en dehors du collège/lycée (primaire, enseignement supérieur)
 - Programmes scolaires d'autres pays que la Côte d'Ivoire
+- Sélection manuelle de la matière/du chapitre avant une photo de devoir (l'IA la déduit automatiquement de l'image)
 - Version web ou desktop de l'app élève (l'app élève reste mobile uniquement ; seul l'outil de relecture de contenu est une interface web)
 - Phasage du lancement (traité dans le plan d'implémentation, pas dans ce PRD)
 
@@ -94,7 +96,10 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - L'onboarding demande la classe (et la série si lycée) avant tout accès au contenu
 - Leçons et répétition espacée des decks pré-faits : accessibles gratuitement à tout élève
 - Exercices corrigés et création de decks de flashcards personnalisés : réservés à Premium, avec message d'incitation à l'endroit où la fonctionnalité est bloquée
-- Tuteur IA (chat, correction et préparation de devoir par photo) : réservé à Premium ; un élève gratuit dispose d'un nombre limité d'essais avant d'être invité à s'abonner
+- Tuteur IA (chat, correction et préparation de devoir par photo) : réservé à Premium ; un élève gratuit dispose de 3 essais par semaine, renouvelés automatiquement, avant d'être invité à s'abonner
+- Le tuteur IA (chat, correction et préparation de devoir) s'appuie sur le contenu des leçons de l'élève pour répondre, en suivant autant que possible la méthode et la structure utilisées dans le cours correspondant, plutôt que sur des connaissances générales non alignées avec le programme
+- Pour une photo de devoir, l'élève ne sélectionne pas manuellement la matière : le tuteur IA identifie lui-même le sujet à partir de la photo avant de s'appuyer sur le cours correspondant
+- Les réponses du tuteur IA sont mises en forme (titres, emphases, listes) pour rester lisibles
 - Focus session : sur Android, active automatiquement le mode Ne Pas Déranger pendant la durée choisie ; sur iOS, guide l'élève pour activer un Focus Filter dédié dans les réglages du téléphone
 - XP attribué à chaque leçon terminée, exercice corrigé, session de flashcards et session de concentration complétée
 - Série quotidienne affichée en évidence, avec un nombre limité de gels de série utilisables par mois
@@ -114,3 +119,4 @@ L'app transforme la révision en habitude quotidienne en la rendant compétitive
 - **Identité de marque** : logo et éléments graphiques au-delà de la palette/typographie déjà tranchées (voir `docs/DESIGN.md`) sont un chantier de production séparé, pas traité comme une user story de ce PRD.
 - **Calibrage comportemental** : les mécaniques de gamification (gels de série, paliers de ligue, fréquence de récompense) mériteront une revue sous l'angle psychologie/science du produit une fois un usage réel observé — pas une fonctionnalité nouvelle, une révision de l'existant.
 - **Support** : géré manuellement par un seul développeur, pas d'équipe support ; le lien WhatsApp (US-37) est un point de contact simple, pas un système de ticketing.
+- **Risque** : l'identification automatique du sujet à partir d'une photo de devoir peut occasionnellement se tromper ; une correction basée sur le mauvais repère de cours reste préférable à une réponse sans aucun ancrage, mais n'est pas garantie à 100%.

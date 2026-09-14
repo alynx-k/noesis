@@ -15,6 +15,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AI_FREE_TRIAL_LIMIT, checkAiQuota, consumeTrial } from '../_shared/ai-trials.ts';
+import { retrieveGroundingSection, type GroundingResult } from '../_shared/lesson-grounding.ts';
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 const ILLEGIBLE_MARKER = 'ILLISIBLE';
@@ -84,17 +85,34 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Profil introuvable.' }, 400);
     }
 
+    const mimeType = body.mimeType ?? 'image/jpeg';
+
+    const subject = await identifySubject({
+      apiKey: geminiApiKey,
+      grade: profile.grade,
+      serie: profile.serie,
+      imageBase64: body.imageBase64,
+      mimeType,
+    });
+
+    if (subject.trim().toUpperCase().startsWith(ILLEGIBLE_MARKER)) {
+      // Ne coûte pas d'essai : ce n'est pas une aide réellement délivrée (US-35).
+      return jsonResponse({ illegible: true, trialsRemaining: isPremium ? null : Math.max(0, AI_FREE_TRIAL_LIMIT - trialsUsed) }, 200);
+    }
+
+    const grounding = await retrieveGroundingSection(adminClient, geminiApiKey, profile.grade, profile.serie, subject);
+
     const reply = await callGeminiVision({
       apiKey: geminiApiKey,
       mode: body.mode,
       grade: profile.grade,
       serie: profile.serie,
       imageBase64: body.imageBase64,
-      mimeType: body.mimeType ?? 'image/jpeg',
+      mimeType,
+      grounding,
     });
 
     if (reply.trim().toUpperCase().startsWith(ILLEGIBLE_MARKER)) {
-      // Ne coûte pas d'essai : ce n'est pas une aide réellement délivrée (US-35).
       return jsonResponse({ illegible: true, trialsRemaining: isPremium ? null : Math.max(0, AI_FREE_TRIAL_LIMIT - trialsUsed) }, 200);
     }
 
@@ -106,6 +124,48 @@ Deno.serve(async (req) => {
   }
 });
 
+async function identifySubject(params: {
+  apiKey: string;
+  grade: string;
+  serie: string | null;
+  imageBase64: string;
+  mimeType: string;
+}): Promise<string> {
+  const { apiKey, grade, serie, imageBase64, mimeType } = params;
+  const classeDesc = `${grade}${serie ? ` (série ${serie})` : ''}`;
+
+  const prompt = `Regarde cette photo de devoir d'un(e) élève de ${classeDesc} en Côte d'Ivoire. Identifie en une phrase courte la matière et la notion précise traitée (ex. "Mathématiques — développement d'une expression littérale", "Français — les figures de style"), pour qu'on puisse retrouver le passage de cours correspondant. Réponds uniquement par cette phrase, rien d'autre.
+Si la photo ne contient aucun texte lisible du tout (page blanche, image totalement floue ou noire), réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }],
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini a répondu ${response.status}: ${errText}`);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('Réponse Gemini vide ou inattendue.');
+  }
+  return text as string;
+}
+
 async function callGeminiVision(params: {
   apiKey: string;
   mode: 'correct' | 'prepare';
@@ -113,17 +173,29 @@ async function callGeminiVision(params: {
   serie: string | null;
   imageBase64: string;
   mimeType: string;
+  grounding: GroundingResult | null;
 }): Promise<string> {
-  const { apiKey, mode, grade, serie, imageBase64, mimeType } = params;
+  const { apiKey, mode, grade, serie, imageBase64, mimeType, grounding } = params;
 
   const classeDesc = `${grade}${serie ? ` (série ${serie})` : ''}`;
+
+  const groundingInstruction = grounding
+    ? `Voici un extrait du cours de l'élève sur ce sujet (leçon "${grounding.lessonTitle}"${grounding.heading ? `, section "${grounding.heading}"` : ''}) :
+"""
+${grounding.content}
+"""
+Appuie-toi sur cet extrait en priorité : utilise la même méthode, la même structure et le même vocabulaire que le cours plutôt que ta culture générale.`
+    : `Aucun extrait de cours ne correspond précisément à ce sujet. Fais de ton mieux avec tes connaissances générales.`;
+
   const prompt =
     mode === 'correct'
       ? `Tu es un tuteur qui corrige le devoir manuscrit d'un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien).
-Voici une photo de son devoir déjà rempli. Pour chaque réponse : dis si elle est juste ou fausse, explique pourquoi, et donne la bonne réponse en cas d'erreur. Sois concret et structuré. Réponds en français.
+${groundingInstruction}
+Voici une photo de son devoir déjà rempli. Pour chaque réponse : dis si elle est juste ou fausse, explique pourquoi, et donne la bonne réponse en cas d'erreur en suivant la méthode du cours ci-dessus. Sois concret et structuré (titres, gras, listes). Réponds en français, de façon concise.
 Si la photo ne contient aucun texte lisible du tout (page blanche, image totalement floue ou noire), réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`
       : `Tu es un tuteur qui aide un(e) élève de ${classeDesc} en Côte d'Ivoire (programme officiel ivoirien) à préparer un devoir.
-Voici une photo de l'énoncé du devoir (pas encore fait). Guide l'élève étape par étape : rappelle les notions nécessaires, pose des questions, donne des pistes de méthode — mais ne donne jamais la réponse finale toute faite. Réponds en français.
+${groundingInstruction}
+Voici une photo de l'énoncé du devoir (pas encore fait). Guide l'élève étape par étape en suivant la méthode du cours ci-dessus : rappelle les notions nécessaires, pose des questions, donne des pistes de méthode — mais ne donne jamais la réponse finale toute faite. Structure ta réponse (titres, gras, listes). Réponds en français, de façon concise.
 Si la photo ne contient aucun texte lisible du tout (page blanche, image totalement floue ou noire), réponds uniquement par le mot "${ILLEGIBLE_MARKER}" (rien d'autre).`;
 
   const response = await fetch(

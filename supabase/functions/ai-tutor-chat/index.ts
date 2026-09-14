@@ -13,6 +13,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AI_FREE_TRIAL_LIMIT, checkAiQuota, consumeTrial } from '../_shared/ai-trials.ts';
+import { retrieveGroundingSection, type GroundingResult } from '../_shared/lesson-grounding.ts';
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 
@@ -119,11 +120,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: historyError?.message ?? 'Historique introuvable.' }, 500);
     }
 
+    const grounding = await retrieveGroundingSection(
+      adminClient,
+      geminiApiKey,
+      profile.grade,
+      profile.serie,
+      body.message.trim()
+    );
+
     const reply = await callGemini({
       apiKey: geminiApiKey,
       grade: profile.grade,
       serie: profile.serie,
       history,
+      grounding,
     });
 
     const { error: replyError } = await adminClient
@@ -148,11 +158,21 @@ async function callGemini(params: {
   grade: string;
   serie: string | null;
   history: { role: string; content: string }[];
+  grounding: GroundingResult | null;
 }): Promise<string> {
-  const { apiKey, grade, serie, history } = params;
+  const { apiKey, grade, serie, history, grounding } = params;
+
+  const groundingInstruction = grounding
+    ? `Voici un extrait du cours de l'élève sur ce sujet (leçon "${grounding.lessonTitle}"${grounding.heading ? `, section "${grounding.heading}"` : ''}) :
+"""
+${grounding.content}
+"""
+Base ta réponse sur cet extrait en priorité : reprends la même méthode, la même structure et le même vocabulaire que le cours plutôt que ta culture générale. Complète si l'extrait ne suffit pas, mais reste cohérent avec l'approche du cours.`
+    : `Aucun extrait de cours ne correspond précisément à cette question. Réponds du mieux que tu peux, en précisant brièvement que ce point ne fait pas partie du programme fourni.`;
 
   const systemInstruction = `Tu es un tuteur pédagogique pour un(e) élève de ${grade}${serie ? ` (série ${serie})` : ''} en Côte d'Ivoire, qui suit le programme officiel ivoirien.
-Explique clairement et adapte ton niveau de langage à cette classe. Encourage la compréhension : guide l'élève vers la réponse plutôt que de la donner brute quand c'est un exercice ou un devoir. Réponds en français, de façon concise et structurée.`;
+${groundingInstruction}
+Explique clairement et adapte ton niveau de langage à cette classe. Encourage la compréhension : guide l'élève vers la réponse plutôt que de la donner brute quand c'est un exercice ou un devoir. Réponds en français, de façon concise (évite tout développement inutilement long). Structure ta réponse avec des titres (## ou ###), du **gras** pour les termes clés, et des listes à puces ou numérotées quand c'est pertinent.`;
 
   const contents = history.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',

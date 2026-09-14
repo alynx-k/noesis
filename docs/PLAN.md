@@ -5,10 +5,10 @@
 ## Décisions architecturales
 
 - **Routes** (app mobile, Expo Router) : `/onboarding/*` → `/login` → `/(tabs)/{accueil,flashcards,ligue,profil}`, avec écrans détail `/course/[id]`, `/subject/[disciplineId]`, `/flashcard-deck/[id]`, `/ai-chat`, `/correct-homework`, `/prepare-homework`, `/focus-session`, `/subscription`, `/settings`. L'outil de relecture de contenu est une webapp d'admin séparée.
-- **Schema** (Supabase/Postgres) : `profiles` (classe, série, contact) ; `lessons`/`exercises` (matière, classe, série, statut brouillon/publié) ; `flashcard_decks`/`flashcards`/`srs_reviews` ; `xp_events` ; `streaks` ; `leagues`/`league_memberships` (semaine, palier, classe+série) ; `subscriptions` (provider : iap/wave/mtn/orange) ; `referrals` ; `ai_conversations`/`ai_messages` ; `content_review_queue`
+- **Schema** (Supabase/Postgres) : `profiles` (classe, série, contact) ; `lessons`/`exercises` (matière, classe, série, statut brouillon/publié) ; `flashcard_decks`/`flashcards`/`srs_reviews` ; `xp_events` ; `streaks` ; `leagues`/`league_memberships` (semaine, palier, classe+série) ; `subscriptions` (provider : iap/wave/mtn/orange) ; `referrals` ; `ai_conversations`/`ai_messages` ; `content_review_queue` ; `lesson_sections` (contenu de leçon découpé par section, avec embedding vectoriel pour la recherche par similarité)
 - **Modèles clés** : Profile, Lesson, Exercise, FlashcardDeck, Flashcard, XpEvent, Streak, League, LeagueMembership, Subscription, Referral, AiConversation, ContentReviewItem
 - **Auth / autorisation** : Supabase Auth (téléphone OTP ou email). RLS : un élève voit uniquement son propre profil/progression/conversations ; le contenu publié est visible par classe/série correspondante ; le contenu brouillon n'est visible que par le rôle admin.
-- **Frontières services tiers** : Gemini appelé uniquement depuis une edge function (jamais côté client) ; un webhook edge function dédié par moyen de paiement (Wave, MTN Money, Orange Money, IAP) alimentant un statut d'abonnement unifié ; fournisseur SMS OTP pour l'auth téléphone.
+- **Frontières services tiers** : Gemini appelé uniquement depuis une edge function (jamais côté client), pour la génération de texte/vision et pour le calcul d'embeddings de recherche ; un webhook edge function dédié par moyen de paiement (Wave, MTN Money, Orange Money, IAP) alimentant un statut d'abonnement unifié ; fournisseur SMS OTP pour l'auth téléphone.
 
 ![Architecture Noesis : ce qui se construit sur quoi](diagrams/diagram-architecture-phases.png)
 
@@ -328,3 +328,43 @@ Un élève qui rate un jour ne perd pas sa série s'il lui reste un gel disponib
 ## Bloquée par
 
 - Aucune — démarrable immédiatement (le mécanisme XP/série existe depuis la Phase 2)
+
+---
+
+## Phase 16 : Ancrage du tuteur IA (chat) sur le contenu des cours
+
+**User stories** : US-9, US-12, US-39
+
+### Ce qu'on livre
+
+Le chat du tuteur IA retrouve automatiquement le passage de cours le plus pertinent par rapport à la question posée par l'élève, et l'utilise pour construire sa réponse en suivant la méthode et la structure du cours plutôt que des connaissances générales. Le quota gratuit passe d'un total fixe à vie à 3 essais par semaine, renouvelés automatiquement. Les réponses peuvent afficher des listes (à puces ou numérotées), en plus des titres et emphases déjà supportés.
+
+### Critères d'acceptation
+
+- [ ] Une question posée au tuteur IA dont la réponse existe dans le programme de l'élève renvoie un contenu qui reflète le vocabulaire et la méthode de la leçon correspondante
+- [ ] Un élève gratuit dispose de 3 essais par semaine ; le compteur se réinitialise au changement de semaine
+- [ ] Une réponse du tuteur IA contenant une liste s'affiche correctement mise en forme (pas de tirets/numéros bruts dans le texte)
+
+## Bloquée par
+
+- Aucune — démarrable immédiatement
+
+---
+
+## Phase 17 : Ancrage de la correction/préparation de devoir par photo sur le contenu des cours
+
+**User stories** : US-10, US-11, US-39
+
+### Ce qu'on livre
+
+Avant de corriger ou de guider un devoir pris en photo, le tuteur IA identifie lui-même le sujet représenté sur la photo, retrouve le passage de cours correspondant, et l'utilise pour que sa correction ou son accompagnement suive la même méthode que celle enseignée en classe. L'élève ne sélectionne jamais manuellement la matière ou le chapitre.
+
+### Critères d'acceptation
+
+- [ ] Une photo de devoir sur un sujet couvert par le programme de l'élève produit une correction qui suit la méthode de la leçon correspondante (mêmes étapes, même vocabulaire)
+- [ ] Le sujet est déduit automatiquement de la photo, sans étape de sélection manuelle de matière
+- [ ] Le mode préparation (énoncé non résolu) guide l'élève avec la même méthode que le cours, sans donner la réponse finale
+
+## Bloquée par
+
+- Phase 16 (réutilise l'infrastructure de recherche par contenu de cours)
