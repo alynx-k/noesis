@@ -14,7 +14,21 @@ export async function activateSubscription(params: {
   externalReference: string;
 }) {
   const client = adminClient();
-  const periodEnd = new Date(Date.now() + PREMIUM_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const now = Date.now();
+
+  // Prolonge de façon additive (comme redeem_promo_code/redeem_referral_code) :
+  // un paiement réel ne doit jamais tronquer des jours Premium déjà acquis
+  // (parrainage, code promo) qui dépassent une fenêtre de 30 jours à partir de maintenant.
+  const { data: existing, error: fetchError } = await client
+    .from('subscriptions')
+    .select('current_period_end')
+    .eq('user_id', params.userId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+
+  const existingPeriodEnd = existing?.current_period_end ? new Date(existing.current_period_end).getTime() : 0;
+  const baseTime = Math.max(existingPeriodEnd, now);
+  const periodEnd = new Date(baseTime + PREMIUM_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   const { error } = await client.from('subscriptions').upsert(
     {

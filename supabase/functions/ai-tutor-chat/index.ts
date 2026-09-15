@@ -1,11 +1,17 @@
 // Edge function : chat avec le tuteur IA (Gemini), historique multi-tour.
-// Premium = illimité ; gratuit = AI_FREE_TRIAL_LIMIT essais partagés avec
-// homework-photo (profiles.ai_trials_used), puis erreur 403 invitant à
-// passer Premium.
+// Premium = illimité ; gratuit = AI_FREE_TRIAL_LIMIT essais par semaine,
+// partagés avec homework-photo/course-summary (profiles.ai_trials_used,
+// renouvelé chaque semaine ISO — voir _shared/ai-trials.ts), puis erreur 403
+// invitant à passer Premium.
+//
+// La réponse s'appuie sur le contenu de cours le plus pertinent (recherche
+// vectorielle sur lesson_sections — voir _shared/lesson-grounding.ts) quand
+// une correspondance suffisante existe.
 //
 // Requiert les secrets Supabase :
-//   GEMINI_API_KEY   — clé API Google AI Studio / Gemini
-//   GEMINI_MODEL     — optionnel, défaut "gemini-3.6-flash"
+//   GEMINI_API_KEY          — clé API Google AI Studio / Gemini
+//   GEMINI_MODEL            — optionnel, défaut "gemini-3.6-flash"
+//   GEMINI_EMBEDDING_MODEL  — optionnel, défaut "gemini-embedding-2" (ancrage)
 //
 // Appel : POST avec un JWT élève en Authorization, body JSON :
 //   { conversationId?: string, message: string }
@@ -120,13 +126,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: historyError?.message ?? 'Historique introuvable.' }, 500);
     }
 
-    const grounding = await retrieveGroundingSection(
-      adminClient,
-      geminiApiKey,
-      profile.grade,
-      profile.serie,
-      body.message.trim()
-    );
+    // L'ancrage est une amélioration best-effort : une panne du service
+    // d'embeddings ne doit pas faire échouer tout le chat.
+    let grounding: GroundingResult | null = null;
+    try {
+      grounding = await retrieveGroundingSection(
+        adminClient,
+        geminiApiKey,
+        profile.grade,
+        profile.serie,
+        body.message.trim()
+      );
+    } catch (groundingError) {
+      console.error('ai-tutor-chat: ancrage indisponible, réponse non ancrée', groundingError);
+    }
 
     const reply = await callGemini({
       apiKey: geminiApiKey,

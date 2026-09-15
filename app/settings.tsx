@@ -1,4 +1,4 @@
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useThemeSettings, type ThemePreference } from '../context/theme';
@@ -45,7 +45,7 @@ export default function Settings() {
           headerTintColor: theme.text,
         }}
       />
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Apparence</Text>
         <View style={styles.options}>
           {OPTIONS.map((option) => (
@@ -65,14 +65,14 @@ export default function Settings() {
           icon="logo-whatsapp"
           onPress={handleContactSupport}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.sm },
+  content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xl },
   sectionLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 13,

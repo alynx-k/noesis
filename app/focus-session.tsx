@@ -70,7 +70,7 @@ export default function FocusSession() {
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <Stack.Screen options={headerOptions} />
         <View style={styles.center}>
-          <Ionicons name="checkmark-circle" size={56} color={theme.primary} />
+          <Ionicons name="checkmark-circle" size={56} color={theme.success} />
           <Text
             style={[styles.summaryTitle, { color: theme.text, fontFamily: fonts.display, marginTop: spacing.sm }]}
           >

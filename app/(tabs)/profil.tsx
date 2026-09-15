@@ -79,10 +79,10 @@ export default function Profil() {
             </Text>
           ) : null}
 
-          {referralStats.data && !referralStats.data.hasRedeemed ? (
+          {referralStats.data ? (
             <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
               <Input
-                label="Un code de parrainage ?"
+                label="Un code de parrainage ou promo ?"
                 placeholder="Ex : AB12CD"
                 autoCapitalize="characters"
                 value={codeInput}

@@ -8,6 +8,7 @@ import { useOnboarding } from '../../context/onboarding';
 import { useAuth } from '../../context/auth';
 import { useAppTheme } from '../../hooks/use-app-theme';
 import { completeOnboarding } from '../../lib/profile';
+import { supabase } from '../../lib/supabase';
 import { OBJECTIVES } from '../../constants/objectives';
 import { spacing } from '../../constants/theme';
 
@@ -25,7 +26,17 @@ export default function Objectifs() {
       setLoading(true);
       setError(null);
       try {
-        await completeOnboarding({ userId: session.user.id, grade, serie, objectiveIds });
+        const { data: existingProfile, error: profileFetchError } = await supabase
+          .from('profiles')
+          .select('onboarding_completed_at')
+          .eq('id', session.user.id)
+          .single();
+        if (profileFetchError) throw profileFetchError;
+        const alreadyOnboarded = existingProfile?.onboarding_completed_at != null;
+
+        if (!alreadyOnboarded) {
+          await completeOnboarding({ userId: session.user.id, grade, serie, objectiveIds });
+        }
         await refreshProfile();
         router.replace('/(tabs)');
       } catch {

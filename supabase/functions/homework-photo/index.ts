@@ -2,12 +2,18 @@
 //   - correct  : corrige un devoir manuscrit déjà fait par l'élève
 //   - prepare  : guide la préparation d'un énoncé de devoir (pas la réponse directe)
 // Photo illisible ou hors-sujet -> { illegible: true }, sans coûter d'essai.
-// Premium = illimité ; gratuit = AI_FREE_TRIAL_LIMIT essais partagés avec
-// ai-tutor-chat (profiles.ai_trials_used).
+// Premium = illimité ; gratuit = AI_FREE_TRIAL_LIMIT essais par semaine,
+// partagés avec ai-tutor-chat/course-summary (profiles.ai_trials_used,
+// renouvelé chaque semaine ISO — voir _shared/ai-trials.ts).
+//
+// Le sujet de la photo est d'abord identifié par Gemini, puis utilisé pour
+// retrouver le passage de cours le plus pertinent (recherche vectorielle sur
+// lesson_sections — voir _shared/lesson-grounding.ts) avant de corriger/guider.
 //
 // Requiert les secrets Supabase :
-//   GEMINI_API_KEY   — clé API Google AI Studio / Gemini
-//   GEMINI_MODEL     — optionnel, défaut "gemini-3.6-flash"
+//   GEMINI_API_KEY          — clé API Google AI Studio / Gemini
+//   GEMINI_MODEL            — optionnel, défaut "gemini-3.6-flash"
+//   GEMINI_EMBEDDING_MODEL  — optionnel, défaut "gemini-embedding-2" (ancrage)
 //
 // Appel : POST avec un JWT élève en Authorization, body JSON :
 //   { mode: 'correct' | 'prepare', imageBase64: string, mimeType?: string }
@@ -100,7 +106,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ illegible: true, trialsRemaining: isPremium ? null : Math.max(0, AI_FREE_TRIAL_LIMIT - trialsUsed) }, 200);
     }
 
-    const grounding = await retrieveGroundingSection(adminClient, geminiApiKey, profile.grade, profile.serie, subject);
+    // L'ancrage est une amélioration best-effort : une panne du service
+    // d'embeddings ne doit pas faire échouer toute la correction/préparation.
+    let grounding: GroundingResult | null = null;
+    try {
+      grounding = await retrieveGroundingSection(adminClient, geminiApiKey, profile.grade, profile.serie, subject);
+    } catch (groundingError) {
+      console.error('homework-photo: ancrage indisponible, réponse non ancrée', groundingError);
+    }
 
     const reply = await callGeminiVision({
       apiKey: geminiApiKey,

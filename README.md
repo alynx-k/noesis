@@ -203,7 +203,7 @@ supabase secrets set GEMINI_MODEL=gemini-3.6-flash   # gemini-2.5-flash n'est pl
 ### 4. Comportement
 
 - Un élève Premium peut discuter sans limite avec le tuteur IA (`app/ai-chat.tsx`, historique des conversations) et reprendre une conversation précédente.
-- Un élève gratuit dispose de 3 essais à vie (`AI_FREE_TRIAL_LIMIT`, compteur affiché) partagés avec la Phase 8 (devoirs par photo) puis est bloqué avec une invitation Premium ; le compteur (`profiles.ai_trials_used`) n'est incrémenté qu'après une réponse réussie du tuteur.
+- Un élève gratuit dispose de 3 essais par semaine (`AI_FREE_TRIAL_LIMIT`, renouvelés chaque semaine ISO, compteur affiché) partagés avec la Phase 8 (devoirs par photo) et la synthèse de cours, puis est bloqué avec une invitation Premium ; le compteur (`profiles.ai_trials_used`/`ai_trials_reset_week`) n'est incrémenté qu'après une réponse réussie du tuteur.
 - Le prompt système adapte le niveau de réponse à la classe (et série) de l'élève, et encourage la pédagogie plutôt que la réponse brute à un exercice.
 - Conversations/messages ne sont jamais écrits par le client : uniquement par la fonction `ai-tutor-chat` (service role), comme les paiements en Phase 3.
 

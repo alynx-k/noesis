@@ -21,6 +21,7 @@ export type Theme = {
   textMuted: string;
   border: string;
   primary: string;
+  primaryDark: string;
   primaryTint: string;
   secondary: string;
   secondaryTint: string;
@@ -37,6 +38,7 @@ export const lightTheme: Theme = {
   textMuted: palette.neutral700,
   border: palette.neutral300,
   primary: palette.primary,
+  primaryDark: palette.primaryDark,
   primaryTint: '#FDEAE0',
   secondary: palette.secondary,
   secondaryTint: '#E7E9F0',
@@ -53,6 +55,7 @@ export const darkTheme: Theme = {
   textMuted: palette.neutral300,
   border: '#3A342A',
   primary: palette.primary,
+  primaryDark: palette.primaryDark,
   primaryTint: '#3A2416',
   secondary: palette.secondary,
   secondaryTint: '#1D2438',

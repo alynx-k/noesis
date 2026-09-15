@@ -18,6 +18,8 @@ import { AI_FREE_TRIAL_LIMIT, checkAiQuota, consumeTrial } from '../_shared/ai-t
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 const ILLEGIBLE_MARKER = 'ILLISIBLE';
+const MAX_IMAGES = 10;
+const MAX_TITLE_LENGTH = 80;
 
 type RequestBody = {
   images: { base64: string; mimeType?: string }[];
@@ -58,6 +60,12 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as RequestBody;
     if (!Array.isArray(body.images) || body.images.length === 0) {
       return jsonResponse({ error: 'images est requis (au moins une photo).' }, 400);
+    }
+    if (body.images.length > MAX_IMAGES) {
+      return jsonResponse({ error: `Maximum ${MAX_IMAGES} photos par synthèse.` }, 400);
+    }
+    if (body.images.some((img) => !img.base64)) {
+      return jsonResponse({ error: 'Une des photos est invalide.' }, 400);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -151,9 +159,13 @@ Si aucune des photos ne contient de texte lisible (page blanche, image totalemen
     return { title: '', contentMd: ILLEGIBLE_MARKER };
   }
 
-  const [firstLine, ...rest] = text.trim().split('\n');
-  const title = firstLine.trim().replace(/^#+\s*/, '') || 'Synthèse de cours';
-  const contentMd = rest.join('\n').trim() || text.trim();
+  const trimmedText = text.trim();
+  const [firstLine, ...rest] = trimmedText.split('\n');
+  const title = (firstLine.trim().replace(/^#+\s*/, '') || 'Synthèse de cours').slice(0, MAX_TITLE_LENGTH);
+  // Si Gemini n'a pas suivi le format "titre, ligne vide, corps" (réponse sur
+  // une seule ligne/un seul bloc), on garde le texte complet non tronqué comme
+  // corps plutôt que le titre tronqué, pour ne perdre aucun contenu généré.
+  const contentMd = rest.join('\n').trim() || trimmedText;
 
   return { title, contentMd };
 }

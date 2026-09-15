@@ -53,11 +53,15 @@ async function hashContent(text: string): Promise<string> {
 export async function ensureLessonSectionsUpToDate(adminClient: any, geminiApiKey: string, grade: string, serie: string | null) {
   const { data: lessons, error } = await adminClient
     .from('lessons')
-    .select('id, content_md')
+    .select('id, content_md, serie')
     .eq('status', 'published')
     .eq('grade', grade)
     .or(serie ? `serie.is.null,serie.eq.${serie}` : 'serie.is.null');
-  if (error || !lessons) return;
+  if (error) {
+    console.error('ensureLessonSectionsUpToDate: échec de lecture des leçons', error);
+    return;
+  }
+  if (!lessons) return;
 
   for (const lesson of lessons) {
     const currentHash = await hashContent(lesson.content_md);
@@ -79,10 +83,14 @@ export async function ensureLessonSectionsUpToDate(adminClient: any, geminiApiKe
     for (const section of sections) {
       const textToEmbed = section.heading ? `${section.heading}\n${section.content}` : section.content;
       const embedding = await embedText(geminiApiKey, textToEmbed);
+      // Série propre à la leçon (peut être null = commune à toutes les
+      // séries), jamais celle de l'élève qui déclenche l'indexation —
+      // sinon une leçon partagée entre séries se retrouve verrouillée à
+      // la première série qui l'a indexée.
       await adminClient.from('lesson_sections').insert({
         lesson_id: lesson.id,
         grade,
-        serie,
+        serie: lesson.serie,
         heading: section.heading,
         content: section.content,
         embedding,
@@ -116,7 +124,11 @@ export async function retrieveGroundingSection(
     p_serie: serie,
     p_match_count: 1,
   });
-  if (error || !matches || matches.length === 0) return null;
+  if (error) {
+    console.error('retrieveGroundingSection: échec de match_lesson_sections', error);
+    return null;
+  }
+  if (!matches || matches.length === 0) return null;
 
   const best = matches[0];
   if (best.similarity < MIN_SIMILARITY) return null;

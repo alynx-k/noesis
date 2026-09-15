@@ -316,13 +316,13 @@ Un élève voit un écran de célébration dédié quand il monte de palier de l
 
 ### Ce qu'on livre
 
-Un élève qui rate un jour ne perd pas sa série s'il lui reste un gel disponible ce mois-ci : la série est préservée automatiquement (pas d'action manuelle requise) plutôt que réinitialisée à zéro. Le nombre de gels disponibles est visible à côté de la série sur l'accueil.
+Un élève qui rate un ou plusieurs jours ne perd pas sa série tant que ses gels disponibles ce mois-ci couvrent tout l'écart (un gel protège exactement un jour manqué) : la série est préservée automatiquement (pas d'action manuelle requise) plutôt que réinitialisée à zéro. Si l'écart dépasse les gels disponibles, la série repart à 1 et aucun gel n'est consommé (tout ou rien). Le renouvellement mensuel des gels prime sur ce calcul : une absence à cheval sur un changement de mois est jugée avec les gels du nouveau mois, pas ceux du mois précédent. Le nombre de gels disponibles est visible à côté de la série sur l'accueil.
 
 ### Critères d'acceptation
 
 - [ ] Un élève dispose d'un nombre limité de gels de série (2), renouvelé chaque mois
-- [ ] Quand un élève rate un jour et dispose d'un gel, sa série n'est pas réinitialisée et un gel est consommé automatiquement
-- [ ] Quand un élève rate un jour sans gel disponible, sa série est réinitialisée comme avant
+- [ ] Quand un élève rate N jours consécutifs et dispose d'au moins N gels, sa série n'est pas réinitialisée et N gels sont consommés automatiquement
+- [ ] Quand un élève rate N jours consécutifs et dispose de moins de N gels, sa série est réinitialisée comme avant, sans consommer de gel
 - [ ] Le nombre de gels restants est visible sur l'écran d'accueil
 
 ## Bloquée par

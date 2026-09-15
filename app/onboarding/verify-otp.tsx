@@ -40,11 +40,12 @@ export default function VerifyOtp() {
     }
 
     try {
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('onboarding_completed_at')
         .eq('id', data.session.user.id)
         .single();
+      if (profileFetchError) throw profileFetchError;
       const alreadyOnboarded = existingProfile?.onboarding_completed_at != null;
 
       if (grade && !alreadyOnboarded) {

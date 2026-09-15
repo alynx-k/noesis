@@ -14,6 +14,8 @@ import { fonts, radius, spacing } from '../constants/theme';
 
 type Page = { uri: string; base64: string; mimeType: string };
 
+const MAX_PAGES = 10;
+
 export default function CreateSummary() {
   const theme = useAppTheme();
   const { isPremium, trialsRemaining, isLocked } = useAiQuota();
@@ -24,6 +26,11 @@ export default function CreateSummary() {
   const [error, setError] = useState<string | null>(null);
 
   async function pickImage(source: 'camera' | 'library') {
+    if (pages.length >= MAX_PAGES) {
+      setError(`Maximum ${MAX_PAGES} pages par synthèse.`);
+      return;
+    }
+
     const permission =
       source === 'camera'
         ? await ImagePicker.requestCameraPermissionsAsync()
@@ -45,13 +52,20 @@ export default function CreateSummary() {
       base64: true,
     });
 
-    setPages((prev) => [...prev, { uri: manipulated.uri, base64: manipulated.base64 ?? '', mimeType: 'image/jpeg' }]);
+    if (!manipulated.base64) {
+      setError("Échec du traitement de cette photo, réessaie.");
+      return;
+    }
+
+    setPages((prev) => [...prev, { uri: manipulated.uri, base64: manipulated.base64!, mimeType: 'image/jpeg' }]);
     setIllegible(false);
     setError(null);
   }
 
   function removePage(index: number) {
     setPages((prev) => prev.filter((_, i) => i !== index));
+    setIllegible(false);
+    setError(null);
   }
 
   async function handleGenerate() {
@@ -66,7 +80,7 @@ export default function CreateSummary() {
         setIllegible(true);
         return;
       }
-      router.replace({ pathname: '/summaries', params: { justCreated: response.summary?.id } });
+      router.replace('/summaries');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Le tuteur IA est indisponible pour le moment.');
     }
@@ -89,16 +103,25 @@ export default function CreateSummary() {
 
         {isLocked ? null : (
           <>
-            <Text style={[styles.instructions, { color: theme.textMuted }]}>
-              Prends en photo une ou plusieurs pages de ton cahier. Le tuteur IA en fait une synthèse claire, fidèle à ce
-              qui est écrit.
-            </Text>
+            {pages.length === 0 ? (
+              <View style={styles.emptyHero}>
+                <View style={[styles.emptyIcon, { backgroundColor: theme.primaryTint }]}>
+                  <Ionicons name="document-text-outline" size={32} color={theme.primary} />
+                </View>
+                <Text style={[styles.instructions, { color: theme.textMuted }]}>
+                  Prends en photo une ou plusieurs pages de ton cahier. Le tuteur IA en fait une synthèse claire, fidèle
+                  à ce qui est écrit.
+                </Text>
+              </View>
+            ) : null}
 
             {pages.length > 0 ? (
               <View style={styles.pagesGrid}>
                 {pages.map((page, i) => (
                   <View key={page.uri} style={styles.pageThumbWrap}>
-                    <Image source={{ uri: page.uri }} style={styles.pageThumb} resizeMode="cover" />
+                    <View style={[styles.pageThumbFrame, { borderColor: theme.primaryTint }]}>
+                      <Image source={{ uri: page.uri }} style={styles.pageThumb} resizeMode="cover" />
+                    </View>
                     <Pressable
                       onPress={() => removePage(i)}
                       style={[styles.removeBadge, { backgroundColor: theme.error }]}
@@ -115,6 +138,7 @@ export default function CreateSummary() {
               <Button
                 label={pages.length === 0 ? 'Prendre une photo' : 'Ajouter une page'}
                 icon="camera-outline"
+                disabled={pages.length >= MAX_PAGES}
                 onPress={() => pickImage('camera')}
                 style={{ flex: 1 }}
               />
@@ -122,6 +146,7 @@ export default function CreateSummary() {
                 label="Galerie"
                 variant="secondary"
                 icon="images-outline"
+                disabled={pages.length >= MAX_PAGES}
                 onPress={() => pickImage('library')}
                 style={{ flex: 1 }}
               />
@@ -165,10 +190,13 @@ export default function CreateSummary() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
-  instructions: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  instructions: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  emptyHero: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
+  emptyIcon: { width: 72, height: 72, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
   pagesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   pageThumbWrap: { width: 100 },
-  pageThumb: { width: 100, height: 130, borderRadius: radius.sm },
+  pageThumbFrame: { borderWidth: 2, borderRadius: radius.sm + 2, padding: 3 },
+  pageThumb: { width: 90, height: 120, borderRadius: radius.sm },
   removeBadge: {
     position: 'absolute',
     top: -6,

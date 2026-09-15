@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { useSubjects } from '../../hooks/queries/use-subjects';
 import { useVisibleLessons, type LessonSummary } from '../../hooks/queries/use-lessons';
 import { useCompletedLessonIds } from '../../hooks/queries/use-lesson-progress';
 import { CelebrationModal } from '../../components/celebration-modal';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { useAppTheme } from '../../hooks/use-app-theme';
 import { GRADE_LABELS, SERIE_LABELS } from '../../constants/grades';
 import { TIER_LABELS } from '../../constants/leagues';
@@ -61,6 +62,9 @@ export default function Accueil() {
   const serieLabel = profile?.serie ? SERIE_LABELS[profile.serie] : null;
   const currentStreak = streak.data?.current_streak ?? 0;
   const currentCelebration = pendingCelebrations.data?.[0] ?? null;
+
+  const isLoading = leagueBoard.isLoading || subjects.isLoading || lessons.isLoading || progress.isLoading;
+  const isError = leagueBoard.isError || subjects.isError || lessons.isError || progress.isError;
 
   const rows = leagueBoard.data ?? [];
   const myRow = rows.find((row) => row.is_me) ?? null;
@@ -140,72 +144,89 @@ export default function Accueil() {
           {gradeLabel ? `${gradeLabel}${serieLabel ? ` · ${serieLabel}` : ''}` : 'Profil en cours de configuration'}
         </Text>
 
-        <View style={styles.statRow}>
-          <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: theme.text, fontFamily: fonts.dataBold }]}>{myRow?.xp ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>XP cette semaine</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: theme.text, fontFamily: fonts.dataBold }]}>{programmeProgressPct}%</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>
-              {gradeLabel ? `Programme ${gradeLabel}` : 'Programme'}
-            </Text>
-          </View>
-        </View>
-
-        {myRow ? (
-          <Pressable
-            onPress={() => router.push('/ligue')}
-            style={[styles.leagueCard, { backgroundColor: theme.secondary }]}
-          >
-            <Text style={styles.leagueTier}>
-              Ligue {TIER_LABELS[myRow.tier]}
-              {gradeLabel ? ` · Classe ${gradeLabel}${serieLabel ? ` ${serieLabel}` : ''}` : ''}
-            </Text>
-            <Text style={[styles.leagueRank, { fontFamily: fonts.displayBlack }]}>{formatRank(myRow.rank)} place</Text>
-            <Text style={styles.leagueSub}>
-              {rowAbove
-                ? `Encore ${rowAbove.xp - myRow.xp} XP pour dépasser le ${formatRank(rowAbove.rank)}`
-                : 'Tu es en tête de ta ligue cette semaine !'}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        {resumeItems.length > 0 ? (
+        {isLoading ? (
+          <ActivityIndicator color={theme.primary} style={{ marginVertical: spacing.lg }} />
+        ) : isError ? (
+          <ErrorState
+            onRetry={() => {
+              leagueBoard.refetch();
+              subjects.refetch();
+              lessons.refetch();
+              progress.refetch();
+            }}
+          />
+        ) : (
           <>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Reprendre</Text>
-            {resumeItems.map((item) => (
+            <View style={styles.statRow}>
+              <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Text style={[styles.statNum, { color: theme.text, fontFamily: fonts.dataBold }]}>{myRow?.xp ?? 0}</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted }]}>XP cette semaine</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Text style={[styles.statNum, { color: theme.text, fontFamily: fonts.dataBold }]}>{programmeProgressPct}%</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+                  {gradeLabel ? `Programme ${gradeLabel}` : 'Programme'}
+                </Text>
+              </View>
+            </View>
+
+            {myRow ? (
               <Pressable
-                key={item.lessonId}
-                onPress={() => router.push({ pathname: '/course/[id]', params: { id: item.lessonId } })}
-                style={[styles.courseItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+                onPress={() => router.push('/ligue')}
+                style={[styles.leagueCard, { backgroundColor: theme.secondary }]}
               >
-                <View style={[styles.courseIcon, { backgroundColor: theme.primaryTint }]}>
-                  <Text style={{ color: theme.primary, fontFamily: fonts.display, fontSize: 14 }}>
-                    {abbreviateSubject(item.subjectName)}
-                  </Text>
-                </View>
-                <View style={styles.courseInfo}>
-                  <Text style={[styles.courseName, { color: theme.text }]}>
-                    {item.lessonTitle} — Chap. {item.chapterOrder}
-                  </Text>
-                  <Text style={[styles.courseMeta, { color: theme.textMuted }]}>
-                    {item.subjectName}
-                    {gradeLabel ? ` · ${gradeLabel}` : ''}
-                  </Text>
-                  <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-                    <View
-                      style={[
-                        styles.progressBarFill,
-                        { backgroundColor: theme.primary, width: `${Math.round((item.completedCount / item.total) * 100)}%` },
-                      ]}
-                    />
-                  </View>
-                </View>
+                <Text style={styles.leagueTier}>
+                  Ligue {TIER_LABELS[myRow.tier]}
+                  {gradeLabel ? ` · Classe ${gradeLabel}${serieLabel ? ` ${serieLabel}` : ''}` : ''}
+                </Text>
+                <Text style={[styles.leagueRank, { fontFamily: fonts.displayBlack }]}>{formatRank(myRow.rank)} place</Text>
+                <Text style={styles.leagueSub}>
+                  {!rowAbove
+                    ? 'Tu es en tête de ta ligue cette semaine !'
+                    : rowAbove.xp > myRow.xp
+                      ? `Encore ${rowAbove.xp - myRow.xp} XP pour dépasser le ${formatRank(rowAbove.rank)}`
+                      : `Tu es à égalité avec le ${formatRank(rowAbove.rank)}`}
+                </Text>
               </Pressable>
-            ))}
+            ) : null}
+
+            {resumeItems.length > 0 ? (
+              <>
+                <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Reprendre</Text>
+                {resumeItems.map((item) => (
+                  <Pressable
+                    key={item.lessonId}
+                    onPress={() => router.push({ pathname: '/course/[id]', params: { id: item.lessonId } })}
+                    style={[styles.courseItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+                  >
+                    <View style={[styles.courseIcon, { backgroundColor: theme.primaryTint }]}>
+                      <Text style={{ color: theme.primaryDark, fontFamily: fonts.display, fontSize: 14 }}>
+                        {abbreviateSubject(item.subjectName)}
+                      </Text>
+                    </View>
+                    <View style={styles.courseInfo}>
+                      <Text style={[styles.courseName, { color: theme.text }]}>
+                        {item.lessonTitle} — Chap. {item.chapterOrder}
+                      </Text>
+                      <Text style={[styles.courseMeta, { color: theme.textMuted }]}>
+                        {item.subjectName}
+                        {gradeLabel ? ` · ${gradeLabel}` : ''}
+                      </Text>
+                      <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+                        <View
+                          style={[
+                            styles.progressBarFill,
+                            { backgroundColor: theme.primary, width: `${Math.round((item.completedCount / item.total) * 100)}%` },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </Pressable>
+                ))}
+              </>
+            ) : null}
           </>
-        ) : null}
+        )}
 
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Accès rapide</Text>
 
@@ -228,7 +249,7 @@ export default function Accueil() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push('/summaries')}
+          onPress={() => router.push('/create-summary')}
           style={[styles.quickRow, { backgroundColor: theme.card, borderColor: theme.border }]}
         >
           <Ionicons name="document-text-outline" size={19} color={theme.primary} />

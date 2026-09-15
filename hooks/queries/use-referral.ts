@@ -41,8 +41,9 @@ export function useRedeemReferralCode() {
       // Pas un code de parrainage valide : peut-être un code promo (usage
       // unique, sans parrain associé) — même champ de saisie pour les deux.
       const promo = await supabase.rpc('redeem_promo_code', { p_code: code });
-      if (promo.error) throw referral.error;
+      if (promo.error) throw promo.error;
       const row = Array.isArray(promo.data) ? promo.data[0] : promo.data;
+      if (!row) throw new Error('Code invalide.');
       return { granted_days: row.granted_days } as { granted_days: number };
     },
     onSuccess: () => {

@@ -25,7 +25,14 @@ export default function Summaries() {
   function handleDelete(item: CourseSummary) {
     Alert.alert('Supprimer cette synthèse ?', `"${item.title}" sera définitivement supprimée.`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteSummary.mutate(item.id) },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () =>
+          deleteSummary.mutate(item.id, {
+            onError: () => Alert.alert('Suppression impossible', 'Vérifie ta connexion et réessaie.'),
+          }),
+      },
     ]);
   }
 
@@ -67,8 +74,13 @@ export default function Summaries() {
                     style={styles.cardHeader}
                     onPress={() => setExpandedId(isExpanded ? null : item.id)}
                   >
+                    <View style={[styles.cardIcon, { backgroundColor: theme.primaryTint }]}>
+                      <Ionicons name="document-text-outline" size={19} color={theme.primary} />
+                    </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.cardTitle, { color: theme.text }]}>{item.title}</Text>
+                      <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
+                        {item.title}
+                      </Text>
                       <Text style={[styles.cardDate, { color: theme.textMuted }]}>{formatDate(item.created_at)}</Text>
                     </View>
                     <Ionicons
@@ -106,6 +118,7 @@ const styles = StyleSheet.create({
   list: { gap: spacing.sm, paddingBottom: spacing.xl },
   card: { borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md },
+  cardIcon: { width: 38, height: 38, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontFamily: fonts.bodySemiBold, fontSize: 15 },
   cardDate: { fontFamily: fonts.body, fontSize: 12.5, marginTop: 2 },
   cardBody: { borderTopWidth: 1, padding: spacing.md, gap: spacing.md },
